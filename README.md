@@ -1,4 +1,8 @@
-# ThinkEx
+<p align="center">
+  <a href="https://thinkex.app">
+    <img alt="ThinkEx: Rethinking the User Interface of AI"" src="public/readmeimage.svg" width="500" />
+  </a>
+</p>
 
 Today’s AI chat interfaces make long-term and complex work frustrating: context gets lost, ideas scatter, and information overload builds over time. ThinkEx raises the standard with a flexible workspace designed to capture what's relevant, organize knowledge, and use AI without losing control.
 
