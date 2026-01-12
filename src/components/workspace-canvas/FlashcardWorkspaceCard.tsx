@@ -218,15 +218,18 @@ export function FlashcardWorkspaceCard({
     }, [cards.length, currentIndex]);
 
     // Persist index change (optional debounce?)
-    const handleIndexChange = (newIndex: number) => {
+    const handleIndexChange = useCallback((newIndex: number) => {
         // Don't persist on every click to avoid network spam, or do?
         // For now just local state is smooth, maybe updating item is fine.
         // Let's keep it local for now, prop update on unmount?
         setCurrentIndex(newIndex);
         // If we want persistence: onUpdateItem(item.id, { data: { ...flashcardData, currentIndex: newIndex }});
-    };
+    }, []);
 
     const currentCard = cards[currentIndex] || cards[0];
+
+    // Flashcard flip animation duration (matches FlipCard component CSS)
+    const FLIP_ANIMATION_DURATION = 600;
 
     // Tracking for flip debounce
     const lastFlipTimeRef = useRef<number>(0);
@@ -248,16 +251,20 @@ export function FlashcardWorkspaceCard({
         setIsColorPickerOpen(false);
     }, [item.id, onUpdateItem]);
 
+    // Helper function to hide tabs during flip animation
+    const startFlipAnimation = useCallback(() => {
+        setIsFlipping(true);
+        setTimeout(() => setIsFlipping(false), FLIP_ANIMATION_DURATION);
+    }, []);
+
     // Debounced flip logic 
     const handleFlip = useCallback(() => {
         const now = Date.now();
         if (now - lastFlipTimeRef.current < 200) return;
         lastFlipTimeRef.current = now;
         setIsFlipped((prev) => !prev);
-        setIsFlipping(true);
-        // Hide stack tabs during flip animation, reappear slightly before animation ends
-        setTimeout(() => setIsFlipping(false), 400);
-    }, []);
+        startFlipAnimation();
+    }, [startFlipAnimation]);
 
 
     const handleClick = useCallback((e: React.MouseEvent) => {
@@ -281,23 +288,27 @@ export function FlashcardWorkspaceCard({
     }, [handleFlip, isScrollLocked, onToggleSelection, item.id]);
 
     // Navigation Handlers
-    const goNext = (e: React.MouseEvent) => {
+    const goNext = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
+        const wasFlipped = isFlipped; // Check if we're currently on the back side
         setIsFlipped(false); // Reset flip
-        setIsFlipping(true); // Hide tabs during flip animation
+        // Only hide tabs if we were on the back side (will cause flip animation)
+        if (wasFlipped) {
+            startFlipAnimation();
+        }
         handleIndexChange((currentIndex + 1) % cards.length);
-        // Show tabs again after animation completes (600ms flip animation)
-        setTimeout(() => setIsFlipping(false), 600);
-    };
+    }, [isFlipped, startFlipAnimation, handleIndexChange, currentIndex, cards.length]);
 
-    const goPrev = (e: React.MouseEvent) => {
+    const goPrev = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
+        const wasFlipped = isFlipped; // Check if we're currently on the back side
         setIsFlipped(false); // Reset flip
-        setIsFlipping(true); // Hide tabs during flip animation
+        // Only hide tabs if we were on the back side (will cause flip animation)
+        if (wasFlipped) {
+            startFlipAnimation();
+        }
         handleIndexChange((currentIndex - 1 + cards.length) % cards.length);
-        // Show tabs again after animation completes (600ms flip animation)
-        setTimeout(() => setIsFlipping(false), 600);
-    };
+    }, [isFlipped, startFlipAnimation, handleIndexChange, currentIndex, cards.length]);
 
     // Calculate border styling to match WorkspaceCard
     const borderColor = isSelected ? 'rgba(255, 255, 255, 0.8)' : (item.color ? getCardAccentColor(item.color, 0.5) : 'transparent');
