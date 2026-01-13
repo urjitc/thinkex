@@ -113,7 +113,6 @@ export const BlockNotePreview = memo(function BlockNotePreview({ blocks, classNa
                                 transform: `translateY(${virtualItem.start}px)`,
                                 // Ensure nested content is not clipped
                                 overflow: 'visible',
-                                willChange: 'transform',
                             }}
                         >
                             <PreviewBlock block={block} index={virtualItem.index} blocks={blocks} isScrollLocked={isScrollLocked} />
@@ -239,7 +238,7 @@ export const PreviewBlock = memo(function PreviewBlock({ block, index, blocks, i
 
             return (
                 <div className="mb-1" style={{ overflow: 'visible' }}>
-                    <div className="flex gap-2 items-center">
+                    <div className="flex gap-2 items-start">
                         <span className="select-none text-muted-foreground font-mono text-xs">{listNumber}.</span>
                         <div className="flex-1 min-w-0 break-words">
                             <p><InlineContent content={content} /></p>
