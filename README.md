@@ -45,7 +45,12 @@ Think of a large physical desk. When you're deeply studying or working on a proj
 
 4. **Capture & Persist:** Extract valuable insights into structured cards that become part of your permanent workspace, available for future reasoning.
 
+### Who It’s For
 
+- Students working across many sources  
+- Researchers comparing papers  
+- Writers and analysts building long-term understanding  
+- Anyone tired of re-explaining the same context to AI
 
 ## Features
 
@@ -67,14 +72,6 @@ ThinkEx is built to make context **explicit, structured, and reusable**:
 | **Notes-first tools** (Notion, Obsidian) | Good organization | Reasoning—AI is bolted on, not integrated |
 | **RAG systems** | Automatic context retrieval | Control—you can't see or adjust what's selected |
 | **Long-context windows** | More tokens | Understanding—scaling context ≠ scaling coherence |
-
-
-## Who It’s For
-
-- Students working across many sources  
-- Researchers comparing papers  
-- Writers and analysts building long-term understanding  
-- Anyone tired of re-explaining the same context to AI
 
 ## Tech Stack
 
