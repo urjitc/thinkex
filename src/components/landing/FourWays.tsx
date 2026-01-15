@@ -321,7 +321,6 @@ export function FourWays() {
                             ? { objectPosition: "center top" }
                             : undefined
                         }
-                        unoptimized
                       />
                     </div>
                     {/* Desktop: Fixed size container */}
@@ -341,7 +340,6 @@ export function FourWays() {
                             ? { objectPosition: "center top" }
                             : undefined
                         }
-                        unoptimized
                       />
                     </div>
                   </div>

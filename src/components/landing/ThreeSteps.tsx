@@ -83,7 +83,6 @@ export function ThreeSteps() {
                       fill
                       className="object-cover"
                       style={step.id === "step-2" ? { objectPosition: "left center" } : undefined}
-                      unoptimized
                     />
                   </div>
                 </div>
