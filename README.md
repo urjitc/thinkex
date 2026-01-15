@@ -25,7 +25,7 @@ Current tools split what should be unified:
 - **Memory** lives in notes and documents
 - **Organization** is scattered across folders and tabs
 
-> **Context should be explicit, structured, persistent, and user-controlled**. Not implicit inside a prompt or hidden in vector space.
+> **Context should be explicit, structured, persistent, and user-controlled**. Not hidden or trapped in vector space.
 
 ThinkEx was built around this insight.
 
