@@ -13,8 +13,12 @@ async function handleGET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const userId = await requireAuth();
+  // Start independent operations in parallel
+  const paramsPromise = params;
+  const authPromise = requireAuth();
+  
+  const { id } = await paramsPromise;
+  const userId = await authPromise;
 
   // Check if user is workspace owner
   await verifyWorkspaceOwnership(id, userId);
