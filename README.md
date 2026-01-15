@@ -22,8 +22,8 @@ The intelligence is there, but your **information collapses over time**.
 
 Current tools split what should be unified:
 - **Reasoning** happens in AI chats
-- **Memory** lives in notes and documents
-- **Organization** is scattered across folders and tabs
+- **Information** lives in notes and documents
+- **Organization** is scattered across tabs and windows
 
 > **Context should be explicit, structured, persistent, and user-controlled**. Not hidden or trapped in vector space.
 
