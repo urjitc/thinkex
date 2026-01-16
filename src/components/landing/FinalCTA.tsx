@@ -62,14 +62,15 @@ export function FinalCTA() {
           </p>
 
           <div className="flex justify-center pt-4">
-            <Link href="/guest-setup" prefetch>
-              <Button
-                size="lg"
-                className="h-12 rounded-md bg-foreground px-8 text-base font-medium text-background transition-all hover:bg-foreground/90"
-              >
+            <Button
+              asChild
+              size="lg"
+              className="h-12 rounded-md bg-foreground px-8 text-base font-medium text-background transition-all hover:bg-foreground/90"
+            >
+              <Link href="/guest-setup" prefetch>
                 Get Started
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
