@@ -1,10 +1,9 @@
 "use client";
 
-import { SearchIcon, ChevronDownIcon, ExternalLink } from "lucide-react";
+import { SearchIcon, ChevronDownIcon } from "lucide-react";
 import {
   memo,
   useCallback,
-  useMemo,
   useRef,
   useState,
   type FC,
@@ -17,7 +16,6 @@ import {
 } from "@assistant-ui/react";
 
 import { StandaloneMarkdown } from "@/components/assistant-ui/standalone-markdown";
-import { Source, SourceIcon, SourceTitle } from "@/components/assistant-ui/sources";
 import {
   Collapsible,
   CollapsibleContent,
@@ -28,54 +26,6 @@ import ShinyText from "@/components/ShinyText";
 
 const ANIMATION_DURATION = 200;
 const SHIMMER_DURATION = 1000;
-
-/**
- * Parse sources from markdown result.
- * Looks for **Sources:** section and extracts URLs.
- */
-function parseSourcesFromResult(result: string): {
-  content: string;
-  sources: Array<{ url: string; title?: string }>;
-} {
-  // Look for **Sources:** section
-  const sourcesMatch = result.match(/\n\n\*\*Sources:\*\*\n([\s\S]*?)$/);
-
-  if (!sourcesMatch) {
-    return { content: result, sources: [] };
-  }
-
-  // Extract content without sources section
-  const content = result.replace(/\n\n\*\*Sources:\*\*\n[\s\S]*?$/, "").trim();
-
-  // Parse source lines - format: "1. [url](url)" or "1. title"
-  const sourcesText = sourcesMatch[1];
-  const sources: Array<{ url: string; title?: string }> = [];
-
-  // Match markdown links: [text](url) or plain URLs
-  const linkRegex = /\d+\.\s*\[([^\]]+)\]\(([^)]+)\)/g;
-  const plainUrlRegex = /\d+\.\s*(https?:\/\/[^\s]+)/g;
-
-  let match;
-  while ((match = linkRegex.exec(sourcesText)) !== null) {
-    const [, text, url] = match;
-    // If text is the same as URL, don't set title
-    sources.push({
-      url: url,
-      title: text !== url ? text : undefined,
-    });
-  }
-
-  // Also check for plain URLs (not in markdown format)
-  while ((match = plainUrlRegex.exec(sourcesText)) !== null) {
-    const url = match[1];
-    // Avoid duplicates
-    if (!sources.some(s => s.url === url)) {
-      sources.push({ url });
-    }
-  }
-
-  return { content, sources };
-}
 
 /**
  * Root collapsible container that manages open/closed state and scroll lock.
@@ -146,13 +96,11 @@ const ToolTrigger: FC<{
   active: boolean;
   label: string;
   icon: React.ReactNode;
-  sourceCount?: number;
   className?: string;
 }> = ({
   active,
   label,
   icon,
-  sourceCount,
   className,
 }) => (
     <CollapsibleTrigger
@@ -164,7 +112,7 @@ const ToolTrigger: FC<{
       {icon}
       <span className="aui-tool-trigger-label-wrapper relative inline-block leading-none">
         {active ? (
-          <ShinyText
+          <ShinyText 
             text={label}
             disabled={false}
             speed={1.5}
@@ -174,11 +122,6 @@ const ToolTrigger: FC<{
           <span>{label}</span>
         )}
       </span>
-      {sourceCount !== undefined && sourceCount > 0 && (
-        <span className="text-xs text-muted-foreground/60">
-          ({sourceCount} source{sourceCount !== 1 ? "s" : ""})
-        </span>
-      )}
       <ChevronDownIcon
         className={cn(
           "aui-tool-trigger-chevron mt-0.5 size-4 shrink-0",
@@ -251,53 +194,8 @@ const ToolText: FC<
 ToolText.displayName = "ToolText";
 
 /**
- * Sources display component with favicons.
- */
-const SourcesDisplay: FC<{
-  sources: Array<{ url: string; title?: string }>;
-}> = ({ sources }) => {
-  if (sources.length === 0) return null;
-
-  return (
-    <div className="space-y-2">
-      <span className="text-xs font-medium text-muted-foreground/70">
-        Sources:
-      </span>
-      <div className="flex flex-wrap gap-2">
-        {sources.map((source, index) => {
-          // Extract domain for display if no title
-          let displayTitle = source.title;
-          if (!displayTitle) {
-            try {
-              displayTitle = new URL(source.url).hostname.replace(/^www\./, "");
-            } catch {
-              displayTitle = source.url;
-            }
-          }
-
-          return (
-            <Source
-              key={index}
-              href={source.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="outline"
-              className="gap-1.5"
-            >
-              <SourceIcon url={source.url} className="size-3.5" />
-              <SourceTitle className="max-w-[150px]">{displayTitle}</SourceTitle>
-              <ExternalLink className="size-3 opacity-50" />
-            </Source>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-/**
  * Tool UI component for searchWeb tool.
- * Displays search query and results in a collapsible format with parsed sources.
+ * Displays search query and results in a collapsible format similar to Reasoning.
  */
 export const SearchWebToolUI = makeAssistantToolUI<{
   query: string;
@@ -307,19 +205,12 @@ export const SearchWebToolUI = makeAssistantToolUI<{
     const isRunning = status.type === "running";
     const hasResult = result !== undefined && result !== null;
 
-    // Parse sources from the result
-    const parsedResult = useMemo(() => {
-      if (!hasResult) return { content: "", sources: [] };
-      return parseSourcesFromResult(result);
-    }, [hasResult, result]);
-
     return (
       <ToolRoot>
         <ToolTrigger
           active={isRunning}
           label={isRunning ? "Searching web" : "Searched web"}
           icon={<SearchIcon className="aui-tool-trigger-icon size-4 shrink-0" />}
-          sourceCount={parsedResult.sources.length}
         />
 
         <ToolContent aria-busy={isRunning}>
@@ -339,19 +230,14 @@ export const SearchWebToolUI = makeAssistantToolUI<{
               )}
 
               {hasResult && (
-                <>
-                  <div>
-                    <span className="text-xs font-medium text-muted-foreground/70">
-                      Results:
-                    </span>
-                    <div className="mt-2">
-                      <StandaloneMarkdown>{parsedResult.content}</StandaloneMarkdown>
-                    </div>
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground/70">
+                    Results:
+                  </span>
+                  <div className="mt-2">
+                    <StandaloneMarkdown>{result}</StandaloneMarkdown>
                   </div>
-
-                  {/* Sources with favicons */}
-                  <SourcesDisplay sources={parsedResult.sources} />
-                </>
+                </div>
               )}
             </div>
           </ToolText>
