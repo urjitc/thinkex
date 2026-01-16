@@ -119,7 +119,7 @@ export function Hero() {
 
           {/* Desktop Demo Image - Hidden on mobile */}
           <div className="relative w-full hidden md:block">
-            <div className="relative w-full max-w-5xl mx-auto px-4">
+            <div className="relative w-full max-w-6xl mx-auto px-4">
               <div className="relative aspect-[16/9] w-full overflow-hidden rounded-md border border-foreground/20 shadow-2xl">
                 <Image
                   src="/demo.png"
