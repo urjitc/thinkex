@@ -3,8 +3,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { getCardAccentColor } from "@/lib/workspace-state/colors";
-import type { CardColor } from "@/lib/workspace-state/colors";
 import { BackgroundCard, cardColors, type BackgroundCardData } from "./BackgroundCard";
 
 // Random card positions and sizes (static - no parallax)
@@ -28,12 +26,12 @@ export function Hero() {
       <div className="absolute inset-0 z-0 opacity-40">
         {/* Static Background Cards */}
         {backgroundCards.map((card, index) => {
-          const isMobileOnly = index >= 3;
+          const isDesktopOnly = index >= 3;
           return (
             <BackgroundCard
               key={index}
               card={card}
-              isMobileOnly={isMobileOnly}
+              isDesktopOnly={isDesktopOnly}
             />
           );
         })}
@@ -111,7 +109,7 @@ export function Hero() {
                   alt="ThinkEx Demo"
                   fill
                   priority
-                  sizes="(max-width: 768px) 100vw, 0vw"
+                  sizes="100vw"
                   className="object-cover"
                 />
               </div>
@@ -127,7 +125,7 @@ export function Hero() {
                   alt="ThinkEx Demo"
                   fill
                   priority
-                  sizes="(max-width: 768px) 0vw, 80vw"
+                  sizes="80vw"
                   className="object-cover"
                 />
               </div>
