@@ -117,7 +117,7 @@ export function FourWays() {
                         alt={way.title}
                         fill
                         loading="lazy"
-                        sizes="(max-width: 768px) 100vw, 0vw"
+                        sizes="100vw"
                         className="object-cover"
                         style={
                           way.image === "/attachments.png"
@@ -138,7 +138,7 @@ export function FourWays() {
                         width={800}
                         height={600}
                         loading="lazy"
-                        sizes="(max-width: 768px) 0vw, 50vw"
+                        sizes="50vw"
                         className="w-full h-full object-cover"
                         style={
                           way.image === "/attachments.png"
