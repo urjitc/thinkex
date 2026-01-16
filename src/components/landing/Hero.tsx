@@ -68,24 +68,22 @@ export function Hero() {
 
           {/* Header - Above Video */}
           <h1 className="mt-4 md:mt-12 text-4xl font-normal tracking-tight text-foreground sm:text-5xl md:text-6xl lg:text-7xl">
-            Turn{" "}
+            The{" "}
             <span className="relative inline-block">
               <span className="relative px-3 py-0.5 rounded-sm inline-block">
                 <span
-                  className="absolute inset-0 rounded-sm border-4"
+                  className="absolute inset-0 rounded-sm"
                   style={{
                     background: "rgba(252, 211, 77, 0.15)",
-                    borderColor: "#EAB308",
-                    boxShadow: "0 0 0 1px rgba(234, 179, 8, 0.3)",
                     left: "2px",
                   }}
                 />
-                <span className="relative z-10">value from AI</span>
+                <span className="relative z-10">Human Interface</span>
               </span>
             </span>{" "}
-            into
+            for
             <br />
-            organized knowledge
+            Artificial Intelligence
           </h1>
 
           {/* Get Started Button - Above Video */}
