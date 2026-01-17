@@ -149,15 +149,17 @@ export function Hero() {
           {/* Mobile Demo Image - Only visible on mobile */}
           <div className="relative w-full md:hidden">
             <div className="relative w-full max-w-md mx-auto">
-              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-md border border-foreground/20 shadow-2xl">
-                <Image
-                  src="/demo.png"
-                  alt="ThinkEx Demo"
-                  fill
-                  priority
-                  sizes="100vw"
-                  className="object-cover"
-                />
+              <div className="rounded-md p-[1px] gradient-border-animated shadow-2xl">
+                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[calc(0.625rem-1px)] bg-background">
+                  <Image
+                    src="/demo.png"
+                    alt="ThinkEx Demo"
+                    fill
+                    priority
+                    sizes="100vw"
+                    className="object-cover"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -165,15 +167,17 @@ export function Hero() {
           {/* Desktop Demo Image - Hidden on mobile */}
           <div className="relative w-full hidden md:block">
             <div className="relative w-full">
-              <div className="relative aspect-[16/9] w-full overflow-hidden rounded-md border border-foreground/20 shadow-2xl">
-                <Image
-                  src="/demo.png"
-                  alt="ThinkEx Demo"
-                  fill
-                  priority
-                  sizes="80vw"
-                  className="object-fill"
-                />
+              <div className="rounded-md p-[1px] gradient-border-animated shadow-2xl">
+                <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[calc(0.625rem-1px)] bg-background">
+                  <Image
+                    src="/demo.png"
+                    alt="ThinkEx Demo"
+                    fill
+                    priority
+                    sizes="80vw"
+                    className="object-fill"
+                  />
+                </div>
               </div>
             </div>
           </div>

@@ -582,6 +582,39 @@ html {
   animation: slideInUp 0.3s ease-out;
 }
 
+/* Animated gradient border - rotates colors around the border in a circle */
+@keyframes gradient-rotate {
+  0% {
+    background-position: 0% 0%;
+  }
+  25% {
+    background-position: 100% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  75% {
+    background-position: 0% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+.gradient-border-animated {
+  background: linear-gradient(
+    90deg,
+    #ef444480,
+    #eab30880,
+    #22c55e80,
+    #3b82f680,
+    #a855f780,
+    #ef444480
+  );
+  background-size: 200% 200%;
+  animation: gradient-rotate 10s ease-in-out infinite;
+}
+
 @keyframes slideInUp {
   from {
     opacity: 0;
