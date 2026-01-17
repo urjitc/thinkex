@@ -116,14 +116,7 @@ export function Navbar() {
             <div className="hidden md:flex md:items-center md:gap-4 z-10">
               {!isPending && !session && (
                 <>
-                  <a
-                    href="https://github.com/thinkex-oss/thinkex/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-foreground/70 transition-colors hover:text-foreground cursor-pointer"
-                  >
-                    <Github className="h-6 w-6" />
-                  </a>
+
                   <Link
                     href="/auth/sign-in"
                     className="text-base font-normal text-foreground/70 transition-colors hover:text-foreground cursor-pointer"
@@ -223,16 +216,7 @@ export function Navbar() {
                   {!isPending && !session && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <a
-                          href="https://github.com/thinkex-oss/thinkex/"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="cursor-pointer flex items-center justify-center"
-                        >
-                          <Github className="h-4 w-4" />
-                        </a>
-                      </DropdownMenuItem>
+
                       <DropdownMenuItem asChild>
                         <Link
                           href="/auth/sign-in"
