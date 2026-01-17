@@ -94,6 +94,7 @@ export function Hero() {
                     className="absolute inset-0 rounded-sm"
                     style={{
                       background: "rgba(252, 211, 77, 0.15)",
+                      border: "1px solid rgba(252, 211, 77, 0.4)",
                       left: "2px",
                     }}
                   />
