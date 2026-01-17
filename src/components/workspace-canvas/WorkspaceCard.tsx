@@ -735,7 +735,7 @@ function WorkspaceCard({
             </Dialog>
 
             {/* Card Content - show compact layout when preview is hidden */}
-            <div className={(item.type === 'note' || item.type === 'pdf') && !shouldShowPreview ? "flex-1 flex flex-col" : "flex-shrink-0"}>
+            <div className={(item.type === 'note' || item.type === 'pdf') && !shouldShowPreview ? "flex-1 flex flex-col min-w-0" : "flex-shrink-0"}>
               {item.type !== 'youtube' && !(item.type === 'pdf' && shouldShowPreview) && (
                 <ItemHeader
                   id={item.id}
