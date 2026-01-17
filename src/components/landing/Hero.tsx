@@ -5,6 +5,11 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Users, Github, ArrowRight } from "lucide-react";
 import { BackgroundCard, cardColors, type BackgroundCardData } from "./BackgroundCard";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 // Random card positions and sizes (static - no parallax)
 const backgroundCards: BackgroundCardData[] = [
@@ -50,36 +55,52 @@ export function Hero() {
       <div className="relative z-10 mx-auto w-full max-w-6xl">
         <div className="space-y-8 md:space-y-12 text-center">
           {/* Backed by Section */}
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm md:text-lg text-muted-foreground mb-0 md:mb-1 font-light">
+          <div className="flex flex-wrap items-center justify-center gap-3 text-sm md:text-base mb-0 md:mb-1">
             <a
               href="https://www.hatchery.umd.edu/about-mokhtarzadas"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer"
+              className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
             >
               <Image
                 src="/hatchery.png"
                 alt="Mokhtarzada Hatchery"
                 width={140}
                 height={28}
-                className="h-5 md:h-7 w-auto"
+                className="h-4 md:h-5 w-auto"
                 priority
               />
               <span>Mokhtarzada Hatchery 2025 Cohort</span>
             </a>
-            <div className="hidden sm:block w-1 h-1 rounded-full bg-muted-foreground/50" />
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 md:h-7 md:w-7 text-blue-500" />
-              <span>100+ Weekly Active Users</span>
-            </div>
-            <div className="hidden sm:block w-1 h-1 rounded-full bg-muted-foreground/50" />
+
+            <HoverCard openDelay={200}>
+              <HoverCardTrigger asChild>
+                <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors cursor-pointer">
+                  <Users className="h-4 w-4 md:h-5 md:w-5" />
+                  <span>100+ Weekly Active Users</span>
+                </div>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-[350px] sm:w-[450px] p-0 overflow-hidden border-none shadow-xl" sideOffset={10}>
+                <iframe
+                  width="100%"
+                  height="400"
+                  frameBorder="0"
+                  allowFullScreen
+                  src="https://us.posthog.com/embedded/wNOXac2TxOxawVOVKHkUGxe1BA1sJQ"
+                  key="4"
+                  sandbox="allow-scripts allow-same-origin allow-popups"
+                  className="bg-background"
+                />
+              </HoverCardContent>
+            </HoverCard>
+
             <a
               href="https://github.com/thinkex-oss/thinkex"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 hover:text-foreground transition-colors cursor-pointer"
+              className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-violet-500/10 text-violet-600 hover:bg-violet-500/20 transition-colors cursor-pointer"
             >
-              <Github className="h-5 w-5 md:h-7 md:w-7 text-violet-500" />
+              <Github className="h-4 w-4 md:h-5 md:w-5" />
               <span>Open Source</span>
             </a>
           </div>
