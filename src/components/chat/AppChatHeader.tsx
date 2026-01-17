@@ -212,6 +212,7 @@ export function AppChatHeader({
                       closeAllPanels();
                     }
                   }}
+                  className="shrink-0"
                 />
               </TooltipTrigger>
               <TooltipContent side="right">
