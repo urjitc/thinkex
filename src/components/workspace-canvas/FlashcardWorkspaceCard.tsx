@@ -191,7 +191,6 @@ export function FlashcardWorkspaceCard({
     const [isFlipping, setIsFlipping] = useState(false);
     // Get scroll lock state from Zustand store (persists across interactions)
     const isScrollLocked = useUIStore(selectItemScrollLocked(item.id));
-    const toggleItemScrollLocked = useUIStore((state) => state.toggleItemScrollLocked);
     const flashcardData = item.data as FlashcardData;
 
     // Navigation State
