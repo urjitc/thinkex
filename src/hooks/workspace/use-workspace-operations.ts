@@ -508,11 +508,30 @@ export function useWorkspaceOperations(
   // Uses atomic bulk update pattern (same as handleBulkDelete in WorkspaceSection)
   const deleteFolderWithContents = useCallback(
     (folderId: string) => {
-      const folder = currentState.items?.find(i => i.id === folderId && i.type === 'folder');
+      // CRITICAL: Read latest state from cache to avoid stale data issues
+      // (same pattern as updateAllItems - currentState prop can be stale)
+      let latestItems: Item[];
+      if (workspaceId) {
+        const cacheData = queryClient.getQueryData<EventResponse>([
+          "workspace",
+          workspaceId,
+          "events",
+        ]);
+        if (cacheData?.events) {
+          const latestState = replayEvents(cacheData.events, workspaceId, cacheData.snapshot?.state);
+          latestItems = latestState.items;
+        } else {
+          latestItems = currentState.items;
+        }
+      } else {
+        latestItems = currentState.items;
+      }
+      
+      const folder = latestItems.find(i => i.id === folderId && i.type === 'folder');
       logger.debug("📁 [FOLDER-DELETE-WITH-CONTENTS] Deleting folder and contents:", { folderId, folderName: folder?.name });
       
       // Find all descendant items recursively (handles nested folders)
-      const allDescendantIds = getAllDescendantIds(folderId, currentState.items);
+      const allDescendantIds = getAllDescendantIds(folderId, latestItems);
       
       // Create set of all IDs to delete (descendants + folder itself)
       const idsToDelete = new Set([...allDescendantIds, folderId]);
@@ -522,7 +541,7 @@ export function useWorkspaceOperations(
       
       // Delete PDF files from storage (fire-and-forget, non-blocking)
       // This is best-effort cleanup - files may become orphaned if this fails
-      const itemsToDelete = currentState.items.filter(item => idsToDelete.has(item.id));
+      const itemsToDelete = latestItems.filter(item => idsToDelete.has(item.id));
       for (const item of itemsToDelete) {
         if (item.type === 'pdf') {
           const pdfData = item.data as { fileUrl?: string };
@@ -535,7 +554,7 @@ export function useWorkspaceOperations(
       }
       
       // Atomic bulk delete using updateAllItems pattern (single BULK_ITEMS_UPDATED event)
-      const remainingItems = currentState.items.filter(item => !idsToDelete.has(item.id));
+      const remainingItems = latestItems.filter(item => !idsToDelete.has(item.id));
       updateAllItems(remainingItems);
       
       toast.success(
@@ -544,7 +563,7 @@ export function useWorkspaceOperations(
           : `Folder and ${itemCount} ${itemCount === 1 ? 'item' : 'items'} deleted`
       );
     },
-    [currentState.items, getAllDescendantIds, updateAllItems]
+    [workspaceId, queryClient, currentState.items, getAllDescendantIds, updateAllItems]
   );
 
   const moveItemToFolder = useCallback(
