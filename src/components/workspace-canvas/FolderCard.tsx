@@ -53,6 +53,7 @@ interface FolderCardProps {
   onOpenFolder: (folderId: string) => void;
   onUpdateItem: (itemId: string, updates: Partial<Item>) => void;
   onDeleteItem: (itemId: string) => void;
+  onDeleteFolderWithContents?: (folderId: string) => void; // Callback to delete folder and all items inside
   onMoveItem?: (itemId: string, folderId: string | null) => void; // Callback to move folder to another location
 }
 
@@ -70,10 +71,12 @@ function FolderCardComponent({
   onOpenFolder,
   onUpdateItem,
   onDeleteItem,
+  onDeleteFolderWithContents,
   onMoveItem,
 }: FolderCardProps) {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteOption, setDeleteOption] = useState<'keep' | 'delete' | null>(null);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isDragHover, setIsDragHover] = useState(false);
@@ -210,9 +213,21 @@ function FolderCardComponent({
   }, [item.id, onUpdateItem]);
 
   const handleDelete = useCallback(() => {
-    onDeleteItem(item.id);
+    if (deleteOption === 'delete' && onDeleteFolderWithContents) {
+      onDeleteFolderWithContents(item.id);
+    } else {
+      onDeleteItem(item.id);
+    }
     setShowDeleteConfirm(false);
-  }, [item.id, onDeleteItem]);
+    setDeleteOption(null);
+  }, [item.id, onDeleteItem, onDeleteFolderWithContents, deleteOption]);
+
+  // Reset delete option when dialog closes
+  useEffect(() => {
+    if (!showDeleteConfirm) {
+      setDeleteOption(null);
+    }
+  }, [showDeleteConfirm]);
 
   // Calculate colors using the same utilities as WorkspaceCard
   const bodyBgColor = getCardColorCSS(folderColor, 0.4); // Body is more transparent
@@ -436,14 +451,57 @@ function FolderCardComponent({
             >
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Folder</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete &quot;{item.name}&quot;? Items in this
-                  folder will be moved out, but not deleted.
+                <AlertDialogDescription asChild>
+                  <div className="space-y-4">
+                    <div>
+                      Choose what happens to the {itemCount} {itemCount === 1 ? 'item' : 'items'} in &quot;{item.name}&quot;:
+                    </div>
+                    <div className="space-y-3 pt-2">
+                      <label className="flex items-start space-x-3 cursor-pointer group">
+                        <input
+                          type="radio"
+                          name="deleteOption"
+                          value="keep"
+                          checked={deleteOption === 'keep'}
+                          onChange={() => setDeleteOption('keep')}
+                          className="mt-1 h-4 w-4 text-primary focus:ring-primary border-gray-300"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">Keep items</div>
+                          <div className="text-xs text-muted-foreground">
+                            Move items out of folder before deleting
+                          </div>
+                        </div>
+                      </label>
+                      <label className={`flex items-start space-x-3 group ${onDeleteFolderWithContents ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                        <input
+                          type="radio"
+                          name="deleteOption"
+                          value="delete"
+                          checked={deleteOption === 'delete'}
+                          onChange={() => setDeleteOption('delete')}
+                          disabled={!onDeleteFolderWithContents}
+                          className="mt-1 h-4 w-4 text-destructive focus:ring-destructive border-gray-300 disabled:opacity-50"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm text-destructive">Delete items</div>
+                          <div className="text-xs text-muted-foreground">
+                            Permanently delete folder and all {itemCount} {itemCount === 1 ? 'item' : 'items'} inside
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteOption(null);
+                  }}
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   Cancel
@@ -454,7 +512,8 @@ function FolderCardComponent({
                     handleDelete();
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={deleteOption === null}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Delete
                 </AlertDialogAction>

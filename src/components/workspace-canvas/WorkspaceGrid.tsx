@@ -30,6 +30,7 @@ interface WorkspaceGridProps {
   onMoveItem?: (itemId: string, folderId: string | null) => void; // Callback to move item to folder
   onMoveItems?: (itemIds: string[], folderId: string | null) => void; // Callback to move multiple items to folder (bulk move)
   onOpenFolder?: (folderId: string) => void; // Callback when folder is clicked
+  onDeleteFolderWithContents?: (folderId: string) => void; // Callback to delete folder and all items inside
   addItem?: (type: CardType, name?: string, initialData?: Partial<Item['data']>) => string | void; // Function to add new items
   onPDFUpload?: (files: File[]) => Promise<void>; // Function to handle PDF upload
   setOpenModalItemId?: (id: string | null) => void; // Function to open modal for newly created items
@@ -59,6 +60,7 @@ export function WorkspaceGrid({
   onMoveItem,
   onMoveItems,
   onOpenFolder,
+  onDeleteFolderWithContents,
   addItem,
   onPDFUpload,
   setOpenModalItemId,
@@ -531,6 +533,7 @@ export function WorkspaceGrid({
             onOpenFolder={handleOpenFolder}
             onUpdateItem={handleUpdateItem}
             onDeleteItem={handleDeleteItem}
+            onDeleteFolderWithContents={onDeleteFolderWithContents}
             onMoveItem={onMoveItem}
           />
         ) : item.type === 'flashcard' ? (
@@ -570,6 +573,7 @@ export function WorkspaceGrid({
     handleOpenModal,
     existingColors,
     onMoveItem,
+    onDeleteFolderWithContents,
     handleOpenFolder,
     folderItemCounts,
     workspaceName,

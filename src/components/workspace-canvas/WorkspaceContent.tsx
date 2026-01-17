@@ -32,6 +32,7 @@ interface WorkspaceContentProps {
   onMoveItem?: (itemId: string, folderId: string | null) => void; // Callback to move item to folder
   onMoveItems?: (itemIds: string[], folderId: string | null) => void; // Callback to move multiple items to folder (bulk move)
   onOpenFolder?: (folderId: string) => void; // Callback when folder is clicked
+  onDeleteFolderWithContents?: (folderId: string) => void; // Callback to delete folder and all items inside
   onPDFUpload?: (files: File[]) => Promise<void>; // Function to handle PDF upload
 }
 
@@ -55,6 +56,7 @@ export default function WorkspaceContent({
   onMoveItem,
   onMoveItems,
   onOpenFolder,
+  onDeleteFolderWithContents,
   onPDFUpload,
 }: WorkspaceContentProps) {
   // Use external ref if provided (from dashboard page), otherwise create local one
@@ -406,6 +408,7 @@ export default function WorkspaceContent({
           onMoveItem={onMoveItem}
           onMoveItems={onMoveItems}
           onOpenFolder={handleOpenFolder}
+          onDeleteFolderWithContents={onDeleteFolderWithContents}
           addItem={addItem}
           onPDFUpload={onPDFUpload}
           setOpenModalItemId={setOpenModalItemId}

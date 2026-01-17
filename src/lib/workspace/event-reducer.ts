@@ -74,14 +74,34 @@ export function eventReducer(state: AgentState, event: WorkspaceEvent): AgentSta
         workspaceId: state.workspaceId, // Preserve workspace ID
       };
 
-    case 'BULK_ITEMS_UPDATED':
-      // Used for layout changes (drag/resize) and reordering
+    case 'BULK_ITEMS_UPDATED': {
+      // Used for layout changes (drag/resize), reordering, and bulk delete
       // Support both new format (layoutUpdates only) and legacy format (full items array)
       if (event.payload.items) {
-        // Legacy format: full items array (for backwards compatibility)
+        // Full items array format (used for bulk delete and item add/remove operations)
+        const newItems = event.payload.items;
+        
+        // Find folders that were deleted (existed in old state but not in new state)
+        const newItemIds = new Set(newItems.map(item => item.id));
+        const deletedFolderIds = new Set(
+          state.items
+            .filter(item => item.type === 'folder' && !newItemIds.has(item.id))
+            .map(item => item.id)
+        );
+        
+        // If any folders were deleted, clear folderId on orphaned items
+        // This prevents items from pointing to non-existent folders
+        const cleanedItems = deletedFolderIds.size > 0
+          ? newItems.map(item => 
+              item.folderId && deletedFolderIds.has(item.folderId)
+                ? { ...item, folderId: undefined }
+                : item
+            )
+          : newItems;
+        
         return {
           ...state,
-          items: event.payload.items,
+          items: cleanedItems,
         };
       } else {
         // New format: only layout changes - apply to existing items
@@ -107,6 +127,7 @@ export function eventReducer(state: AgentState, event: WorkspaceEvent): AgentSta
           }),
         };
       }
+    }
 
     case 'BULK_ITEMS_CREATED':
       // Create multiple items atomically in a single event

@@ -33,6 +33,7 @@ export interface WorkspaceOperations {
   createFolderWithItems: (name: string, itemIds: string[], color?: CardColor) => string;
   updateFolder: (folderId: string, changes: Partial<Item>) => void;
   deleteFolder: (folderId: string) => void;
+  deleteFolderWithContents: (folderId: string) => void;
   moveItemToFolder: (itemId: string, folderId: string | null) => void;
   moveItemsToFolder: (itemIds: string[], folderId: string | null) => void;
   isPending: boolean;
@@ -484,6 +485,87 @@ export function useWorkspaceOperations(
     [deleteItem, currentState.items]
   );
 
+  // Helper to recursively find all descendant IDs (items in folder and nested subfolders)
+  const getAllDescendantIds = useCallback(
+    (folderId: string, items: Item[]): string[] => {
+      const directChildren = items.filter(item => item.folderId === folderId);
+      const descendantIds: string[] = [];
+      
+      for (const child of directChildren) {
+        descendantIds.push(child.id);
+        // Recursively get descendants of nested folders
+        if (child.type === 'folder') {
+          descendantIds.push(...getAllDescendantIds(child.id, items));
+        }
+      }
+      
+      return descendantIds;
+    },
+    []
+  );
+
+  // deleteFolderWithContents deletes the folder and all items inside it (including nested)
+  // Uses atomic bulk update pattern (same as handleBulkDelete in WorkspaceSection)
+  const deleteFolderWithContents = useCallback(
+    (folderId: string) => {
+      // CRITICAL: Read latest state from cache to avoid stale data issues
+      // (same pattern as updateAllItems - currentState prop can be stale)
+      let latestItems: Item[];
+      if (workspaceId) {
+        const cacheData = queryClient.getQueryData<EventResponse>([
+          "workspace",
+          workspaceId,
+          "events",
+        ]);
+        if (cacheData?.events) {
+          const latestState = replayEvents(cacheData.events, workspaceId, cacheData.snapshot?.state);
+          latestItems = latestState.items;
+        } else {
+          latestItems = currentState.items;
+        }
+      } else {
+        latestItems = currentState.items;
+      }
+      
+      const folder = latestItems.find(i => i.id === folderId && i.type === 'folder');
+      logger.debug("📁 [FOLDER-DELETE-WITH-CONTENTS] Deleting folder and contents:", { folderId, folderName: folder?.name });
+      
+      // Find all descendant items recursively (handles nested folders)
+      const allDescendantIds = getAllDescendantIds(folderId, latestItems);
+      
+      // Create set of all IDs to delete (descendants + folder itself)
+      const idsToDelete = new Set([...allDescendantIds, folderId]);
+      const itemCount = allDescendantIds.length;
+      
+      logger.debug("📁 [FOLDER-DELETE-WITH-CONTENTS] Found items to delete:", { itemCount, itemIds: [...idsToDelete] });
+      
+      // Delete PDF files from storage (fire-and-forget, non-blocking)
+      // This is best-effort cleanup - files may become orphaned if this fails
+      const itemsToDelete = latestItems.filter(item => idsToDelete.has(item.id));
+      for (const item of itemsToDelete) {
+        if (item.type === 'pdf') {
+          const pdfData = item.data as { fileUrl?: string };
+          if (pdfData?.fileUrl) {
+            fetch(`/api/delete-file?url=${encodeURIComponent(pdfData.fileUrl)}`, {
+              method: 'DELETE',
+            }).catch(err => logger.warn("📁 [FOLDER-DELETE-WITH-CONTENTS] Failed to delete PDF file:", err));
+          }
+        }
+      }
+      
+      // Atomic bulk delete using updateAllItems pattern (single BULK_ITEMS_UPDATED event)
+      const remainingItems = latestItems.filter(item => !idsToDelete.has(item.id));
+      updateAllItems(remainingItems);
+      
+      toast.success(
+        folder 
+          ? `Folder "${folder.name}" and ${itemCount} ${itemCount === 1 ? 'item' : 'items'} deleted`
+          : `Folder and ${itemCount} ${itemCount === 1 ? 'item' : 'items'} deleted`
+      );
+    },
+    [workspaceId, queryClient, currentState.items, getAllDescendantIds, updateAllItems]
+  );
+
   const moveItemToFolder = useCallback(
     (itemId: string, folderId: string | null) => {
       logger.debug("📁 [ITEM-MOVE] Moving item to folder:", { itemId, folderId });
@@ -566,6 +648,7 @@ export function useWorkspaceOperations(
     createFolderWithItems,
     updateFolder,
     deleteFolder,
+    deleteFolderWithContents,
     moveItemToFolder,
     moveItemsToFolder,
     isPending: mutation.isPending,
