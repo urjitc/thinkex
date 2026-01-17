@@ -501,6 +501,7 @@ export function WorkspaceSection({
                   workspaceColor={workspaceColor}
                   onMoveItem={operations?.moveItemToFolder}
                   onMoveItems={operations?.moveItemsToFolder}
+                  onDeleteFolderWithContents={operations?.deleteFolderWithContents}
                   onPDFUpload={handlePDFUpload}
                 />
               )}
