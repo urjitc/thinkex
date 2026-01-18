@@ -36,6 +36,7 @@ const typewriterStrings = PLACEHOLDER_OPTIONS.map(option => baseText + option);
 
 export function HomePromptInput() {
   const [value, setValue] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typewriterRef = useRef<any>(null);
 
@@ -43,13 +44,19 @@ export function HomePromptInput() {
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     setValue(newValue);
-    
-    if (newValue.length > 0 && typewriterRef.current) {
-      // Stop and clear typewriter when user types
+  };
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    if (typewriterRef.current) {
       typewriterRef.current.stop();
       typewriterRef.current.deleteAll(1);
-    } else if (newValue.length === 0 && typewriterRef.current) {
-      // Restart typewriter when input is cleared
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    if (value.length === 0 && typewriterRef.current) {
       typewriterRef.current.start();
     }
   };
@@ -118,6 +125,8 @@ export function HomePromptInput() {
           <Textarea
             value={value}
             onChange={handleInput}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             placeholder=""
             style={{ fontSize: '1.125rem', lineHeight: '1.75rem', paddingTop: '1rem', paddingBottom: '1rem' }}
             className={cn(
@@ -127,8 +136,7 @@ export function HomePromptInput() {
               "border-2 border-sidebar-border/50",
               "focus:border-primary/50 focus:bg-background/80",
               "transition-all duration-200",
-              "pl-12 pr-14",
-              !value && "text-transparent caret-transparent" // Make text and caret transparent when showing placeholder
+              "pl-12 pr-14"
             )}
             rows={1}
             onKeyDown={(e) => {
@@ -139,8 +147,8 @@ export function HomePromptInput() {
             }}
           />
 
-          {/* Typewriter placeholder - positioned over textarea */}
-          {!value && (
+          {/* Typewriter placeholder - positioned over textarea, hidden on focus */}
+          {!value && !isFocused && (
             <div
               className={cn(
                 "absolute inset-0 flex items-center pointer-events-none z-[5]",
