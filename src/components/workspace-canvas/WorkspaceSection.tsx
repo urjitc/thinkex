@@ -6,7 +6,6 @@ import type { WorkspaceOperations } from "@/hooks/workspace/use-workspace-operat
 import WorkspaceHeader from "./WorkspaceHeader";
 import WorkspaceContent from "./WorkspaceContent";
 import SelectionActionBar from "./SelectionActionBar";
-import NoWorkspaceSelected from "@/components/workspace/NoWorkspaceSelected";
 import { WorkspaceSkeleton } from "@/components/workspace/WorkspaceSkeleton";
 import { MarqueeSelector } from "./MarqueeSelector";
 import { useUIStore, selectSelectedCardIdsArray } from "@/lib/stores/ui-store";
@@ -476,11 +475,8 @@ export function WorkspaceSection({
               {/* Show skeleton when loading workspaces, resolving workspace ID, or loading workspace events */}
               {loadingWorkspaces || (!currentWorkspaceId && currentSlug) || isLoadingWorkspace ? (
                 <WorkspaceSkeleton />
-              ) : !currentWorkspaceId && !currentSlug ? (
-                /* Show empty state only when truly no workspace (no slug in URL and not loading) */
-                <NoWorkspaceSelected />
               ) : (
-                /* Key forces remount when workspace changes */
+                /* Workspace content - assumes workspace exists (home route handles no-workspace state) */
                 <WorkspaceContent
                   key={`workspace-content-${state.workspaceId || 'none'}`}
                   viewState={state}
