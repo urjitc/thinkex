@@ -9,6 +9,7 @@ import {
   codeExecutionWorker,
   workspaceWorker,
   textSelectionWorker,
+  quizWorker,
 } from "@/lib/ai/workers";
 import { loadWorkspaceState } from "@/lib/workspace/state-loader";
 import { auth } from "@/lib/auth";
@@ -1066,6 +1067,279 @@ Math is supported: use $$...$$ for inline and $$...$$ for display math within th
             logger.error("❌ [DEEP-RESEARCH] Error:", error);
             return {
               error: error?.message || "Failed to start deep research"
+            };
+          }
+        },
+      },
+
+      // TOOL 10: Create Quiz
+      createQuiz: {
+        description: "Create an interactive quiz in the workspace. Generates multiple-choice and true/false questions. If cards are selected in the context drawer, questions are generated EXCLUSIVELY from that content. If no context is selected, generates questions from general knowledge about the provided topic. Creates a quiz card with 10 questions that the user can take interactively.",
+        inputSchema: z.object({
+          topic: z.string().optional().describe("Topic for quiz (only used if no context is selected)"),
+          difficulty: z.enum(["easy", "medium", "hard"]).default("medium").describe("Difficulty level affecting question complexity"),
+        }),
+        execute: async ({ topic, difficulty }: { topic?: string; difficulty: "easy" | "medium" | "hard" }) => {
+          logger.debug("🎯 [CREATE-QUIZ] Tool execution started:", { topic, difficulty });
+
+          if (!workspaceId) {
+            return {
+              success: false,
+              message: "No workspace context available",
+            };
+          }
+
+          try {
+            // Import quizWorker dynamically to avoid circular deps at top level
+            // const { quizWorker } = await import("@/lib/ai/workers");
+
+            // Check if we have context from selected cards
+            let contextContent: string | undefined;
+            let sourceCardIds: string[] | undefined;
+            let sourceCardNames: string[] | undefined;
+
+            const extractSelectedCardsContext = (text: string) => {
+              const marker = "[[SELECTED_CARDS_MARKER]]";
+              const match = text.match(new RegExp(`${marker}([\\s\\S]*?)${marker}`));
+              if (!match) return null;
+
+              const context = match[1];
+              const nameMatches = context.matchAll(/CARD\s+\d+:\s+.*"([^"]+)"/g);
+              const idMatches = context.matchAll(/Card ID:\s*([a-zA-Z0-9_-]+)/g);
+              const names = Array.from(nameMatches).map(m => m[1]);
+              const ids = Array.from(idMatches).map(m => m[1]);
+
+              return { context, names, ids };
+            };
+
+            for (const msg of convertedMessages) {
+              if (typeof msg.content === "string") {
+                const extracted = extractSelectedCardsContext(msg.content);
+                if (extracted) {
+                  contextContent = extracted.context;
+                  sourceCardNames = extracted.names;
+                  sourceCardIds = extracted.ids;
+                  break;
+                }
+              }
+
+              if (Array.isArray(msg.content)) {
+                for (const part of msg.content) {
+                  if (part.type === "text" && typeof part.text === "string") {
+                    const extracted = extractSelectedCardsContext(part.text);
+                    if (extracted) {
+                      contextContent = extracted.context;
+                      sourceCardNames = extracted.names;
+                      sourceCardIds = extracted.ids;
+                      break;
+                    }
+                  }
+                }
+                if (contextContent) break;
+              }
+            }
+
+            // If no context and no topic, return error
+            if (!contextContent && !topic) {
+              return {
+                success: false,
+                message: "Please provide a topic or select cards to generate a quiz from.",
+              };
+            }
+
+            // Generate quiz questions
+            const quizResult = await quizWorker({
+              topic: contextContent ? undefined : topic,
+              contextContent,
+              sourceCardIds,
+              sourceCardNames,
+              difficulty,
+              questionCount: 10,
+            });
+
+            // Create the quiz card
+            const result = await workspaceWorker("create", {
+              workspaceId,
+              title: quizResult.title,
+              itemType: "quiz",
+              quizData: {
+                title: quizResult.title,
+                difficulty,
+                sourceCardIds,
+                sourceCardNames,
+                questions: quizResult.questions,
+              },
+              folderId: activeFolderId,
+            });
+
+            logger.debug("✅ [CREATE-QUIZ] Quiz created:", {
+              itemId: result.itemId,
+              title: quizResult.title,
+            });
+
+            return {
+              ...result,
+              title: quizResult.title,
+              questionCount: quizResult.questions.length,
+            };
+          } catch (error) {
+            logger.error("❌ [CREATE-QUIZ] Error:", error);
+            return {
+              success: false,
+              message: `Error creating quiz: ${error instanceof Error ? error.message : String(error)}`,
+            };
+          }
+        },
+      },
+
+      // TOOL 11: Update Quiz
+      updateQuiz: {
+        description: "Add more questions to an existing quiz. This tool analyzes the user's performance history (weak areas) to generate targeted follow-up questions. It should be called when the user asks to 'continue the quiz', 'add more questions', or 'practice my weak areas'.",
+        inputSchema: z.object({
+          quizId: z.string().describe("ID of the quiz to update"),
+        }),
+        execute: async ({ quizId }: { quizId: string }) => {
+          logger.debug("🎯 [UPDATE-QUIZ] Tool execution started:", { quizId });
+
+          if (!workspaceId) {
+            return {
+              success: false,
+              message: "No workspace context available",
+            };
+          }
+
+          try {
+            // Import workers dynamically
+            // const { quizWorker } = await import("@/lib/ai/workers");
+
+            // Load current workspace state to find the quiz
+            const state = await loadWorkspaceState(workspaceId);
+            const quizItem = state.items.find(item => item.id === quizId);
+
+            if (!quizItem || quizItem.type !== 'quiz') {
+              logger.warn("❌ [UPDATE-QUIZ] Quiz not found:", {
+                searchedId: quizId,
+                availableIds: state.items.filter(i => i.type === 'quiz').map(i => i.id)
+              });
+              return {
+                success: false,
+                message: "Quiz not found. Please select a quiz card in the context drawer.",
+              };
+            }
+
+            logger.debug("✅ [UPDATE-QUIZ] Found quiz:", {
+              id: quizItem.id,
+              name: quizItem.name
+            });
+
+            const quizData = quizItem.data as any;
+            const existingQuestions = quizData.questions || [];
+            logger.debug("📋 [UPDATE-QUIZ] Existing questions:", { count: existingQuestions.length });
+
+            const session = quizData.session;
+            let performanceTelemetry: {
+              totalAnswered: number;
+              correctCount: number;
+              incorrectCount: number;
+              weakAreas?: Array<{
+                questionText: string;
+                userSelectedOption: string;
+                correctOption: string;
+              }>;
+            } | undefined;
+
+            if (session && Array.isArray(session.answeredQuestions) && session.answeredQuestions.length > 0) {
+              const answered = session.answeredQuestions;
+              const correctCount = answered.filter((a: any) => a.isCorrect).length;
+              const weakAreas = answered
+                .filter((a: any) => !a.isCorrect)
+                .map((a: any) => {
+                  const question = existingQuestions.find((q: any) => q.id === a.questionId);
+                  if (!question) return null;
+                  return {
+                    questionText: question.questionText || "",
+                    userSelectedOption: question.options?.[a.userAnswer] || "Unknown",
+                    correctOption: question.options?.[question.correctIndex] || "Unknown",
+                  };
+                })
+                .filter((w: any) => Boolean(w));
+
+              performanceTelemetry = {
+                totalAnswered: answered.length,
+                correctCount,
+                incorrectCount: answered.length - correctCount,
+                weakAreas: weakAreas.length > 0 ? weakAreas : undefined,
+              };
+            }
+
+            // Generate 10 more questions using the same context/topic
+            let contextContent: string | undefined;
+
+            // If original quiz was context-based, try to get that context again
+            if (quizData.sourceCardIds && quizData.sourceCardIds.length > 0) {
+              const sourceCards = state.items.filter(item =>
+                quizData.sourceCardIds.includes(item.id)
+              );
+              // Rebuild context from source cards
+              contextContent = sourceCards.map(card => {
+                if (card.type === 'note') {
+                  const noteData = card.data as any;
+                  return `## ${card.name}\n${noteData.field1 || ''}`;
+                }
+                return `## ${card.name}`;
+              }).join('\n\n');
+            }
+
+            const quizResult = await quizWorker({
+              topic: contextContent ? undefined : quizData.title, // Fallback to title as topic
+              contextContent,
+              sourceCardIds: quizData.sourceCardIds,
+              sourceCardNames: quizData.sourceCardNames,
+              difficulty: quizData.difficulty || "medium",
+              questionCount: 10,
+              existingQuestions: existingQuestions.map((q: any) => ({
+                id: q.id,
+                questionText: q.questionText,
+                correctIndex: q.correctIndex
+              })),
+              performanceTelemetry
+            });
+
+            // Update the quiz card
+            const result = await workspaceWorker("updateQuiz", {
+              workspaceId,
+              itemId: quizId,
+              questionsToAdd: quizResult.questions,
+            });
+
+            logger.info("📝 [UPDATE-QUIZ] workspaceWorker result:", {
+              success: result.success,
+              itemId: result.itemId,
+              totalQuestions: (result as any).totalQuestions,
+            });
+
+            if (!result.success) {
+              logger.error("❌ [UPDATE-QUIZ] workspaceWorker failed:", result.message);
+              return result;
+            }
+
+            logger.info("✅ [UPDATE-QUIZ] Quiz successfully updated:", {
+              quizId,
+              previousCount: existingQuestions.length,
+              newCount: quizResult.questions.length,
+              totalQuestions: (result as any).totalQuestions || (existingQuestions.length + quizResult.questions.length),
+            });
+
+            return {
+              ...result,
+              questionsAdded: quizResult.questions.length,
+              totalQuestions: (result as any).totalQuestions || (existingQuestions.length + quizResult.questions.length),
+            };
+          } catch (error) {
+            logger.error("❌ [UPDATE-QUIZ] Error:", error);
+            return {
+              success: false,
+              message: `Error updating quiz: ${error instanceof Error ? error.message : String(error)}`,
             };
           }
         },

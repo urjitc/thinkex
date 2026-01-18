@@ -1,6 +1,6 @@
 import type { CardColor } from './colors';
 
-export type CardType = "note" | "pdf" | "flashcard" | "folder" | "youtube";
+export type CardType = "note" | "pdf" | "flashcard" | "folder" | "youtube" | "quiz";
 
 export interface NoteData {
   field1?: string; // textarea - legacy plain text format
@@ -47,7 +47,41 @@ export interface YouTubeData {
   url: string; // YouTube video URL
 }
 
-export type ItemData = NoteData | PdfData | FlashcardData | FolderData | YouTubeData;
+// Quiz Types
+export type QuestionType = "multiple_choice" | "true_false";
+
+export interface QuizQuestion {
+  id: string;
+  type: QuestionType;
+  questionText: string;
+  options: string[];      // Answer options (4 for MC, 2 for T/F)
+  correctIndex: number;   // Index of correct answer in options array
+  hint?: string;          // Optional hint text
+  explanation: string;    // Explanation shown after answering
+  sourceContext?: string; // Optional: excerpt from source material
+}
+
+export interface QuizSessionData {
+  currentIndex: number;
+  answeredQuestions: {
+    questionId: string;
+    userAnswer: number;   // Index selected by user
+    isCorrect: boolean;
+  }[];
+  startedAt?: number;     // Timestamp when quiz was started
+  completedAt?: number;   // Timestamp when quiz was completed
+}
+
+export interface QuizData {
+  title?: string;
+  difficulty: "easy" | "medium" | "hard";
+  sourceCardIds?: string[];     // IDs of cards used to generate (if context-based)
+  sourceCardNames?: string[];   // Names for display
+  questions: QuizQuestion[];
+  session?: QuizSessionData;    // Session state for resuming
+}
+
+export type ItemData = NoteData | PdfData | FlashcardData | FolderData | YouTubeData | QuizData;
 
 // =====================================================
 // FOLDER TYPES (DEPRECATED)

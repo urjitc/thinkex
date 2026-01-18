@@ -8,6 +8,8 @@ import { plainTextToBlocks, type Block } from "@/components/editor/BlockNoteEdit
 import FlashcardContent from "./FlashcardContent";
 import YouTubeCardContent from "./YouTubeCardContent";
 
+import { QuizContent } from "./QuizContent";
+
 export function CardRenderer(props: {
   item: Item;
   onUpdateData: (updater: (prev: ItemData) => ItemData) => void;
@@ -82,6 +84,10 @@ export function CardRenderer(props: {
 
   if (item.type === "flashcard") {
     return <FlashcardContent item={item} onUpdateData={onUpdateData} />;
+  }
+
+  if (item.type === "quiz") {
+    return <QuizContent item={item} onUpdateData={onUpdateData} />;
   }
 
   if (item.type === "youtube") {

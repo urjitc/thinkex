@@ -56,6 +56,8 @@ import {
 import Link from "next/link";
 import { MarkdownText } from "@/components/assistant-ui/markdown-text";
 import { ToolFallback } from "@/components/assistant-ui/tool-fallback";
+import { CreateQuizToolUI } from "@/components/assistant-ui/CreateQuizToolUI";
+import { UpdateQuizToolUI } from "@/components/assistant-ui/UpdateQuizToolUI";
 import { CreateNoteToolUI } from "@/components/assistant-ui/CreateNoteToolUI";
 import { CreateFlashcardToolUI } from "@/components/assistant-ui/CreateFlashcardToolUI";
 import { UpdateFlashcardToolUI } from "@/components/assistant-ui/UpdateFlashcardToolUI";
@@ -124,6 +126,8 @@ export const Thread: FC<ThreadProps> = ({ items = [] }) => {
     <LazyMotion features={domAnimation}>
       <MotionConfig reducedMotion="user">
         {/* Register tool UI - this component mounts and registers the UI with the assistant runtime */}
+        <CreateQuizToolUI />
+        <UpdateQuizToolUI />
         <CreateNoteToolUI />
         <CreateFlashcardToolUI />
         <UpdateFlashcardToolUI />

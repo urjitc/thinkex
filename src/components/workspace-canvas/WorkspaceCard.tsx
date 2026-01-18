@@ -1,4 +1,6 @@
+import { QuizContent } from "./QuizContent";
 import { MoreVertical, Trash2, Palette, CheckCircle2, FolderInput, FileText, Copy, X } from "lucide-react";
+
 import { PiMouseScrollFill, PiMouseScrollBold } from "react-icons/pi";
 import { useCallback, useState, memo, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
@@ -512,6 +514,13 @@ function WorkspaceCard({
       }
     }
 
+    // Prevent opening modal for quiz cards as they are interactive
+    if (item.type === 'quiz') {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
     // For YouTube cards, handle click to play
     if (item.type === 'youtube') {
       // If we got here, it wasn't a drag (checked above)
@@ -794,6 +803,17 @@ function WorkspaceCard({
                 </div>
               );
             })()}
+
+            {/* Quiz Content - render interactive quiz */}
+            {item.type === 'quiz' && (
+              <div
+                className="flex-1 min-h-0 overflow-auto"
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <QuizContent item={item} onUpdateData={(updater) => onUpdateItem(item.id, { data: updater(item.data) as any })} />
+              </div>
+            )}
 
             {/* Flashcard Content - render interactive flashcard */}
             {item.type === 'flashcard' && (() => {
