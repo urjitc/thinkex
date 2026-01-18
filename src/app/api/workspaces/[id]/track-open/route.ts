@@ -29,6 +29,14 @@ async function handlePOST(
     .where(eq(workspaces.id, id))
     .returning();
 
+  // Guard against empty update result (workspace deleted between ownership check and update)
+  if (!updatedWorkspace) {
+    return NextResponse.json(
+      { error: "Workspace not found" },
+      { status: 404 }
+    );
+  }
+
   return NextResponse.json({ 
     success: true,
     lastOpenedAt: updatedWorkspace.lastOpenedAt 
