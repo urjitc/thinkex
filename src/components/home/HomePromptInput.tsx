@@ -163,7 +163,7 @@ export function HomePromptInput() {
                   
                   const buildSequence = () => {
                     // Paste base text instantly (no animation)
-                    typewriter.pasteString(baseText);
+                    typewriter.pasteString(baseText, null);
                     
                     // Cycle through options with animation
                     PLACEHOLDER_OPTIONS.forEach((option, index) => {
