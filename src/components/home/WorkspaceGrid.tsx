@@ -37,7 +37,7 @@ export function WorkspaceGrid() {
     <>
       <div className="w-full max-w-6xl">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-normal text-muted-foreground">Your workspaces</h2>
+          <h2 className="text-lg font-normal text-muted-foreground">Recent workspaces</h2>
           <button
             type="button"
             onClick={handleCreateNew}
