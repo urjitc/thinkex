@@ -198,8 +198,8 @@ export function HomePromptInput() {
                   typewriter.start();
                 }}
                 options={{
-                  delay: 50,
-                  deleteSpeed: 30,
+                  delay: 10,
+                  deleteSpeed: 3,
                   cursor: "",
                   loop: false,
                 }}
