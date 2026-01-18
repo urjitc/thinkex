@@ -125,10 +125,20 @@ export function FeaturedWorkspaces() {
         {FEATURED_WORKSPACES.map((workspace) => (
           <div
             key={workspace.id}
+            role="button"
+            tabIndex={0}
             onClick={() => {
               toast.info("Coming soon", {
                 description: `Template workspace "${workspace.name}" will be available soon!`,
               });
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                toast.info("Coming soon", {
+                  description: `Template workspace "${workspace.name}" will be available soon!`,
+                });
+              }
             }}
             className={cn(
               "flex-shrink-0 w-64 px-6 py-8 rounded-md border border-sidebar-border/50 backdrop-blur-sm",

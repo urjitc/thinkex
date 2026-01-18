@@ -6,7 +6,7 @@ import { ArrowUp, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import Typewriter from "typewriter-effect";
+import Typewriter, { TypewriterClass } from "typewriter-effect";
 
 const PLACEHOLDER_OPTIONS = [
   "climate change impacts",
@@ -37,7 +37,7 @@ export function HomePromptInput() {
   const [value, setValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const typewriterRef = useRef<ReturnType<typeof import("typewriter-effect").default> | null>(null);
+  const typewriterRef = useRef<TypewriterClass | null>(null);
 
   // Cleanup typewriter on unmount to prevent memory leaks
   useEffect(() => {
