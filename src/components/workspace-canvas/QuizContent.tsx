@@ -30,12 +30,12 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
     );
 
     // Initialize showResults based on whether quiz is completed
-    // Quiz is completed if: completedAt exists OR all questions are answered
+    // Quiz is completed ONLY if: completedAt exists AND all questions are answered
     const isInitiallyCompleted = !!(
-        quizData.session?.completedAt ||
-        (quizData.session?.answeredQuestions?.length &&
-            quizData.session.answeredQuestions.length >= questions.length &&
-            questions.length > 0)
+        quizData.session?.completedAt &&
+        quizData.session?.answeredQuestions?.length &&
+        questions.length > 0 &&
+        quizData.session.answeredQuestions.length >= questions.length
     );
     const [showResults, setShowResults] = useState(isInitiallyCompleted);
 
@@ -46,10 +46,8 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
     const currentQuestion = questions[currentIndex];
     const totalQuestions = questions.length;
 
-    // Detect when new questions are added and handle all cases:
-    // Case 1: Quiz on first question or restarted
-    // Case 2: Quiz in progress (some answered, some not)
-    // Case 3: Quiz finished (showing results)
+    // Sync effect: ensure showResults state matches reality of questions vs answered
+    // and handle new questions being added
     useEffect(() => {
         const prevCount = prevQuestionCountRef.current;
         const currentCount = questions.length;
@@ -59,13 +57,14 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
         const currentIds = new Set(questions.map(q => q.id));
         const questionsAdded = questions.filter(q => !prevIds.has(q.id)).length;
 
+        // Check if we have unanswered questions
+        const hasUnansweredQuestions = answeredQuestions.length < currentCount;
+
         if (questionsAdded > 0 && currentCount > prevCount) {
-            // New questions were added - determine which case we're in
-            const answeredCount = answeredQuestions.length;
+            // New questions were added
 
             if (showResults) {
-                // CASE 3: Quiz was finished, showing results
-                // Exit results and navigate to first new question
+                // If we were showing results, we need to hide them and let user answer new questions
                 toast.success(`${questionsAdded} new question${questionsAdded > 1 ? 's' : ''} added! Continue your quiz.`);
                 setShowResults(false);
                 setCurrentIndex(prevCount); // Go to first new question
@@ -73,7 +72,7 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
                 setIsSubmitted(false);
                 setShowHint(false);
 
-                // Persist the new currentIndex and clear completedAt so LLM context stays in sync
+                // Clear completedAt since we're no longer complete
                 onUpdateData((prev) => {
                     const current = prev as QuizData;
                     return {
@@ -81,25 +80,24 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
                         session: {
                             ...current.session,
                             currentIndex: prevCount,
-                            completedAt: undefined, // Clear since we're continuing
+                            completedAt: undefined,
                         } as QuizSessionData,
                     };
                 });
-            } else if (answeredCount === 0 && currentIndex === 0) {
-                // CASE 1: Quiz just started or was restarted (on first question, nothing answered)
-                // Just show a notification, stay where they are
-                toast.success(`${questionsAdded} new question${questionsAdded > 1 ? 's' : ''} added to this quiz!`);
             } else {
-                // CASE 2: Quiz in progress (some answered, some not)
-                // Show notification with info about new questions
-                toast.success(`${questionsAdded} new question${questionsAdded > 1 ? 's' : ''} added! You now have ${currentCount} total.`);
+                // Just notify user
+                toast.success(`${questionsAdded} new question${questionsAdded > 1 ? 's' : ''} added!`);
             }
+        } else if (showResults && hasUnansweredQuestions) {
+            // Sanity check: if showing results but we have unanswered questions (e.g. from sync mismatch),
+            // force exit results mode
+            setShowResults(false);
         }
 
         // Update refs for next comparison
         prevQuestionCountRef.current = currentCount;
         prevQuestionIdsRef.current = currentIds;
-    }, [questions, showResults, answeredQuestions.length, currentIndex]);
+    }, [questions, showResults, answeredQuestions.length, currentIndex, onUpdateData]);
 
     // Check if current question was already answered
     const previousAnswer = useMemo(() => {
@@ -228,7 +226,7 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
 
     // Results view
     if (showResults) {
-        const percentage = Math.round((score / totalQuestions) * 100);
+        const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
         return (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
                 <Trophy className={cn(
