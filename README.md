@@ -1,87 +1,62 @@
 <p align="center">
   <a href="https://thinkex.app">
-    <img alt="ThinkEx: Rethinking the User Interface of AI" src="public/newreadmeimage.svg" width="500" />
+    <img alt="ThinkEx" src="public/newreadmeimage.svg" width="500" />
   </a>
 </p>
 
 <p align="center">
-  <a href="https://thinkex.app">Try ThinkEx</a> · <a href="#what-is-thinkex">What is ThinkEx?</a> · <a href="#features">Features</a> · <a href="#self-hosting">Self-Host</a> · <a href="#contributing">Contribute</a>
+  <a href="https://thinkex.app">Try ThinkEx</a> · <a href="#features">Features</a> · <a href="#self-hosting">Self-Host</a> · <a href="#contributing">Contribute</a>
 </p>
-
-
 
 ## The Problem
 
-AI needs context to think well. <br>
-Humans need space to think well. <br>
-**Today, no single platform supports both.**
+AI needs context to think well, and humans need space to think well. Current tools split these functions: reasoning happens in chat logs, while information lives in scattered documents.
 
-Valuable reasoning disappears into chat logs. You explain the same context again and again. Insights that could have been breakthroughs last week are now buried in scroll history across conversations you’ll never revisit.
+As a result, valuable reasoning gets buried in chat history. You find yourself explaining the same context repeatedly, and insights disappear into logs you never revisit.
 
-The intelligence is there, but your **information collapses over time**.
-
-Current tools split what should be unified:
-- **Reasoning** happens in AI chats
-- **Information** lives in notes and documents
-- **Organization** is scattered across tabs and windows
-
-> **Context should be explicit, structured, persistent, and user-controlled**. Not hidden or trapped in vector space.
-
-ThinkEx was built around this insight.
+ThinkEx solves this by making context explicit, structured, and persistent.
 
 ## What is ThinkEx?
 
+Think of a large desk where you spread out textbooks, notes, and papers to study. You look back and forth, connecting dots and comparing sources.
 
+ThinkEx is that desk, serialized for the browser.
 
-Think of a large physical desk. When you're deeply studying or working on a project, you spread everything out: textbook on the left, notebook in the middle, research paper on the right. You look back and forth, comparing them, connecting dots in your head.
-
-**ThinkEx is that desk, digitalized.**
-
-1. **See Everything:** Bring your PDFs, videos, and notes onto a visual canvas. Organize them spatially so *you* can make sense of the mess.
-
-2. **Compare & Contrast:** Look across your sources. See how Source A contradicts Source B. Spot patterns that only emerge when everything is visible.
-
-3. **Targeted AI Support:** Select specific items on your desk and say, "Look at *this* note and *this* paragraph—help me understand the connection."
-
-4. **Capture & Persist:** Extract valuable insights into structured cards that become part of your permanent workspace, available for future reasoning.
-
-### Who It’s For
-
-- Students working across many sources  
-- Researchers comparing papers  
-- Writers and analysts building long-term understanding  
-- Anyone tired of re-explaining the same context to AI
+1.  **See Everything**: Bring PDFs, videos, and notes onto a visual canvas. Organize them spatially to make sense of the information.
+2.  **Compare Sources**: Look across your sources side-by-side. Spot patterns and contradictions that only emerge when everything is visible.
+3.  **Targeted Reasoning**: Select specific items on your desk for the AI to analyze. Point to a note and a paragraph and ask for the connection.
+4.  **Capture Insights**: Extract findings into structured cards that become part of your permanent workspace.
 
 ## Features
 
-- **Context you control**: Hand-pick the exact cards/notes/document sections the AI can use (no “guessy” retrieval).
-- **Spatial canvas**: Arrange notes, PDFs, videos, and chat side-by-side to spot connections and compare sources.
-- **First-class documents**: Native PDF viewing with highlights/annotations; add YouTube with transcript-backed context.
-- **Knowledge that persists**: Capture what you need and  turn into structured cards (notes, flashcards, references) that live on your workspace.
-- **Multi-model**: Switch models per task without locking your workspace to a single provider.
-- **Share & collaborate**: Share/export workspaces or specific items with context preserved.
-
+*   **User-Controlled Context**: Manually select exact cards, notes, or document sections for the AI. No opaque retrieval mechanisms.
+*   **Spatial Canvas**: Arrange notes, PDFs, videos, and chat side-by-side.
+*   **First-Class Media**: Native PDF viewing with highlights; YouTube videos with transcript-backed context.
+*   **Persistent Knowledge**: Saved cards (notes, flashcards, references) remain in your workspace.
+*   **Multi-Model**: Switch AI models per task without locking into a single provider.
+*   **Sharing**: Share or export workspaces with all context preserved.
 
 ## Why Existing Tools Fall Short
 
 | Approach | What It Does | What It Loses |
-|----------|--------------|---------------|
-| **Chat-first tools** (ChatGPT, Claude) | Powerful reasoning | Memory—everything vanishes into logs |
-| **Notes-first tools** (Notion, Obsidian) | Good organization | Reasoning—AI is bolted on, not integrated |
-| **RAG systems** | Automatic context retrieval | Control—you can't see or adjust what's selected |
-| **Long-context windows** | More tokens | Understanding—scaling context ≠ scaling coherence |
+| :--- | :--- | :--- |
+| **ThinkEx** | **Integrated Reasoning** | -- |
+| Chat-first tools | Powerful reasoning | Memory (context vanishes in logs) |
+| Notes-first tools | Organization | Reasoning (AI is not deeply integrated) |
+| RAG systems | Auto-retrieval | Control (you can't see/adjust selection) |
+| Long-context | More tokens | Understanding (coherence doesn't scale with size) |
 
 ## Tech Stack
 
-*   **Framework:** [Next.js](https://nextjs.org/)
-*   **Styling:** [Tailwind CSS](https://tailwindcss.com/), [Shadcn UI](https://ui.shadcn.com/)
-*   **Database:** [PostgreSQL](https://github.com/postgres/postgres) with [Drizzle ORM](https://orm.drizzle.team/)
-*   **State & Data:** [TanStack Query](https://tanstack.com/query/latest), [Zustand](https://github.com/pmndrs/zustand)
-
+*   **Framework**: [Next.js](https://nextjs.org/)
+*   **Styling**: [Tailwind CSS](https://tailwindcss.com/), [Shadcn UI](https://ui.shadcn.com/)
+*   **Database**: [PostgreSQL](https://github.com/postgres/postgres) with [Drizzle ORM](https://orm.drizzle.team/)
+*   **State**: [TanStack Query](https://tanstack.com/query/latest), [Zustand](https://github.com/pmndrs/zustand)
+*   **Auth**: [Better Auth](https://www.better-auth.com/)
 
 ## Self-Hosting
 
-Want to run ThinkEx on your own infrastructure?
+Follow these steps to run ThinkEx on your own infrastructure.
 
 ### Prerequisites
 
@@ -91,87 +66,68 @@ Want to run ThinkEx on your own infrastructure?
 
 ### Installation
 
-1.  **Clone the repository:**
+1.  **Clone the repository**
     ```bash
     git clone https://github.com/ThinkEx-OSS/thinkex.git
     cd thinkex
     ```
 
-2.  **Install dependencies:**
+2.  **Install dependencies**
     ```bash
     pnpm install
     ```
 
-3.  **Environment Setup:**
+3.  **Environment Setup**
+    Create the local environment file:
     ```bash
     cp .env.example .env.local
     ```
-    Configure the required environment variables in `.env.local`:
     
-    **Required:**
-    *   `DATABASE_URL` – PostgreSQL connection string (from Supabase)
-    *   `NEXT_PUBLIC_SUPABASE_URL` – Your Supabase project URL
-    *   `SUPABASE_SERVICE_ROLE_KEY` – For file uploads (from Supabase dashboard)
-    *   `BETTER_AUTH_SECRET` – Random secret for authentication (generate with `openssl rand -base64 32`)
-    *   `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` – For Google OAuth
-    *   `GOOGLE_GENERATIVE_AI_API_KEY` – For AI features
+    Open `.env.local` and configure the following:
     
-    **Optional:**
-    *   `ASSISTANT_API_KEY` – For Assistant UI cloud features
-    *   `NEXT_PUBLIC_POSTHOG_KEY` – For analytics
+    *   **Database**:
+        *   `DATABASE_URL`: PostgreSQL connection string.
+        *   `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL.
+        *   `SUPABASE_SERVICE_ROLE_KEY`: Service role key from Supabase dashboard.
+    *   **Auth**:
+        *   `BETTER_AUTH_SECRET`: Generate a random string (e.g., `openssl rand -base64 32`).
+    *   **AI**:
+        *   `GOOGLE_GENERATIVE_AI_API_KEY`: API key for Google Gemini.
+    *   **Google OAuth** (for login):
+        *   `GOOGLE_CLIENT_ID`
+        *   `GOOGLE_CLIENT_SECRET`
 
-4.  **Database Setup:**
-    
-    For a fresh database (recommended):
-    ```bash
-    pnpm db:setup
-    ```
-    
-    Or if you prefer to sync schema directly without migrations:
+4.  **Supabase Storage**
+    Create a storage bucket for file uploads:
+    1.  Go to Supabase Dashboard → Storage.
+    2.  Create a new bucket named `file-upload`.
+    3.  Set the bucket to **Public**.
+
+5.  **Database Setup**
+    Push the schema to your database:
     ```bash
     pnpm db:push
     ```
-    
-    > **Note:** `db:setup` runs migrations which include database functions required for workspace operations. Use `db:push` only if you plan to create the functions manually via your database's SQL editor.
+    *Note: Use `db:setup` if you want to run full migrations, but `db:push` is sufficient for syncing the schema.*
 
-5.  **Supabase Storage Setup:**
-    
-    Create a storage bucket for file uploads:
-    1. Go to your Supabase Dashboard → Storage
-    2. Create a new bucket named `file-upload`
-    3. Set the bucket to **Public** (required for file URLs to work)
-
-6.  **Run the development server:**
+6.  **Run Development Server**
     ```bash
     pnpm dev
     ```
-
-    Open [http://localhost:3000](http://localhost:3000) to see the app.
+    Access the app at [http://localhost:3000](http://localhost:3000).
 
 ## Contributing
 
-We welcome contributions! Whether it's bug fixes, new features, or documentation improvements.
+We welcome contributions.
 
-1.  Fork the repository
-2.  Create your feature branch: `git checkout -b feature/amazing-feature`
-3.  Commit your changes: `git commit -m 'Add some amazing feature'`
-4.  Push to the branch: `git push origin feature/amazing-feature`
-5.  Open a Pull Request
+1.  Fork the repository.
+2.  Create a feature branch: `git checkout -b feature/new-feature`
+3.  Commit changes: `git commit -m 'Add new feature'`
+4.  Push to branch: `git push origin feature/new-feature`
+5.  Open a Pull Request.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
-
-## Acknowledgments
-
-ThinkEx is built on incredible open-source projects:
-*   [Assistant UI](https://www.assistant-ui.com/) – AI chat components
-*   [EmbedPDF](https://embedpdf.com/) – PDF rendering
-*   [BlockNote](https://blocknotejs.org/) – Block-based editor
-*   [Better Auth](https://www.better-auth.com/) & [Better Auth UI](https://better-auth-ui.com/) – Authentication
-*   [React Grid Layout](https://github.com/react-grid-layout/react-grid-layout) – Canvas layout system
-
-
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## License
 
-This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0) - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the [AGPL-3.0 License](LICENSE).
