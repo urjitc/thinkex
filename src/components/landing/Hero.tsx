@@ -63,9 +63,8 @@ export function Hero() {
           {/* Header - Above Video */}
           <div className="space-y-6">
             <h1 className="mt-4 md:mt-12 text-3xl font-normal tracking-tight text-foreground sm:text-6xl md:text-7xl lg:text-7xl">
-              The Workspace That
-              <br />
-              <span className="relative inline-block">
+              The Workspace That <br className="hidden md:block" />
+              <span className="relative inline-block md:mt-2">
                 <span className="relative px-3 py-0.5 rounded-sm inline-block">
                   <span
                     className="absolute inset-0 rounded-sm"
