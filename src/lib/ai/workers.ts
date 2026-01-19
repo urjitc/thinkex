@@ -1,9 +1,8 @@
 /**
  * Specialized AI Workers
- * Each worker uses only ONE type of tool to comply with Google Vertex constraints
+ * Each worker uses only ONE type of tool
  */
 
-import { vertex } from "@ai-sdk/google-vertex/edge";
 import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
 import type { GoogleGenerativeAIProviderMetadata } from "@ai-sdk/google";
@@ -44,7 +43,7 @@ Provide a comprehensive answer based on the search results. Include relevant det
     });
 
     // Access grounding metadata for additional context
-    const metadata = providerMetadata?.vertex as GoogleGenerativeAIProviderMetadata | undefined;
+    const metadata = providerMetadata?.google as GoogleGenerativeAIProviderMetadata | undefined;
     const groundingMetadata = metadata?.groundingMetadata;
 
     logger.debug("🔍 [SEARCH-WORKER] Search completed", {
@@ -91,9 +90,9 @@ export async function codeExecutionWorker(task: string): Promise<string> {
     logger.debug("⚙️ [CODE-WORKER] Starting code execution for:", task);
 
     const result = await generateText({
-      model: vertex("gemini-2.5-flash"),
+      model: google("gemini-2.5-flash"),
       tools: {
-        code_execution: vertex.tools.codeExecution({}),
+        code_execution: google.tools.codeExecution({}),
       },
       prompt: `${task}
 
@@ -739,7 +738,7 @@ export async function textSelectionWorker(
     };
 
     const result = await generateText({
-      model: vertex("gemini-2.5-flash"),
+      model: google("gemini-2.5-flash"),
       prompt: prompts[action] + (additionalContext ? `\n\nAdditional context: ${additionalContext}` : ""),
     });
 

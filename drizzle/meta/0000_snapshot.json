@@ -1,5 +1,5 @@
 {
-  "id": "969eb3f8-826a-472a-b6ca-96e2aff98c3d",
+  "id": "9c4d6810-bb7c-4f01-be08-61eb46e059ed",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -88,7 +88,24 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_account_user_id": {
+          "name": "idx_account_user_id",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "account_user_id_user_id_fk": {
           "name": "account_user_id_user_id_fk",
@@ -164,7 +181,40 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_session_user_id": {
+          "name": "idx_session_user_id",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_session_token": {
+          "name": "idx_session_token",
+          "columns": [
+            {
+              "expression": "token",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "session_user_id_user_id_fk": {
           "name": "session_user_id_user_id_fk",
@@ -208,7 +258,7 @@
           "name": "name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "email": {
           "name": "email",
@@ -229,6 +279,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "is_anonymous": {
+          "name": "is_anonymous",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -244,7 +301,24 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_user_email": {
+          "name": "idx_user_email",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
@@ -407,7 +481,24 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_verification_identifier": {
+          "name": "idx_verification_identifier",
+          "columns": [
+            {
+              "expression": "identifier",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -507,14 +598,14 @@
               "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "int8_ops"
+              "opclass": "uuid_ops"
             },
             {
               "expression": "timestamp",
               "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "uuid_ops"
+              "opclass": "int8_ops"
             }
           ],
           "isUnique": false,
@@ -553,7 +644,7 @@
               "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "uuid_ops"
+              "opclass": "int4_ops"
             }
           ],
           "isUnique": false,
@@ -595,7 +686,7 @@
           "to": [
             "public"
           ],
-          "withCheck": "((EXISTS ( SELECT 1\n   FROM workspaces\n  WHERE ((workspaces.id = workspace_events.workspace_id) AND (workspaces.user_id = (auth.jwt() ->> 'sub'::text))))) OR (EXISTS ( SELECT 1\n   FROM workspace_shares\n  WHERE ((workspace_shares.workspace_id = workspace_events.workspace_id) AND (workspace_shares.user_id = (auth.jwt() ->> 'sub'::text)) AND (workspace_shares.permission_level = ANY (ARRAY['editor'::text, 'admin'::text]))))))"
+          "withCheck": "(EXISTS ( SELECT 1\n   FROM workspaces\n  WHERE ((workspaces.id = workspace_events.workspace_id) AND (workspaces.user_id = (auth.jwt() ->> 'sub'::text)))))"
         },
         "Users can read workspace events they have access to": {
           "name": "Users can read workspace events they have access to",
@@ -607,146 +698,6 @@
         }
       },
       "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.workspace_shares": {
-      "name": "workspace_shares",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "permission_level": {
-          "name": "permission_level",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "idx_workspace_shares_user_id": {
-          "name": "idx_workspace_shares_user_id",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_workspace_shares_workspace_id": {
-          "name": "idx_workspace_shares_workspace_id",
-          "columns": [
-            {
-              "expression": "workspace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "uuid_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "workspace_shares_workspace_id_fkey": {
-          "name": "workspace_shares_workspace_id_fkey",
-          "tableFrom": "workspace_shares",
-          "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "workspace_shares_workspace_id_user_id_key": {
-          "name": "workspace_shares_workspace_id_user_id_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "workspace_id",
-            "user_id"
-          ]
-        }
-      },
-      "policies": {
-        "Users can create shares for their workspaces": {
-          "name": "Users can create shares for their workspaces",
-          "as": "PERMISSIVE",
-          "for": "INSERT",
-          "to": [
-            "authenticated"
-          ],
-          "withCheck": "(EXISTS ( SELECT 1\n   FROM workspaces\n  WHERE ((workspaces.id = workspace_shares.workspace_id) AND (workspaces.user_id = ( SELECT (auth.jwt() ->> 'sub'::text))))))"
-        },
-        "Users can delete shares for their workspaces": {
-          "name": "Users can delete shares for their workspaces",
-          "as": "PERMISSIVE",
-          "for": "DELETE",
-          "to": [
-            "authenticated"
-          ]
-        },
-        "Users can update shares for their workspaces": {
-          "name": "Users can update shares for their workspaces",
-          "as": "PERMISSIVE",
-          "for": "UPDATE",
-          "to": [
-            "authenticated"
-          ]
-        },
-        "Users can view shares for their workspaces": {
-          "name": "Users can view shares for their workspaces",
-          "as": "PERMISSIVE",
-          "for": "SELECT",
-          "to": [
-            "authenticated"
-          ]
-        }
-      },
-      "checkConstraints": {
-        "workspace_shares_permission_level_check": {
-          "name": "workspace_shares_permission_level_check",
-          "value": "permission_level = ANY (ARRAY['viewer'::text, 'editor'::text, 'admin'::text])"
-        }
-      },
       "isRLSEnabled": false
     },
     "public.workspace_snapshots": {
@@ -801,14 +752,14 @@
               "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "int4_ops"
+              "opclass": "uuid_ops"
             },
             {
               "expression": "snapshot_version",
               "isExpression": false,
               "asc": false,
               "nulls": "first",
-              "opclass": "uuid_ops"
+              "opclass": "int4_ops"
             }
           ],
           "isUnique": false,
@@ -962,6 +913,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "last_opened_at": {
+          "name": "last_opened_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -1044,7 +1001,7 @@
               "isExpression": false,
               "asc": true,
               "nulls": "last",
-              "opclass": "int4_ops"
+              "opclass": "text_ops"
             },
             {
               "expression": "sort_order",
@@ -1052,6 +1009,22 @@
               "asc": true,
               "nulls": "last",
               "opclass": "int4_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_workspaces_last_opened_at": {
+          "name": "idx_workspaces_last_opened_at",
+          "columns": [
+            {
+              "expression": "last_opened_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "first",
+              "opclass": "timestamptz_ops"
             }
           ],
           "isUnique": false,

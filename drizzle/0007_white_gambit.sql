@@ -1,2 +1,0 @@
-ALTER TABLE "workspaces" ADD COLUMN "last_opened_at" timestamp with time zone;--> statement-breakpoint
-CREATE INDEX "idx_workspaces_last_opened_at" ON "workspaces" USING btree ("last_opened_at" DESC NULLS FIRST);

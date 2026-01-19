@@ -1,1 +1,0 @@
-ALTER TABLE "workspaces" ADD COLUMN "allow_public_preview" boolean DEFAULT false;
