@@ -350,7 +350,7 @@ export async function workspaceWorker(
                 }
 
                 // Use helper to load current state (duplicated logic removed)
-                const currentState = await loadCurrentState(params.workspaceId);
+                const currentState = await loadWorkspaceState(params.workspaceId);
 
                 const existingItem = currentState.items.find((i: any) => i.id === params.itemId);
                 if (!existingItem) {
@@ -449,7 +449,7 @@ export async function workspaceWorker(
                 });
 
                 // Use helper to load current state (duplicated logic removed)
-                const currentState = await loadCurrentState(params.workspaceId);
+                const currentState = await loadWorkspaceState(params.workspaceId);
 
                 const existingItem = currentState.items.find((i: any) => i.id === params.itemId);
                 if (!existingItem) {
