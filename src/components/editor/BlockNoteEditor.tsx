@@ -10,6 +10,7 @@ import "@blocknote/shadcn/style.css";
 import { useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { schema } from "./schema";
+import { normalizeMathSyntax, convertMathInBlocks } from "@/lib/editor/math-helpers";
 import { uploadFile } from "@/lib/editor/upload-file";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { useUIStore } from "@/lib/stores/ui-store";
@@ -81,9 +82,55 @@ export default function BlockNoteEditor({ initialContent, onChange, readOnly, ca
 
     // Get clipboard text content
     const textContent = clipboardData.getData('text/plain');
+    const markdownContent = clipboardData.getData('text/markdown');
+
+    const looksLikeMarkdown = (text: string) => {
+      return (
+        /(^|\n)#{1,6}\s/.test(text) ||
+        /(^|\n)\|.+\|/.test(text) ||
+        /```/.test(text) ||
+        /\[[^\]]+\]\([^)]+\)/.test(text) ||
+        /(^|\n)(-|\*)\s/.test(text)
+      );
+    };
+
+    const markdownText = markdownContent || (textContent && looksLikeMarkdown(textContent) ? textContent : "");
+
+    if (markdownText) {
+      const parseMarkdown = editor?.tryParseMarkdownToBlocks;
+      if (typeof parseMarkdown === "function") {
+        event.preventDefault();
+        const currentBlock = editor.getTextCursorPosition().block;
+        void (async () => {
+          try {
+            const normalizedMarkdown = normalizeMathSyntax(markdownText);
+            const blocks = await editor.tryParseMarkdownToBlocks(normalizedMarkdown);
+            const processedBlocks = convertMathInBlocks(blocks);
+
+            if (processedBlocks.length === 1 && processedBlocks[0].type === "paragraph") {
+              // If it's a single paragraph, insert it inline at the cursor
+              editor.insertInlineContent(processedBlocks[0].content);
+            } else {
+              // For multiple blocks or non-paragraphs
+              // Check if current block is empty (and is a paragraph) to replace it
+              const isEmpty = currentBlock.type === "paragraph" && (!currentBlock.content || currentBlock.content.length === 0);
+
+              if (isEmpty) {
+                editor.replaceBlocks([currentBlock], processedBlocks);
+              } else {
+                editor.insertBlocks(processedBlocks, currentBlock, "after");
+              }
+            }
+          } catch (error) {
+            console.error("[BlockNoteEditor] Markdown paste failed:", error);
+            editor.insertInlineContent([{ type: "text", text: markdownText }]);
+          }
+        })();
+        return true;
+      }
+    }
 
     // Helper function to extract LaTeX from math delimiters
-    // Only matches if the entire content is just math (no surrounding text)
     const extractMathContent = (text: string): { type: 'block' | 'inline'; latex: string } | null => {
       const trimmed = text.trim();
 
@@ -94,7 +141,6 @@ export default function BlockNoteEditor({ initialContent, onChange, readOnly, ca
       }
 
       // Check for inline math: $...$ or \(...\)
-      // Only match if the entire content is just the math (no surrounding text)
       const inlineMathMatch = trimmed.match(/^\$([^$\n]+?)\$$/) || trimmed.match(/^\\\(([\s\S]*?)\\\)$/);
       if (inlineMathMatch) {
         return { type: 'inline', latex: inlineMathMatch[1].trim() };
@@ -104,7 +150,6 @@ export default function BlockNoteEditor({ initialContent, onChange, readOnly, ca
     };
 
     // Check if clipboard contains only math content (no surrounding text)
-    // This handles cases where math is selected and pasted directly
     if (textContent) {
       const mathContent = extractMathContent(textContent);
 
@@ -112,31 +157,26 @@ export default function BlockNoteEditor({ initialContent, onChange, readOnly, ca
         const currentBlock = editor.getTextCursorPosition().block;
 
         if (mathContent.type === 'block') {
-          // Insert block math after current block
-          editor.insertBlocks(
-            [
-              {
-                type: 'math',
-                props: {
-                  latex: mathContent.latex,
-                },
-              },
-            ],
-            currentBlock,
-            'after'
-          );
+          // Insert block math
+          event.preventDefault(); // Prevent default paste behavior
+
+          const isEmpty = currentBlock.type === "paragraph" && (!currentBlock.content || currentBlock.content.length === 0);
+          const mathBlock = {
+            type: 'math',
+            props: {
+              latex: mathContent.latex,
+            },
+          };
+
+          if (isEmpty) {
+            editor.replaceBlocks([currentBlock], [mathBlock]);
+          } else {
+            editor.insertBlocks([mathBlock], currentBlock, 'after');
+          }
           return true;
         } else if (mathContent.type === 'inline') {
-          // Insert inline math at cursor position
-          editor.insertInlineContent([
-            {
-              type: 'inlineMath',
-              props: {
-                latex: mathContent.latex,
-              },
-            },
-          ]);
-          return true;
+          // Let default handler handle inline text unless we want to force inline math insertion
+          // For now, let's just handle block math specifically
         }
       }
     }
@@ -159,20 +199,20 @@ export default function BlockNoteEditor({ initialContent, onChange, readOnly, ca
           .then((imageUrl) => {
             // Get the current block (where cursor is)
             const currentBlock = editor.getTextCursorPosition().block;
+            const isEmpty = currentBlock.type === "paragraph" && (!currentBlock.content || currentBlock.content.length === 0);
 
-            // Insert image block after current block
-            editor.insertBlocks(
-              [
-                {
-                  type: 'image',
-                  props: {
-                    url: imageUrl,
-                  },
-                },
-              ],
-              currentBlock,
-              'after'
-            );
+            const imageBlock = {
+              type: 'image',
+              props: {
+                url: imageUrl,
+              },
+            };
+
+            if (isEmpty) {
+              editor.replaceBlocks([currentBlock], [imageBlock]);
+            } else {
+              editor.insertBlocks([imageBlock], currentBlock, 'after');
+            }
 
             // Show success toast
             toast.success('Image uploaded successfully!', {
@@ -211,20 +251,20 @@ export default function BlockNoteEditor({ initialContent, onChange, readOnly, ca
         .then((imageUrl) => {
           // Get the current block (where cursor is)
           const currentBlock = editor.getTextCursorPosition().block;
+          const isEmpty = currentBlock.type === "paragraph" && (!currentBlock.content || currentBlock.content.length === 0);
 
-          // Insert image block after current block
-          editor.insertBlocks(
-            [
-              {
-                type: 'image',
-                props: {
-                  url: imageUrl,
-                },
-              },
-            ],
-            currentBlock,
-            'after'
-          );
+          const imageBlock = {
+            type: 'image',
+            props: {
+              url: imageUrl,
+            },
+          };
+
+          if (isEmpty) {
+            editor.replaceBlocks([currentBlock], [imageBlock]);
+          } else {
+            editor.insertBlocks([imageBlock], currentBlock, 'after');
+          }
 
           // Show success toast
           toast.success('Image uploaded successfully!', {
