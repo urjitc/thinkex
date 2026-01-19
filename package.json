@@ -15,6 +15,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
+    "db:setup": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:drop": "drizzle-kit drop",
     "db:reset": "pnpm db:drop && pnpm db:push",
@@ -28,7 +29,6 @@
   "packageManager": "pnpm@10.14.0",
   "dependencies": {
     "@ai-sdk/google": "^3.0.2",
-    "@ai-sdk/google-vertex": "^4.0.2",
     "@assistant-ui/react": "^0.11.53",
     "@assistant-ui/react-ai-sdk": "^1.1.20",
     "@assistant-ui/react-devtools": "^0.1.12",

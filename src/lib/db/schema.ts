@@ -98,7 +98,7 @@ export const workspaces = pgTable("workspaces", {
 	index("idx_workspaces_slug").using("btree", table.slug.asc().nullsLast().op("text_ops")),
 	index("idx_workspaces_user_id").using("btree", table.userId.asc().nullsLast().op("text_ops")),
 	uniqueIndex("idx_workspaces_user_slug").using("btree", table.userId.asc().nullsLast().op("text_ops"), table.slug.asc().nullsLast().op("text_ops")),
-	index("idx_workspaces_user_sort_order").using("btree", table.userId.asc().nullsLast().op("int4_ops"), table.sortOrder.asc().nullsLast().op("int4_ops")),
+	index("idx_workspaces_user_sort_order").using("btree", table.userId.asc().nullsLast().op("text_ops"), table.sortOrder.asc().nullsLast().op("int4_ops")),
 	index("idx_workspaces_last_opened_at").using("btree", table.lastOpenedAt.desc().nullsFirst().op("timestamptz_ops")),
 	pgPolicy("Users can delete their own workspaces", { as: "permissive", for: "delete", to: ["authenticated"], using: sql`(( SELECT (auth.jwt() ->> 'sub'::text)) = user_id)` }),
 	pgPolicy("Users can insert their own workspaces", { as: "permissive", for: "insert", to: ["authenticated"] }),
@@ -136,7 +136,7 @@ export const workspaceSnapshots = pgTable("workspace_snapshots", {
 	eventCount: integer("event_count").notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 }, (table) => [
-	index("idx_workspace_snapshots_version").using("btree", table.workspaceId.asc().nullsLast().op("int4_ops"), table.snapshotVersion.desc().nullsFirst().op("uuid_ops")),
+	index("idx_workspace_snapshots_version").using("btree", table.workspaceId.asc().nullsLast().op("uuid_ops"), table.snapshotVersion.desc().nullsFirst().op("int4_ops")),
 	index("idx_workspace_snapshots_workspace").using("btree", table.workspaceId.asc().nullsLast().op("uuid_ops")),
 	foreignKey({
 		columns: [table.workspaceId],
@@ -162,9 +162,9 @@ export const workspaceEvents = pgTable("workspace_events", {
 	userName: text("user_name"),
 }, (table) => [
 	index("idx_workspace_events_event_id").using("btree", table.eventId.asc().nullsLast().op("text_ops")),
-	index("idx_workspace_events_timestamp").using("btree", table.workspaceId.asc().nullsLast().op("int8_ops"), table.timestamp.asc().nullsLast().op("uuid_ops")),
+	index("idx_workspace_events_timestamp").using("btree", table.workspaceId.asc().nullsLast().op("uuid_ops"), table.timestamp.asc().nullsLast().op("int8_ops")),
 	index("idx_workspace_events_user_name").using("btree", table.userName.asc().nullsLast().op("text_ops")),
-	index("idx_workspace_events_workspace").using("btree", table.workspaceId.asc().nullsLast().op("uuid_ops"), table.version.asc().nullsLast().op("uuid_ops")),
+	index("idx_workspace_events_workspace").using("btree", table.workspaceId.asc().nullsLast().op("uuid_ops"), table.version.asc().nullsLast().op("int4_ops")),
 	foreignKey({
 		columns: [table.workspaceId],
 		foreignColumns: [workspaces.id],

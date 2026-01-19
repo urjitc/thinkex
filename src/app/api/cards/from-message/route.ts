@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { workspaceWorker } from "@/lib/ai/workers";
 import { logger } from "@/lib/utils/logger";
 import { processMessageContent } from "@/lib/ai/clean-message-content";
-import { vertex } from "@ai-sdk/google-vertex/edge";
+import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
 
 /**
@@ -77,7 +77,7 @@ INSTRUCTIONS:
 Return ONLY the reformatted note content in markdown format. Do not include any meta-commentary or explanations.`;
 
     const aiResult = await generateText({
-      model: vertex("gemini-2.5-flash"),
+      model: google("gemini-2.5-flash"),
       system: systemPrompt,
       prompt: `Create a cohesive, well-formatted note from the following content:\n\n${content}`,
     });
