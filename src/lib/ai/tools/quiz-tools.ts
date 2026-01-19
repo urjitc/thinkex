@@ -158,6 +158,7 @@ export function createQuizTool(ctx: WorkspaceToolContext, convertedMessages: any
                     title: quizResult.title,
                     questionCount: quizResult.questions.length,
                     difficulty,
+                    isContextBased: !!contextContent,
                     message: `Created quiz "${quizResult.title}" with ${quizResult.questions.length} questions.`,
                 };
             } catch (error) {

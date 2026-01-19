@@ -31,6 +31,7 @@ type CreateQuizResult = {
     difficulty?: "easy" | "medium" | "hard";
     isContextBased?: boolean;
     itemId?: string;
+    quizId?: string; // Add quizId to match tool output
 };
 
 interface CreateQuizReceiptProps {
@@ -69,9 +70,10 @@ const CreateQuizReceipt = ({
 
     // Get the current item from workspace state
     const currentItem = useMemo(() => {
-        if (!result.itemId || !workspaceState?.items) return undefined;
-        return workspaceState.items.find((item: any) => item.id === result.itemId);
-    }, [result.itemId, workspaceState?.items]);
+        const targetId = result.itemId || result.quizId;
+        if (!targetId || !workspaceState?.items) return undefined;
+        return workspaceState.items.find((item: any) => item.id === targetId);
+    }, [result.itemId, result.quizId, workspaceState?.items]);
 
     // Get folder name if item is in a folder
     const folderName = useMemo(() => {
@@ -81,13 +83,15 @@ const CreateQuizReceipt = ({
     }, [currentItem?.folderId, workspaceState?.items]);
 
     const handleViewCard = () => {
-        if (!result.itemId) return;
-        navigateToItem(result.itemId);
+        const targetId = result.itemId || result.quizId;
+        if (!targetId) return;
+        navigateToItem(targetId);
     };
 
     const handleMoveToFolder = (folderId: string | null) => {
-        if (moveItemToFolder && result.itemId) {
-            moveItemToFolder(result.itemId, folderId);
+        const targetId = result.itemId || result.quizId;
+        if (moveItemToFolder && targetId) {
+            moveItemToFolder(targetId, folderId);
         }
     };
 
@@ -124,7 +128,7 @@ const CreateQuizReceipt = ({
                             )}
                         </div>
                     </div>
-                    {status?.type === "complete" && result.itemId && (
+                    {status?.type === "complete" && (result.itemId || result.quizId) && (
                         <Button
                             variant="ghost"
                             size="sm"
@@ -261,8 +265,9 @@ export const CreateQuizToolUI = makeAssistantToolUI<CreateQuizArgs, CreateQuizRe
             );
         }
 
-        // Show error state
-        if (status.type === "incomplete" && status.reason === "error") {
+        // Show error state (handles "incomplete" error OR "complete" but failure)
+        if ((status.type === "incomplete" && status.reason === "error") ||
+            (status.type === "complete" && result && !result.success)) {
             return (
                 <div className="my-2 flex w-full flex-col overflow-hidden rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
                     <div className="flex items-center gap-2">
