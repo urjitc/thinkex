@@ -15,7 +15,7 @@ const useCases: UseCase[] = [
     {
         icon: BookOpen,
         title: "Studying",
-        description: "Stop switching between tabs. Keep your lecture slides, textbook PDF, and class notes open side-by-side while the AI quizzes you.",
+        description: "Stop switching between tabs. Keep your lecture slides, textbook PDF, and class notes open side-by-side while the AI guides you.",
         items: [
             { type: "pdf", label: "Lecture 1.pdf", color: "bg-red-500/10 text-red-500", size: "col-span-2" },
             { type: "ai", label: "Quiz", color: "bg-blue-500/10 text-blue-500", size: "col-span-1" },
