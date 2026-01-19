@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/utils/logger";
 // Initialize client
 const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 if (!apiKey) {
@@ -24,10 +25,10 @@ export async function GET(req: NextRequest) {
         // Get the interaction without streaming - this returns the current state
         const interaction = await client.interactions.get(interactionId);
         // DEBUG: Log the entire raw interaction object (optional, kept minimal)
-        console.log('[DEEP-RESEARCH-STATUS] ========== RAW INTERACTION PAYLOAD ==========');
-        console.log('[DEEP-RESEARCH-STATUS] Interaction ID:', interactionId);
-        console.log('[DEEP-RESEARCH-STATUS] State object:', (interaction as any).state);
-        console.log('[DEEP-RESEARCH-STATUS] Status field:', (interaction as any).status);
+        logger.debug('[DEEP-RESEARCH-STATUS] ========== RAW INTERACTION PAYLOAD ==========');
+        logger.debug('[DEEP-RESEARCH-STATUS] Interaction ID:', interactionId);
+        logger.debug('[DEEP-RESEARCH-STATUS] State object:', (interaction as any).state);
+        logger.debug('[DEEP-RESEARCH-STATUS] Status field:', (interaction as any).status);
         // Extract status from interaction - check multiple possible properties
         const rawStatus = (interaction as any).state?.status ||
             (interaction as any).status ||
