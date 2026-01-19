@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { makeAssistantToolUI } from "@assistant-ui/react";
@@ -15,6 +17,7 @@ type UpdateQuizResult = {
     success: boolean;
     message: string;
     itemId?: string;
+    quizId?: string; // Add quizId to match tool output
     questionsAdded?: number;
     totalQuestions?: number;
 };
@@ -78,7 +81,9 @@ export const UpdateQuizToolUI = makeAssistantToolUI<UpdateQuizArgs, UpdateQuizRe
         useEffect(() => {
             if (status?.type === "complete" && result && result.success && workspaceId) {
                 // Use itemId as unique identifier to prevent duplicate refetches
-                const refetchKey = `${result.itemId}-${result.totalQuestions}`;
+                // Fallback to args.quizId if result doesn't have ID (though it should)
+                const targetId = result.quizId || result.itemId || args.quizId;
+                const refetchKey = `${targetId}-${result.totalQuestions}`;
                 if (hasRefetchedRef.current === refetchKey) {
                     return; // Already refetched for this result
                 }
