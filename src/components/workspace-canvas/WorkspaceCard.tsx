@@ -807,10 +807,14 @@ function WorkspaceCard({
             {/* Quiz Content - render interactive quiz */}
             {item.type === 'quiz' && (
               <div
-                className={`flex-1 min-h-0 ${isScrollLocked ? "overflow-hidden" : "overflow-auto"}`}
+                className="flex-1 min-h-0"
                 onClick={(e) => e.stopPropagation()}
               >
-                <QuizContent item={item} onUpdateData={(updater) => onUpdateItem(item.id, { data: updater(item.data) as any })} />
+                <QuizContent
+                  item={item}
+                  onUpdateData={(updater) => onUpdateItem(item.id, { data: updater(item.data) as any })}
+                  isScrollLocked={isScrollLocked}
+                />
               </div>
             )}
 

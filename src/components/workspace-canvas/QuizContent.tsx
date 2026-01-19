@@ -13,9 +13,10 @@ import { toast } from "sonner";
 interface QuizContentProps {
     item: Item;
     onUpdateData: (updater: (prev: ItemData) => ItemData) => void;
+    isScrollLocked?: boolean;
 }
 
-export function QuizContent({ item, onUpdateData }: QuizContentProps) {
+export function QuizContent({ item, onUpdateData, isScrollLocked = false }: QuizContentProps) {
     const quizData = item.data as QuizData;
     const questions = quizData.questions || [];
 
@@ -283,7 +284,10 @@ export function QuizContent({ item, onUpdateData }: QuizContentProps) {
             </div>
 
             {/* Question */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className={cn(
+                "flex-1 p-4",
+                isScrollLocked ? "overflow-hidden" : "overflow-y-auto"
+            )}>
                 <div className="mb-6">
                     <span className="text-xs uppercase tracking-wider text-white/40 mb-2 block">
                         {currentQuestion.type === "true_false" ? "True or False" : "Multiple Choice"}
