@@ -442,7 +442,7 @@ const Composer: FC<ComposerProps> = ({ items }) => {
     if (files.length > 0) {
       e.preventDefault();
       // Add the first file (or prioritize images if multiple files) as an attachment
-      // It will be uploaded to Supermemory when the message is sent
+      // It will be uploaded when the message is sent
       const imageFile = files.find((file: File) => file.type.startsWith('image/'));
       const fileToUpload = imageFile || files[0];
 

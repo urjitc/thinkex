@@ -581,32 +581,14 @@ export default function AssistantTextSelectionManager({
     setShowNegativeFeedbackDialog(true);
   }, [currentSelection, setTooltipVisible, extractMessageContext, extractUserPrompt]);
 
-  // Handle submitting negative feedback
+  // Handle submitting negative feedback (stubbed - SuperMemory integration removed)
   const handleSubmitNegativeFeedback = useCallback(async () => {
     if (!negativeSelectionForDialog || !workspaceId) return;
 
     setIsSubmittingNegative(true);
     try {
-      const response = await fetch("/api/add-negative-feedback", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          selection: negativeSelectionForDialog,
-          messageContext: negativeMessageContextForDialog,
-          userPrompt: negativeUserPromptForDialog || undefined,
-          annotation: negativeFeedbackAnnotation.trim() || undefined,
-          workspaceId,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save negative feedback");
-      }
-
-      const result = await response.json();
-      toast.success(negativeFeedbackAnnotation.trim() ? "Feedback saved with notes!" : "Marked as not useful!");
+      // Note: SuperMemory integration removed - feedback is no longer stored externally
+      toast.success(negativeFeedbackAnnotation.trim() ? "Feedback noted!" : "Marked as not useful!");
 
       // Clear state
       setShowNegativeFeedbackDialog(false);
@@ -616,8 +598,6 @@ export default function AssistantTextSelectionManager({
       setNegativeUserPromptForDialog("");
       window.getSelection()?.removeAllRanges();
       setCurrentSelection(null);
-    } catch (error) {
-      toast.error("Failed to save feedback");
     } finally {
       setIsSubmittingNegative(false);
     }

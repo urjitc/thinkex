@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, useScroll, useTransform } from "motion/react";
+import { useRef, useState } from "react";
+import { motion, useInView } from "motion/react";
 import { FloatingCard, type FloatingCardData } from "./FloatingCard";
 import { type CardColor } from "@/lib/workspace-state/colors";
 import { cn } from "@/lib/utils";
@@ -36,22 +36,20 @@ const MOCK_CARDS: FloatingCardData[] = [
 
 interface FloatingWorkspaceCardsProps {
     bottomGradientHeight?: string;
-    enableParallax?: boolean;
     className?: string;
 }
 
-export function FloatingWorkspaceCards({ bottomGradientHeight = '60%', enableParallax = true, className }: FloatingWorkspaceCardsProps) {
+export function FloatingWorkspaceCards({ bottomGradientHeight = '60%', className }: FloatingWorkspaceCardsProps) {
     // We can randomize the order on mount if we want, or keep it static for consistency
     // Keeping specific shuffle for now to ensure good distribution if we want
     const [cards, setCards] = useState<FloatingCardData[]>(MOCK_CARDS);
 
-    // Parallax effect
-    const { scrollY } = useScroll();
-    const yParallax = useTransform(scrollY, [0, 1000], [0, 400]);
-    const y = enableParallax ? yParallax : 0;
+    // Ref for visibility detection
+    const containerRef = useRef<HTMLDivElement>(null);
+    const isInView = useInView(containerRef, { margin: "100px" });
 
     return (
-        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none select-none z-0">
+        <div ref={containerRef} className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none select-none z-0">
             {/* 
           Masonry Layout using CSS Columns 
           - 2 columns on mobile
@@ -59,7 +57,7 @@ export function FloatingWorkspaceCards({ bottomGradientHeight = '60%', enablePar
           - 4 columns on desktop
        */}
             <motion.div
-                style={{ y }}
+
                 className={cn(
                     "w-[120%] -ml-[10%] -mt-[5%] columns-2 md:columns-3 lg:columns-6 gap-4 md:gap-6 lg:gap-8 opacity-20 md:opacity-25",
                     className

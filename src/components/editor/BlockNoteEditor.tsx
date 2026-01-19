@@ -55,7 +55,7 @@ export default function BlockNoteEditor({ initialContent, onChange, readOnly, ca
   const posthog = usePostHog();
   const initStartTime = useRef<number | null>(null);
 
-  // Get current workspace ID for Supermemory uploads
+  // Get current workspace ID
   const currentWorkspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
 
   // Get UI store actions for BlockNote selection
@@ -301,7 +301,7 @@ export default function BlockNoteEditor({ initialContent, onChange, readOnly, ca
 
     try {
       // Upload the image (don't show toast in uploadFile since we're handling it here)
-      // Pass workspaceId for Supermemory background upload and cardName for attachment naming
+      // Pass workspaceId and cardName for attachment naming
       const url = await uploadFile(file, false, currentWorkspaceId, cardName);
 
       // Show success toast

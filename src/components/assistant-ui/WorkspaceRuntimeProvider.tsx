@@ -4,7 +4,6 @@ import { AssistantCloud } from "@assistant-ui/react";
 import { SafeAssistantRuntimeProvider } from "@/components/assistant-ui/SafeAssistantRuntimeProvider";
 import { useChatRuntime, AssistantChatTransport } from "@assistant-ui/react-ai-sdk";
 import { useMemo, useCallback } from "react";
-import { SupermemoryCompositeAdapter } from "@/lib/attachments/supermemory-composite-adapter";
 import { AssistantAvailableProvider } from "@/contexts/AssistantAvailabilityContext";
 import { useUIStore } from "@/lib/stores/ui-store";
 import { useSession } from "@/lib/auth-client";
@@ -56,19 +55,13 @@ export function WorkspaceRuntimeProvider({
     });
   }, [workspaceId, session?.user?.isAnonymous]);
 
-  // Create custom attachment adapter that handles Supabase uploads and Supermemory integration
-  const attachmentAdapter = useMemo(
-    () => new SupermemoryCompositeAdapter({ workspaceId }),
-    [workspaceId]
-  );
-
   // Error handler for chat runtime errors (timeouts, network issues, etc.)
   const handleChatError = useCallback((error: Error) => {
     console.error("[Chat Error]", error);
-    
+
     // Provide user-friendly error messages based on error type
     const errorMessage = error.message?.toLowerCase() || "";
-    
+
     if (errorMessage.includes("timeout") || errorMessage.includes("504") || errorMessage.includes("gateway")) {
       toast.error("Request timed out", {
         description: "The AI is taking too long to respond. Please try again.",
@@ -97,8 +90,7 @@ export function WorkspaceRuntimeProvider({
     }
   }, []);
 
-  // Create runtime with Assistant Cloud integration and custom attachment adapter
-  // Pass selectedTags via headers (not body) to avoid interfering with message format
+  // Create runtime with Assistant Cloud integration
   const runtime = useChatRuntime({
     cloud,
     transport: useMemo(() => {
@@ -115,9 +107,6 @@ export function WorkspaceRuntimeProvider({
       });
       return transport;
     }, [workspaceId, selectedModelId, activeFolderId]),
-    adapters: {
-      attachments: attachmentAdapter,
-    },
     onError: handleChatError,
   });
 
@@ -129,4 +118,3 @@ export function WorkspaceRuntimeProvider({
     </SafeAssistantRuntimeProvider>
   );
 }
-

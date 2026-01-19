@@ -3,6 +3,7 @@ import { getTemplateInitialState } from "@/lib/workspace/templates";
 import { loadWorkspaceState } from "@/lib/workspace/state-loader";
 import { eq, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { generateSlug } from "@/lib/workspace/slug";
 
 const DEMO_WORKSPACE_ID = '511080ff-429e-4492-a242-1fc8416271d8';
 
@@ -56,19 +57,43 @@ export async function cloneDemoWorkspace(
         initialState = getTemplateInitialState("blank");
     }
 
-    const [workspace] = await db
-        .insert(workspaces)
-        .values({
-            userId,
-            name,
-            description,
-            template: "blank",
-            isPublic: false,
-            icon,
-            color,
-            sortOrder: 0,
-        })
-        .returning();
+    let workspace;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 5;
+
+    while (attempts < MAX_ATTEMPTS) {
+        try {
+            const slug = generateSlug(name);
+
+            [workspace] = await db
+                .insert(workspaces)
+                .values({
+                    userId,
+                    name,
+                    description,
+                    template: "blank",
+                    isPublic: false,
+                    icon,
+                    color,
+                    sortOrder: 0,
+                    slug,
+                })
+                .returning();
+
+            break; // Success
+        } catch (error: any) {
+            if (error?.code === '23505') {
+                attempts++;
+                if (attempts === MAX_ATTEMPTS) throw error;
+                continue;
+            }
+            throw error;
+        }
+    }
+
+    if (!workspace) {
+        throw new Error("Failed to create workspace after multiple attempts");
+    }
 
     initialState.workspaceId = workspace.id;
 
