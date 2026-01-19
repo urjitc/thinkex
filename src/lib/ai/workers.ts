@@ -16,7 +16,7 @@ import { createEvent } from "@/lib/workspace/events";
 import { generateItemId } from "@/lib/workspace-state/item-helpers";
 import { getRandomCardColor } from "@/lib/workspace-state/colors";
 import { logger } from "@/lib/utils/logger";
-import type { Item, NoteData } from "@/lib/workspace-state/types";
+import type { Item, NoteData, QuizData, QuizQuestion, QuestionType } from "@/lib/workspace-state/types";
 import { markdownToBlocks } from "@/lib/editor/markdown-to-blocks";
 
 /**
@@ -161,18 +161,20 @@ async function executeWorkspaceOperation<T>(
  * Operations are serialized per workspace to prevent version conflicts
  */
 export async function workspaceWorker(
-  action: "create" | "update" | "delete" | "updateFlashcard",
+  action: "create" | "update" | "delete" | "updateFlashcard" | "updateQuiz",
   params: {
     workspaceId: string;
     title?: string;
     content?: string; // For notes
     itemId?: string;
 
-    itemType?: "note" | "flashcard"; // Defaults to "note" if undefined
+    itemType?: "note" | "flashcard" | "quiz"; // Defaults to "note" if undefined
     flashcardData?: {
       cards?: { front: string; back: string }[]; // For creating flashcards
       cardsToAdd?: { front: string; back: string }[]; // For updating flashcards (appending)
     };
+    quizData?: QuizData; // For creating quizzes
+    questionsToAdd?: QuizQuestion[]; // For updating quizzes (appending questions)
     // Optional: deep research metadata to attach to a note
     deepResearchData?: {
       prompt: string;
@@ -255,6 +257,19 @@ export async function workspaceWorker(
           itemData = {
             cards: cardsWithIds
           };
+        } else if (itemType === "quiz") {
+          // Quiz type
+          if (!params.quizData) {
+            throw new Error("Quiz data required for quiz creation");
+          }
+
+          logger.debug("🎯 [WORKSPACE-WORKER] Creating quiz with data:", {
+            title: params.quizData.title,
+            difficulty: params.quizData.difficulty,
+            questionCount: params.quizData.questions?.length,
+          });
+
+          itemData = params.quizData;
         } else {
           // "note" type
           // Convert markdown to blocks on the server
@@ -281,7 +296,7 @@ export async function workspaceWorker(
         const item: Item = {
           id: itemId,
           type: itemType,
-          name: params.title || (itemType === "flashcard" ? "New Flashcard Deck" : "New Note"),
+          name: params.title || (itemType === "quiz" ? "New Quiz" : itemType === "flashcard" ? "New Flashcard Deck" : "New Note"),
           subtitle: "",
           data: itemData,
           color: getRandomCardColor(),
@@ -657,6 +672,150 @@ export async function workspaceWorker(
         };
       }
 
+      if (action === "updateQuiz") {
+        if (!params.itemId) {
+          throw new Error("Item ID required for updateQuiz");
+        }
+
+        if (!params.questionsToAdd || params.questionsToAdd.length === 0) {
+          throw new Error("Questions to add required for updateQuiz");
+        }
+
+        logger.debug("🎯 [WORKSPACE-WORKER] Updating quiz with new questions:", {
+          itemId: params.itemId,
+          questionsToAdd: params.questionsToAdd.length,
+        });
+
+        // Get the latest snapshot state using the optimized function
+        const snapshotResult = await db.execute(sql`
+          SELECT state
+          FROM get_latest_snapshot_fast(${params.workspaceId}::uuid)
+        `);
+
+        const snapshotState = snapshotResult[0]?.state as { items?: any[] } | null;
+
+        // Get snapshot version separately
+        const snapshotVersionResult = await db.execute(sql`
+          SELECT snapshot_version as "snapshotVersion"
+          FROM get_latest_snapshot_fast(${params.workspaceId}::uuid)
+        `);
+        const snapshotVersion = (snapshotVersionResult[0]?.snapshotVersion as number) || 0;
+
+        // Get events after the snapshot
+        const eventsResult = await db.execute(sql`
+          SELECT event_type as "eventType", payload
+          FROM workspace_events
+          WHERE workspace_id = ${params.workspaceId}::uuid
+            AND version > ${snapshotVersion}
+          ORDER BY version ASC
+        `);
+
+        // Apply events to snapshot state to get current state
+        let currentItems = snapshotState?.items || [];
+
+        for (const row of eventsResult) {
+          const event = row as { eventType: string; payload: any };
+
+          if (event.eventType === 'ITEM_CREATED' && event.payload?.item) {
+            currentItems = [...currentItems, event.payload.item];
+          } else if (event.eventType === 'ITEM_UPDATED' && event.payload?.id) {
+            currentItems = currentItems.map((item: any) =>
+              item.id === event.payload.id
+                ? { ...item, ...event.payload.changes }
+                : item
+            );
+          } else if (event.eventType === 'ITEM_DELETED' && event.payload?.id) {
+            currentItems = currentItems.filter((item: any) => item.id !== event.payload.id);
+          }
+        }
+
+        const existingItem = currentItems.find((i: any) => i.id === params.itemId);
+        if (!existingItem) {
+          throw new Error(`Quiz not found with ID: ${params.itemId}`);
+        }
+
+        if (existingItem.type !== "quiz") {
+          throw new Error(`Item "${existingItem.name}" is not a quiz (type: ${existingItem.type})`);
+        }
+
+        const existingData = existingItem.data as QuizData;
+        const existingQuestions = existingData?.questions || [];
+
+        // Merge existing questions with new questions
+        const updatedData: QuizData = {
+          ...existingData,
+          questions: [...existingQuestions, ...params.questionsToAdd],
+        };
+
+        const changes = { data: updatedData };
+        const event = createEvent("ITEM_UPDATED", { id: params.itemId, changes, source: 'agent' }, userId);
+
+        logger.debug("📝 [UPDATE-QUIZ-DB] Created event:", {
+          eventId: event.id,
+          eventType: event.type,
+          payloadId: event.payload.id,
+          questionsInPayload: (event.payload.changes?.data as any)?.questions?.length,
+        });
+
+        const currentVersionResult = await db.execute(sql`
+          SELECT get_workspace_version(${params.workspaceId}::uuid) as version
+        `);
+
+        const baseVersion = currentVersionResult[0]?.version || 0;
+        logger.debug("📝 [UPDATE-QUIZ-DB] Current version:", { baseVersion });
+
+        logger.debug("📝 [UPDATE-QUIZ-DB] Calling append_workspace_event...");
+        const eventResult = await db.execute(sql`
+          SELECT append_workspace_event(
+            ${params.workspaceId}::uuid,
+            ${event.id}::text,
+            ${event.type}::text,
+            ${JSON.stringify(event.payload)}::jsonb,
+            ${event.timestamp}::bigint,
+            ${event.userId}::text,
+            ${baseVersion}::integer,
+            ${null}::text
+          ) as result
+        `);
+
+        logger.info("📝 [UPDATE-QUIZ-DB] append_workspace_event result:", {
+          hasResult: !!eventResult,
+          resultLength: eventResult?.length,
+          rawResult: JSON.stringify(eventResult),
+        });
+
+        if (!eventResult || eventResult.length === 0) {
+          logger.error("❌ [UPDATE-QUIZ-DB] No result from append_workspace_event");
+          throw new Error("Failed to update quiz: database returned no result");
+        }
+
+        const result = eventResult[0].result as any;
+        logger.info("📝 [UPDATE-QUIZ-DB] Parsed result:", {
+          result: JSON.stringify(result),
+          hasConflict: !!result?.conflict,
+          resultVersion: result?.version,
+        });
+
+        if (result && result.conflict) {
+          logger.error("❌ [UPDATE-QUIZ-DB] Version conflict detected");
+          throw new Error("Workspace was modified by another user, please try again");
+        }
+
+        logger.info("🎯 [WORKSPACE-WORKER] Updated quiz:", {
+          itemId: params.itemId,
+          questionsAdded: params.questionsToAdd.length,
+          totalQuestions: updatedData.questions.length,
+        });
+
+        return {
+          success: true,
+          itemId: params.itemId,
+          questionsAdded: params.questionsToAdd.length,
+          totalQuestions: updatedData.questions.length,
+          message: `Added ${params.questionsToAdd.length} question${params.questionsToAdd.length !== 1 ? 's' : ''} to quiz`,
+        };
+      }
+
       if (action === "delete") {
         if (!params.itemId) {
           throw new Error("Item ID required for delete");
@@ -747,6 +906,276 @@ export async function textSelectionWorker(
     return result.text;
   } catch (error) {
     logger.error("📄 [TEXT-WORKER] Error:", error);
+    throw error;
+  }
+}
+
+/**
+ * WORKER 5: Quiz Generation Agent
+ * Generates quiz questions using Gemini with structured JSON output
+ */
+type QuizWorkerParams = {
+  topic?: string;                // Used only if no context provided
+  contextContent?: string;       // Aggregated content from selected cards
+  sourceCardIds?: string[];
+  sourceCardNames?: string[];
+  difficulty: "easy" | "medium" | "hard";
+  questionCount?: number;        // Defaults to 10
+  questionTypes?: ("multiple_choice" | "true_false")[];
+  existingQuestions?: Array<{
+    id: string;
+    questionText: string;
+    correctIndex: number;
+  }>;
+  performanceTelemetry?: {
+    totalAnswered: number;
+    correctCount: number;
+    incorrectCount: number;
+    weakAreas?: Array<{
+      questionText: string;
+      userSelectedOption: string;
+      correctOption: string;
+    }>;
+  };
+};
+
+function buildAdaptiveInstructions(
+  baseDifficulty: "easy" | "medium" | "hard",
+  telemetry?: QuizWorkerParams["performanceTelemetry"]
+): string {
+  if (!telemetry || telemetry.totalAnswered === 0) {
+    return `- Difficulty: ${baseDifficulty.toUpperCase()}`;
+  }
+
+  const successRate = telemetry.totalAnswered > 0
+    ? telemetry.correctCount / telemetry.totalAnswered
+    : 0;
+
+  let adjustedDifficulty: "easy" | "medium" | "hard";
+  let cognitiveLevel: string;
+
+  if (successRate >= 0.8) {
+    adjustedDifficulty = baseDifficulty === "hard" ? "hard" : baseDifficulty === "medium" ? "hard" : "medium";
+    cognitiveLevel = "Analysis and synthesis - test deeper understanding";
+  } else if (successRate >= 0.5) {
+    adjustedDifficulty = baseDifficulty;
+    cognitiveLevel = "Application - focus on practical usage";
+  } else {
+    adjustedDifficulty = baseDifficulty === "easy" ? "easy" : baseDifficulty === "medium" ? "easy" : "medium";
+    cognitiveLevel = "Recall and understanding - reinforce fundamentals";
+  }
+
+  let instructions = `- Adaptive Difficulty: ${adjustedDifficulty.toUpperCase()} (adjusted from ${baseDifficulty})
+- User Performance: ${Math.round(successRate * 100)}% correct (${telemetry.correctCount}/${telemetry.totalAnswered})
+- Cognitive Level: ${cognitiveLevel}`;
+
+  if (telemetry.weakAreas && telemetry.weakAreas.length > 0 && successRate < 0.7) {
+    instructions += `
+LEARNING GAPS DETECTED - Include scaffolding questions for these weak areas:
+${telemetry.weakAreas.slice(0, 3).map((w, i) =>
+      `${i + 1}. Topic: "${w.questionText.substring(0, 50)}..." - User confused "${w.userSelectedOption}" with "${w.correctOption}"`
+    ).join('\n')}
+For weak areas:
+- Include 2-3 foundational questions that build up to the concept
+- Add extra hints for these topics
+- Break complex concepts into smaller parts`;
+  }
+
+  return instructions;
+}
+
+export async function quizWorker(params: QuizWorkerParams): Promise<{ questions: QuizQuestion[]; title: string }> {
+  try {
+    const questionCount = params.questionCount || 10;
+    const questionTypes = params.questionTypes || ["multiple_choice", "true_false"];
+
+    logger.debug("🎯 [QUIZ-WORKER] Starting quiz generation:", {
+      hasContext: !!params.contextContent,
+      hasTopic: !!params.topic,
+      difficulty: params.difficulty,
+      questionCount,
+      questionTypes,
+    });
+
+    // Build the prompt based on whether we have context or topic
+    let prompt: string;
+    const adaptiveInstructions = buildAdaptiveInstructions(params.difficulty, params.performanceTelemetry);
+
+    if (params.contextContent) {
+      // Context-based quiz generation
+      prompt = `You are a quiz generator. Create exactly ${questionCount} quiz questions based EXCLUSIVELY on the following content. Do NOT use any external knowledge.
+
+IMPORTANT: The content below is from workspace cards and includes metadata headers like "CARD 1:", "Card ID:", "METADATA:", "CONTENT:", etc. IGNORE ALL METADATA. Focus ONLY on the actual educational content within each card - the text, concepts, facts, and information being taught. Do NOT create questions about:
+- Card IDs, card types, or card names
+- Metadata like "Type: note" or "Card ID: xyz"
+- System formatting like separators, emojis, or structural markers
+- The number of cards, questions, or any organizational details
+
+CONTENT TO QUIZ ON:
+${params.contextContent}
+
+REQUIREMENTS:
+${adaptiveInstructions}
+- Difficulty guide:
+  - Easy: Basic recall and recognition questions
+  - Medium: Understanding and application questions  
+  - Hard: Analysis, synthesis, and critical thinking questions
+- Question types allowed: ${questionTypes.join(", ")}
+- For multiple_choice: provide exactly 4 options with only 1 correct answer
+- For true_false: provide exactly 2 options (["True", "False"])
+- Each question must have a clear, specific explanation
+- Each question should optionally have a helpful hint
+- Questions must be directly answerable from the provided EDUCATIONAL content (not metadata)
+
+SOURCE: ${params.sourceCardNames?.join(", ") || "Selected content"}`;
+    } else if (params.topic) {
+      // Topic-based quiz generation from LLM knowledge
+      prompt = `You are a quiz generator. Create exactly ${questionCount} quiz questions about: ${params.topic}
+
+REQUIREMENTS:
+${adaptiveInstructions}
+- Difficulty guide:
+  - Easy: Basic facts and definitions
+  - Medium: Understanding concepts and relationships
+  - Hard: Complex analysis and application
+- Question types allowed: ${questionTypes.join(", ")}
+- For multiple_choice: provide exactly 4 options with only 1 correct answer
+- For true_false: provide exactly 2 options (["True", "False"])
+- Each question must have a clear, specific explanation
+- Each question should optionally have a helpful hint
+- Questions should cover diverse aspects of the topic`;
+    } else {
+      throw new Error("Either topic or contextContent must be provided");
+    }
+
+    if (params.existingQuestions && params.existingQuestions.length > 0) {
+      prompt += `
+
+EXISTING QUESTIONS (DO NOT DUPLICATE):
+The following ${params.existingQuestions.length} questions already exist. Generate NEW questions that:
+1. Cover DIFFERENT aspects of the topic
+2. Do NOT ask the same thing with different wording
+3. Do NOT repeat any correct answers
+Existing questions to avoid:
+${params.existingQuestions.map((q, i) => `${i + 1}. ${q.questionText}`).join('\n')}`;
+    }
+
+    prompt += `
+
+OUTPUT FORMAT (strict JSON):
+{
+  "title": "Quiz Title",
+  "questions": [
+    {
+      "id": "q_001",
+      "type": "multiple_choice",
+      "questionText": "Question text here?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctIndex": 0,
+      "hint": "Optional hint text",
+      "explanation": "Explanation of why this is correct"
+    }
+  ]
+}
+
+Generate the quiz now:`;
+
+    // Check if context contains PDF URLs that Gemini should read directly
+    // PDF URLs are marked with "📖 PDF_CONTENT_URL:" in the context
+    const pdfUrlMatches = params.contextContent?.match(/📖 PDF_CONTENT_URL:\s*(https?:\/\/[^\s]+)/g) || [];
+    const pdfUrls = pdfUrlMatches.map(match => {
+      const urlMatch = match.match(/https?:\/\/[^\s]+/);
+      return urlMatch ? urlMatch[0] : null;
+    }).filter((url): url is string => url !== null);
+
+    logger.debug("🎯 [QUIZ-WORKER] PDF detection:", {
+      foundPdfUrls: pdfUrls.length,
+      urls: pdfUrls
+    });
+
+    let result;
+    if (pdfUrls.length > 0) {
+      // Use multimodal content with PDF file parts
+      // Gemini can read PDFs directly via URL
+      const fileParts = pdfUrls.map(url => ({
+        type: 'file' as const,
+        data: new URL(url),
+        mediaType: 'application/pdf' as const,
+      }));
+
+      logger.debug("🎯 [QUIZ-WORKER] Using multimodal generation with PDFs");
+
+      result = await generateText({
+        model: google("gemini-2.5-flash"),
+        messages: [
+          {
+            role: 'user',
+            content: [
+              ...fileParts,
+              { type: 'text', text: prompt },
+            ],
+          },
+        ],
+      });
+    } else {
+      // Standard text-only generation
+      result = await generateText({
+        model: google("gemini-2.5-flash"),
+        prompt,
+      });
+    }
+
+    // Parse the JSON response
+    let parsed: { title: string; questions: any[] };
+    try {
+      // Extract JSON from potential markdown code blocks
+      let jsonText = result.text.trim();
+      if (jsonText.startsWith("```json")) {
+        jsonText = jsonText.slice(7);
+      } else if (jsonText.startsWith("```")) {
+        jsonText = jsonText.slice(3);
+      }
+      if (jsonText.endsWith("```")) {
+        jsonText = jsonText.slice(0, -3);
+      }
+      jsonText = jsonText.trim();
+
+      // Sanitize LaTeX escape sequences before parsing
+      // LaTeX uses backslashes (e.g., \frac, \cap, \cup) which are invalid JSON escapes
+      // We need to double-escape them so they become valid JSON strings
+      // This regex finds backslashes NOT followed by valid JSON escape chars (", \, /, b, f, n, r, t, u)
+      jsonText = jsonText.replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
+
+      parsed = JSON.parse(jsonText);
+    } catch (parseError) {
+      logger.error("🎯 [QUIZ-WORKER] Failed to parse JSON:", parseError);
+      logger.error("🎯 [QUIZ-WORKER] Raw response:", result.text);
+      throw new Error("Failed to parse quiz generation response");
+    }
+
+    // Validate and transform questions - ALWAYS generate new unique IDs
+    // to prevent collisions when adding questions to existing quizzes
+    const questions: QuizQuestion[] = parsed.questions.map((q) => ({
+      id: generateItemId(), // Always use unique ID, ignore AI-generated IDs (they're predictable like q_001)
+      type: q.type as QuestionType,
+      questionText: q.questionText || q.question_text || q.text || "",
+      options: q.options || [],
+      correctIndex: q.correctIndex ?? q.correct_index ?? 0,
+      hint: q.hint,
+      explanation: q.explanation || "No explanation provided.",
+    }));
+
+    logger.debug("🎯 [QUIZ-WORKER] Generated quiz:", {
+      title: parsed.title,
+      questionCount: questions.length,
+    });
+
+    return {
+      title: parsed.title || params.topic || "Quiz",
+      questions,
+    };
+  } catch (error) {
+    logger.error("🎯 [QUIZ-WORKER] Error:", error);
     throw error;
   }
 }

@@ -1,4 +1,6 @@
+import { QuizContent } from "./QuizContent";
 import { MoreVertical, Trash2, Palette, CheckCircle2, FolderInput, FileText, Copy, X } from "lucide-react";
+
 import { PiMouseScrollFill, PiMouseScrollBold } from "react-icons/pi";
 import { useCallback, useState, memo, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
@@ -512,6 +514,13 @@ function WorkspaceCard({
       }
     }
 
+    // Prevent opening modal for quiz cards as they are interactive
+    if (item.type === 'quiz') {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
     // For YouTube cards, handle click to play
     if (item.type === 'youtube') {
       // If we got here, it wasn't a drag (checked above)
@@ -795,6 +804,16 @@ function WorkspaceCard({
               );
             })()}
 
+            {/* Quiz Content - render interactive quiz */}
+            {item.type === 'quiz' && (
+              <div
+                className={`flex-1 min-h-0 ${isScrollLocked ? "overflow-hidden" : "overflow-auto"}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <QuizContent item={item} onUpdateData={(updater) => onUpdateItem(item.id, { data: updater(item.data) as any })} />
+              </div>
+            )}
+
             {/* Flashcard Content - render interactive flashcard */}
             {item.type === 'flashcard' && (() => {
               const flashcardData = item.data as FlashcardData;
@@ -1050,6 +1069,16 @@ export const WorkspaceCardMemoized = memo(WorkspaceCard, (prevProps, nextProps) 
     const prevData = prevProps.item.data;
     const nextData = nextProps.item.data;
     if (JSON.stringify(prevData) !== JSON.stringify(nextData)) return false;
+  }
+  if (prevProps.item.type === 'quiz' && nextProps.item.type === 'quiz') {
+    const prevData = prevProps.item.data;
+    const nextData = nextProps.item.data;
+    // For quiz, compare questions length first (fast check), then full data if needed
+    const prevQuestions = (prevData as any)?.questions || [];
+    const nextQuestions = (nextData as any)?.questions || [];
+    if (prevQuestions.length !== nextQuestions.length) return false;
+    // Also check session changes (currentIndex, answeredQuestions)
+    if (JSON.stringify((prevData as any)?.session) !== JSON.stringify((nextData as any)?.session)) return false;
   }
 
   // Compare layout (use lg breakpoint for comparison)
