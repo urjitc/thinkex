@@ -10,7 +10,7 @@ import { type CardColor } from "@/lib/workspace-state/colors";
 const MOCK_CARDS: FloatingCardData[] = [
     // Column 1ish
     { type: 'note', title: 'Product Vision 2025', color: '#3B82F6' },
-    { type: 'youtube', youtubeUrl: 'https://www.youtube.com/watch?v=VIDEO_ID', thumbnailUrl: 'https://i.ytimg.com/vi/jfKfPfyJRdk/sddefault.jpg' },
+    { type: 'note', title: 'Tech Stack Decision Log', color: '#E11D48' },
     { type: 'flashcard', content: 'What is the primary function of the hippocampus?', color: '#EF4444' },
     { type: 'folder', title: 'Research Papers', itemCount: 12, color: '#10B981' },
 
@@ -18,29 +18,33 @@ const MOCK_CARDS: FloatingCardData[] = [
     { type: 'pdf', title: 'Q4 Financial Report.pdf', color: '#F59E0B', aspectRatio: '1/1.1' },
     { type: 'note', title: 'Meeting Notes: Design Sync', color: '#8B5CF6' },
     { type: 'flashcard', content: 'Define "Neuroplasticity"', color: '#EC4899' },
-    { type: 'youtube', youtubeUrl: 'https://www.youtube.com/watch?v=VIDEO_ID_2', thumbnailUrl: 'https://i.ytimg.com/vi/lxrwzqDebBQ/sddefault.jpg' }, // Lofi girl or similar placeholder
+    { type: 'youtube', youtubeUrl: 'https://www.youtube.com/watch?v=P6FORpg0KVo', thumbnailUrl: 'https://img.youtube.com/vi/P6FORpg0KVo/sddefault.jpg' }, // Lofi girl or similar placeholder
 
     // Column 3ish
     { type: 'folder', title: 'Project Assets', itemCount: 48, color: '#06B6D4' },
     { type: 'note', title: 'Ideas for Marketing', color: '#F97316' },
-    { type: 'pdf', title: 'User_Interview_Script_v2.pdf', color: '#6366F1' },
+    { type: 'youtube', youtubeUrl: 'https://www.youtube.com/watch?v=WUvTyaaNkzM', thumbnailUrl: 'https://img.youtube.com/vi/WUvTyaaNkzM/sddefault.jpg' },
     { type: 'folder', title: 'Cognitive Science', itemCount: 24, color: '#14B8A6' },
 
     // Column 4ish
-    { type: 'youtube', youtubeUrl: 'https://www.youtube.com/watch?v=VIDEO_ID_3', thumbnailUrl: 'https://i.ytimg.com/vi/ptDyOpfC8wU/sddefault.jpg' },
+    { type: 'youtube', youtubeUrl: 'https://www.youtube.com/watch?v=WUvTyaaNkzM', thumbnailUrl: 'https://img.youtube.com/vi/WUvTyaaNkzM/sddefault.jpg' },
     { type: 'folder', title: 'Archive 2024', itemCount: 156, color: '#64748B' },
-    { type: 'note', title: 'Tech Stack Decision Log', color: '#E11D48' },
+    { type: 'pdf', title: 'User_Interview_Script_v2.pdf', color: '#6366F1' },
     { type: 'folder', title: 'Neurology Resources', itemCount: 18, color: '#8B5CF6' },
 ];
 
-export function FloatingWorkspaceCards() {
+interface FloatingWorkspaceCardsProps {
+    bottomGradientHeight?: string;
+}
+
+export function FloatingWorkspaceCards({ bottomGradientHeight = '60%' }: FloatingWorkspaceCardsProps) {
     // We can randomize the order on mount if we want, or keep it static for consistency
     // Keeping specific shuffle for now to ensure good distribution if we want
     const [cards, setCards] = useState<FloatingCardData[]>(MOCK_CARDS);
 
     // Parallax effect
     const { scrollY } = useScroll();
-    const y = useTransform(scrollY, [0, 1000], [0, 200]); // Moves down 200px for every 1000px scroll (slower upward movement)
+    const y = useTransform(scrollY, [0, 1000], [0, 400]); // Stronger parallax effect
 
     return (
         <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none select-none z-0">
@@ -66,8 +70,9 @@ export function FloatingWorkspaceCards() {
 
             {/* Gradient Overlay for Fade Out */}
             <div
-                className="absolute bottom-0 left-0 right-0 h-[60%] z-10"
+                className="absolute bottom-0 left-0 right-0 z-10"
                 style={{
+                    height: bottomGradientHeight,
                     background: 'linear-gradient(to bottom, transparent 0%, var(--background) 90%)'
                 }}
             />
