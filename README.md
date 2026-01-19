@@ -134,7 +134,14 @@ Want to run ThinkEx on your own infrastructure?
     
     > **Note:** `db:setup` runs migrations which include database functions required for workspace operations. Use `db:push` only if you plan to create the functions manually via your database's SQL editor.
 
-5.  **Run the development server:**
+5.  **Supabase Storage Setup:**
+    
+    Create a storage bucket for file uploads:
+    1. Go to your Supabase Dashboard → Storage
+    2. Create a new bucket named `file-upload`
+    3. Set the bucket to **Public** (required for file URLs to work)
+
+6.  **Run the development server:**
     ```bash
     pnpm dev
     ```
