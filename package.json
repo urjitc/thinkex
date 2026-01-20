@@ -125,7 +125,7 @@
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
     "sonner": "^2.0.7",
-    "streamdown": "^2.0.1",
+    "streamdown": "^2.1.0",
     "tailwind-merge": "^3.4.0",
     "typewriter-effect": "^2.22.0",
     "zod": "^4.3.4",
