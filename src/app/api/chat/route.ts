@@ -246,7 +246,7 @@ export async function POST(req: Request) {
     }
 
     // Get model
-    const modelId = body.modelId || "gemini-2.5-pro";
+    const modelId = body.modelId || "gemini-2.5-flash";
     const model = google(modelId);
 
     // Create tools using the modular factory
