@@ -13,9 +13,9 @@ export interface WorkspaceToolContext {
  */
 export function createNoteTool(ctx: WorkspaceToolContext) {
     return {
-        description: "Create a note card. returns success message.\n\nCRITICAL CONSTRAINTS:\n1. 'content' MUST NOT start with the title.\n2. Start directly with body text.\n3. Math: use $$...$$ for inline and $$\\n...\\n$$ for block.\n4. NO Mermaid diagrams.",
+        description: "Create a note card. returns success message.\n\nCRITICAL CONSTRAINTS:\n1. 'content' MUST NOT start with the title.\n2. Start directly with body text.\n3. NO Mermaid diagrams.",
         inputSchema: z.any().describe(
-            "JSON {title, content}. 'content': markdown body. DO NOT repeat title in content. Start with subheadings/text. Math: $$...$$ inline, $$\\n...\\n$$ block. No Mermaid."
+            "JSON {title, content}. 'content': markdown body. DO NOT repeat title in content. Start with subheadings/text. No Mermaid."
         ),
         execute: async ({ title, content }: { title: string; content: string }) => {
             // Validate inputs before use
@@ -58,7 +58,7 @@ export function createUpdateCardTool(ctx: WorkspaceToolContext) {
     return {
         description: "Update the content of an existing card. This tool COMPLETELY REPLACES the existing content. You must synthesize the FULL new content by combining the existing card content (from your context) with the user's requested changes. Do not just provide the diff; provide the complete new markdown content.",
         inputSchema: z.any().describe(
-            "A JSON object with 'id' (string) and 'markdown' (string) or 'content' (string) fields. The 'id' uniquely identifies the note to update. The 'markdown' or 'content' field contains the full note body ONLY (do not include the title as a header). The markdown may include LaTeX math: use $$...$$ for inline math (with proper spacing) and $$...$$ for display math. Ensure math inside lists and tables has spaces around the $$ symbols. Do not place punctuation immediately after math expressions."
+            "A JSON object with 'id' (string) and 'markdown' (string) or 'content' (string) fields. The 'id' uniquely identifies the note to update. The 'markdown' or 'content' field contains the full note body ONLY (do not include the title as a header). Ensure math inside lists and tables has spaces around the $$ symbols. Do not place punctuation immediately after math expressions."
         ),
         execute: async (input: any) => {
             logger.group("🎯 [UPDATE-CARD] Tool execution started", true);

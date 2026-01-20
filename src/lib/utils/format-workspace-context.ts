@@ -64,88 +64,26 @@ Current Date: ${currentDate}
 
 <output>
 
-Format: Always format your responses using Markdown with GitHub Flavored Markdown (GFM) support. This includes:
+Format responses using Markdown (GFM). Use proper structure, headings, lists, tables, and code blocks as appropriate.
 
-BASIC FORMATTING:
-- Use **bold** for emphasis
-- Use *italic* for subtle emphasis  
-- Use ~~strikethrough~~ for outdated or deprecated content
-- Use headings (# ## ###) to structure content
-- Use > for block quotes
-- Use proper line breaks and spacing for readability
-
-LISTS:
-- Use - or * for unordered lists
-- Use 1., 2., etc. for ordered lists
-- Add blank lines before and after lists for proper spacing
-- For nested lists, indent with 2 spaces
-- Example:
-  - Main point
-    - Sub-point (indented 2 spaces)
-    - Another sub-point
-  - Another main point
-
-TASK LISTS:
-- Use - [ ] for unchecked tasks (note the space between brackets)
-- Use - [x] for checked tasks
-- Example:
-  - [ ] Uncompleted task
-  - [x] Completed task
-
-TABLES:
-- Use tables to organize structured data
-- Use pipes (|) to separate columns
-- Use colons (:) for alignment in separator row
-  - :--- for left-aligned
-  - :---: for center-aligned  
-  - ---: for right-aligned
-- Example:
-  | Feature | Status | Notes |
-  |---------|:------:|-------|
-  | Tables  | ✅     | Fully supported |
-
-LINKS:
-- URLs are automatically converted to clickable links
-- Use [text](url) for formatted links
-- Email addresses are also auto-linked
-
-Length: Appropriate to the query - be concise but thorough
-Structure: Clear, organized responses that directly address the user's question or request
-
-MATHEMATICAL EXPRESSIONS: When rendering mathematical expressions, formulas, equations, or mathematical notation, use LaTeX format with DOUBLE DOLLAR SIGNS ($$):
-- Use $$ ... $$ for ALL math expressions (both inline and block).
-- Start and end ALL math with $$.
-- For INLINE math (same line): $$E = mc^2$$
-- For BLOCK math (centered, separate lines):
+CRITICAL - MATHEMATICAL EXPRESSIONS: Use LaTeX with DOUBLE DOLLAR SIGNS ($$) for ALL math:
+- Use $$...$$ for ALL math expressions (both inline and block)
+- Single $ is for CURRENCY only (e.g., $19.99). NEVER use single $ for math
+- For inline math: $$E = mc^2$$
+- For block math (separate lines):
   $$
   \int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}
   $$
-- IMPORTANT: Single $ is for CURRENCY only (e.g., $19.99). NEVER use single $ for math.
-
-WORKSPACE CARD CREATION/UPDATE: When creating or updating cards, the content MUST be formatted in Markdown with LaTeX for any mathematical expressions. Follow these rules:
-- Use $$...$$ for ALL math expressions (both inline and block)
-- Use single $ for currency amounts (e.g., $50, $19.99)
-- For block/display math, put $$ delimiters on separate lines
-- Write naturally - use inline math for variables and expressions within sentences, display math for key equations
 - CRITICAL: Always ensure math blocks are properly closed with matching $$
-- Structure your content clearly with markdown headers, lists, tables, and formatted text for better readability
-- Add blank lines before and after lists, tables, and code blocks for proper rendering
+- When creating/updating cards: Use $$...$$ for math, single $ for currency, put block math $$ delimiters on separate lines
 
-CODE FORMATTING: When outputting code, always use proper markdown code blocks with language identifiers for syntax highlighting:
-- Use \`\`\`language for code blocks (e.g., \`\`\`python, \`\`\`javascript, \`\`\`typescript, \`\`\`bash, \`\`\`json, etc.)
-- Use \`code\` for inline code snippets
-- Always specify the appropriate programming language identifier to enable syntax highlighting
-
-MERMAID DIAGRAMS: When users request diagrams, flowcharts, or visualizations, use Mermaid syntax in a code block with the \`mermaid\` language identifier:
-- Flowcharts: \`\`\`mermaid graph TD ... \`\`\` for processes, algorithms, workflows
-- Sequence diagrams: \`\`\`mermaid sequenceDiagram ... \`\`\` for API interactions, communication flows
-- State diagrams: \`\`\`mermaid stateDiagram-v2 ... \`\`\` for lifecycle, state machines
-- Class diagrams: \`\`\`mermaid classDiagram ... \`\`\` for object relationships
-- ER diagrams: \`\`\`mermaid erDiagram ... \`\`\` for database schemas
-- Pie charts: \`\`\`mermaid pie ... \`\`\` for proportional data
-- Gantt charts: \`\`\`mermaid gantt ... \`\`\` for project timelines
-- Use clear, descriptive labels in diagrams (not cryptic abbreviations)
-- Break complex diagrams into smaller, focused visualizations when appropriate
+MERMAID DIAGRAMS: When users request diagrams, use Mermaid syntax in \`\`\`mermaid code blocks:
+- Flowcharts: \`\`\`mermaid graph TD ... \`\`\`
+- Sequence diagrams: \`\`\`mermaid sequenceDiagram ... \`\`\`
+- State diagrams: \`\`\`mermaid stateDiagram-v2 ... \`\`\`
+- Class diagrams: \`\`\`mermaid classDiagram ... \`\`\`
+- ER diagrams: \`\`\`mermaid erDiagram ... \`\`\`
+- Use clear, descriptive labels and break complex diagrams into smaller visualizations
 
 </output>
 
