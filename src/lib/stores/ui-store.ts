@@ -512,8 +512,11 @@ export const useUIStore = create<UIState>()(
           }
         });
         
-        // Cards in the new selection that weren't auto-selected are user selections
-        // (don't add them to panelAutoSelectedCardIds)
+        // Treat multi-select as user-owned: remove auto flags for all selected IDs
+        // (user explicitly selected these, so they're no longer auto-selected)
+        newSelectedCardIds.forEach(id => {
+          newPanelAutoSelectedCardIds.delete(id);
+        });
         
         return { 
           selectedCardIds: newSelectedCardIds,
