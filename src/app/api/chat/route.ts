@@ -228,6 +228,45 @@ export async function POST(req: Request) {
       messages: cleanedMessages,
       stopWhen: stepCountIs(25),
       tools,
+      onFinish: ({ usage, finishReason }) => {
+        const usageInfo = {
+          inputTokens: usage?.inputTokens,
+          outputTokens: usage?.outputTokens,
+          totalTokens: usage?.totalTokens,
+          cachedInputTokens: usage?.cachedInputTokens, // Standard property
+          reasoningTokens: usage?.reasoningTokens,
+          // Extended properties (Google provider specific)
+          inputTokenDetails: (usage as any)?.inputTokenDetails ? {
+            cacheReadTokens: (usage as any).inputTokenDetails?.cacheReadTokens,
+            cacheWriteTokens: (usage as any).inputTokenDetails?.cacheWriteTokens,
+            noCacheTokens: (usage as any).inputTokenDetails?.noCacheTokens,
+          } : undefined,
+          finishReason,
+        };
+        
+        logger.info("📊 [CHAT-API] Final Token Usage:", usageInfo);
+      },
+      onStepFinish: ({ stepType, usage, finishReason }) => {
+        if (usage) {
+          const stepUsageInfo = {
+            stepType: stepType || 'unknown',
+            inputTokens: usage?.inputTokens,
+            outputTokens: usage?.outputTokens,
+            totalTokens: usage?.totalTokens,
+            cachedInputTokens: usage?.cachedInputTokens, // Standard property
+            reasoningTokens: usage?.reasoningTokens,
+            finishReason,
+            // Extended properties (Google provider specific)
+            inputTokenDetails: (usage as any)?.inputTokenDetails ? {
+              cacheReadTokens: (usage as any).inputTokenDetails?.cacheReadTokens,
+              cacheWriteTokens: (usage as any).inputTokenDetails?.cacheWriteTokens,
+              noCacheTokens: (usage as any).inputTokenDetails?.noCacheTokens,
+            } : undefined,
+          };
+          
+          logger.debug(`📊 [CHAT-API] Step Usage (${stepType || 'unknown'}):`, stepUsageInfo);
+        }
+      },
     });
 
     logger.debug("🔍 [CHAT-API] streamText returned, calling toUIMessageStreamResponse...");
