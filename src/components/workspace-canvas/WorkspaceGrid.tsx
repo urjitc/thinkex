@@ -404,20 +404,22 @@ export function WorkspaceGrid({
         if (newItem.w === 4) newItem.h = 10;
         else if (newItem.w === 3) newItem.h = 8;
         else if (newItem.w === 2) newItem.h = 5;
-      } else if (itemData.type === 'folder' || itemData.type === 'pdf' || itemData.type === 'flashcard') {
-        // Folders, PDFs, and flashcards don't need minimum height enforcement - skip
-      } else if (currentBreakpointRef.current !== 'xxs') {
-        // Note cards: handle transitions between compact and expanded modes
-        // Compact mode: w=1, h=4 | Expanded mode: w>=2, h>=9
+      } else if (itemData.type === 'folder' || itemData.type === 'flashcard') {
+        // Folders and flashcards don't need minimum height enforcement - skip
+      } else if (currentBreakpointRef.current !== 'xxs' && (itemData.type === 'note' || itemData.type === 'pdf')) {
+        // Note and PDF cards: handle transitions between compact and expanded modes
+        // Note cards: Compact mode: w=1, h=4 | Expanded mode: w>=2, h>=9
+        // PDF cards: Compact mode: w=1, h=4 | Expanded mode: w>=2, h>=6
         const wasCompact = oldItem.w === 1;
         const widthChanged = oldItem.w !== newItem.w;
+        const minExpandedHeight = itemData.type === 'pdf' ? 6 : 9;
 
         // Check for mode transitions triggered by height-only resize
         if (!widthChanged) {
           if (wasCompact && newItem.h > 4) {
             // Growing a compact card taller → expand to wide mode
             newItem.w = 2;
-          } else if (!wasCompact && newItem.h < 9) {
+          } else if (!wasCompact && newItem.h < minExpandedHeight) {
             // Shrinking a wide card shorter → collapse to compact mode
             newItem.w = 1;
           }
@@ -425,7 +427,7 @@ export function WorkspaceGrid({
 
         // Apply constraints based on final width
         if (newItem.w >= 2) {
-          newItem.h = Math.max(newItem.h, 9);
+          newItem.h = Math.max(newItem.h, minExpandedHeight);
         } else {
           newItem.h = 4;
         }
