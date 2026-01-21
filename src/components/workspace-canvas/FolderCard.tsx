@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState, useCallback, useEffect, useRef } from "react";
-import { MoreVertical, Trash2, Palette, CheckCircle2, FolderInput, X } from "lucide-react";
+import { MoreVertical, Trash2, Palette, CheckCircle2, FolderInput, X, Pencil } from "lucide-react";
 import ItemHeader from "@/components/workspace-canvas/ItemHeader";
 import { SwatchesPicker, ColorResult } from "react-color";
 import { cn } from "@/lib/utils";
@@ -41,6 +41,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import MoveToDialog from "@/components/modals/MoveToDialog";
+import RenameDialog from "@/components/modals/RenameDialog";
 import { toast } from "sonner";
 
 interface FolderCardProps {
@@ -78,6 +79,7 @@ function FolderCardComponent({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteOption, setDeleteOption] = useState<'keep' | 'delete' | null>(null);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isDragHover, setIsDragHover] = useState(false);
   const [selectedCount, setSelectedCount] = useState<number | null>(null);
@@ -222,6 +224,11 @@ function FolderCardComponent({
     setDeleteOption(null);
   }, [item.id, onDeleteItem, onDeleteFolderWithContents, deleteOption]);
 
+  const handleRename = useCallback((newName: string) => {
+    onUpdateItem(item.id, { name: newName });
+    toast.success("Folder renamed");
+  }, [item.id, onUpdateItem]);
+
   // Reset delete option when dialog closes
   useEffect(() => {
     if (!showDeleteConfirm) {
@@ -336,6 +343,15 @@ function FolderCardComponent({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowRenameDialog(true);
+                  }}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Rename
+                </DropdownMenuItem>
                 {onMoveItem && (
                   <>
                     <DropdownMenuItem
@@ -521,6 +537,15 @@ function FolderCardComponent({
             </AlertDialogContent>
           </AlertDialog>
 
+          {/* Rename Dialog */}
+          <RenameDialog
+            open={showRenameDialog}
+            onOpenChange={setShowRenameDialog}
+            currentName={item.name}
+            itemType="folder"
+            onRename={handleRename}
+          />
+
           {/* Move to Dialog */}
           {onMoveItem && (
             <MoveToDialog
@@ -542,6 +567,10 @@ function FolderCardComponent({
 
       {/* Right-Click Context Menu */}
       <ContextMenuContent className="w-48">
+        <ContextMenuItem onSelect={() => setShowRenameDialog(true)}>
+          <Pencil className="mr-2 h-4 w-4" />
+          <span>Rename</span>
+        </ContextMenuItem>
         {onMoveItem && (
           <>
             <ContextMenuItem onSelect={() => setShowMoveDialog(true)}>

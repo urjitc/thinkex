@@ -30,16 +30,6 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { useWorkspaceState } from "@/hooks/workspace/use-workspace-state";
 import { useWorkspaceOperations } from "@/hooks/workspace/use-workspace-operations";
@@ -49,6 +39,7 @@ import { getChildFolders, getFolderPath } from "@/lib/workspace-state/search";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import MoveToDialog from "@/components/modals/MoveToDialog";
+import RenameDialog from "@/components/modals/RenameDialog";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 
 /**
@@ -92,13 +83,6 @@ function SidebarItemButton({ item, allItems, workspaceName, workspaceIcon, works
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showRenameDialog, setShowRenameDialog] = useState(false);
     const [showMoveDialog, setShowMoveDialog] = useState(false);
-    const [renameValue, setRenameValue] = useState(item.name || "Untitled");
-    const renameInputRef = useRef<HTMLInputElement>(null);
-
-    // Sync rename value when item name changes
-    useEffect(() => {
-        setRenameValue(item.name || "Untitled");
-    }, [item.name]);
 
     const handleDelete = useCallback(() => {
         if (onDeleteItem) {
@@ -107,12 +91,11 @@ function SidebarItemButton({ item, allItems, workspaceName, workspaceIcon, works
         setShowDeleteDialog(false);
     }, [item.id, onDeleteItem]);
 
-    const handleRename = useCallback(() => {
-        if (onRenameItem && renameValue.trim()) {
-            onRenameItem(item.id, renameValue.trim());
-            setShowRenameDialog(false);
+    const handleRename = useCallback((newName: string) => {
+        if (onRenameItem) {
+            onRenameItem(item.id, newName);
         }
-    }, [item.id, renameValue, onRenameItem]);
+    }, [item.id, onRenameItem]);
 
     const handleMove = useCallback((folderId: string | null) => {
         if (onMoveItem) {
@@ -179,7 +162,6 @@ function SidebarItemButton({ item, allItems, workspaceName, workspaceIcon, works
                                 <DropdownMenuItem
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setRenameValue(item.name || "Untitled");
                                         setIsDropdownOpen(false);
                                         setShowRenameDialog(true);
                                     }}
@@ -236,39 +218,13 @@ function SidebarItemButton({ item, allItems, workspaceName, workspaceIcon, works
                 </AlertDialogContent>
             </AlertDialog>
             {/* Rename Dialog */}
-            <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
-                <DialogContent onClick={(e) => e.stopPropagation()}>
-                    <DialogHeader>
-                        <DialogTitle>Rename {item.type === 'pdf' ? 'PDF' : item.type === 'flashcard' ? 'Flashcard' : 'Note'}</DialogTitle>
-                        <DialogDescription>
-                            Enter a new name for this item.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <Input
-                            ref={renameInputRef}
-                            value={renameValue}
-                            onChange={(e) => setRenameValue(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && renameValue.trim()) {
-                                    handleRename();
-                                } else if (e.key === 'Escape') {
-                                    setShowRenameDialog(false);
-                                }
-                            }}
-                            placeholder="Item name"
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowRenameDialog(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleRename} disabled={!renameValue.trim()}>
-                            Rename
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <RenameDialog
+                open={showRenameDialog}
+                onOpenChange={setShowRenameDialog}
+                currentName={item.name || "Untitled"}
+                itemType={item.type}
+                onRename={handleRename}
+            />
             {/* Move to Dialog */}
             {onMoveItem && (
                 <MoveToDialog
@@ -307,13 +263,6 @@ function SidebarRootItem({ item, allItems, workspaceName, workspaceIcon, workspa
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showRenameDialog, setShowRenameDialog] = useState(false);
     const [showMoveDialog, setShowMoveDialog] = useState(false);
-    const [renameValue, setRenameValue] = useState(item.name || "Untitled");
-    const renameInputRef = useRef<HTMLInputElement>(null);
-
-    // Sync rename value when item name changes
-    useEffect(() => {
-        setRenameValue(item.name || "Untitled");
-    }, [item.name]);
 
     const handleDelete = useCallback(() => {
         if (onDeleteItem) {
@@ -322,12 +271,11 @@ function SidebarRootItem({ item, allItems, workspaceName, workspaceIcon, workspa
         setShowDeleteDialog(false);
     }, [item.id, onDeleteItem]);
 
-    const handleRename = useCallback(() => {
-        if (onRenameItem && renameValue.trim()) {
-            onRenameItem(item.id, renameValue.trim());
-            setShowRenameDialog(false);
+    const handleRename = useCallback((newName: string) => {
+        if (onRenameItem) {
+            onRenameItem(item.id, newName);
         }
-    }, [item.id, renameValue, onRenameItem]);
+    }, [item.id, onRenameItem]);
 
     const handleMove = useCallback((folderId: string | null) => {
         if (onMoveItem) {
@@ -336,13 +284,6 @@ function SidebarRootItem({ item, allItems, workspaceName, workspaceIcon, workspa
         }
     }, [item.id, onMoveItem]);
 
-    // Auto-focus and select all text when dialog opens
-    useEffect(() => {
-        if (showRenameDialog && renameInputRef.current) {
-            renameInputRef.current.focus();
-            renameInputRef.current.select();
-        }
-    }, [showRenameDialog]);
 
     return (
         <SidebarMenuItem>
@@ -410,7 +351,6 @@ function SidebarRootItem({ item, allItems, workspaceName, workspaceIcon, workspa
                                 <DropdownMenuItem
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setRenameValue(item.name || "Untitled");
                                         setIsDropdownOpen(false);
                                         setShowRenameDialog(true);
                                     }}
@@ -467,39 +407,13 @@ function SidebarRootItem({ item, allItems, workspaceName, workspaceIcon, workspa
                 </AlertDialogContent>
             </AlertDialog>
             {/* Rename Dialog */}
-            <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
-                <DialogContent onClick={(e) => e.stopPropagation()}>
-                    <DialogHeader>
-                        <DialogTitle>Rename {item.type === 'pdf' ? 'PDF' : item.type === 'flashcard' ? 'Flashcard' : 'Note'}</DialogTitle>
-                        <DialogDescription>
-                            Enter a new name for this item.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <Input
-                            ref={renameInputRef}
-                            value={renameValue}
-                            onChange={(e) => setRenameValue(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && renameValue.trim()) {
-                                    handleRename();
-                                } else if (e.key === 'Escape') {
-                                    setShowRenameDialog(false);
-                                }
-                            }}
-                            placeholder="Item name"
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowRenameDialog(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleRename} disabled={!renameValue.trim()}>
-                            Rename
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <RenameDialog
+                open={showRenameDialog}
+                onOpenChange={setShowRenameDialog}
+                currentName={item.name || "Untitled"}
+                itemType={item.type}
+                onRename={handleRename}
+            />
             {/* Move to Dialog */}
             {onMoveItem && (
                 <MoveToDialog
@@ -570,13 +484,6 @@ function SidebarFolderItem({
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showRenameDialog, setShowRenameDialog] = useState(false);
     const [showMoveDialog, setShowMoveDialog] = useState(false);
-    const [renameValue, setRenameValue] = useState(folder.name);
-    const renameInputRef = useRef<HTMLInputElement>(null);
-
-    // Sync rename value when folder name changes
-    useEffect(() => {
-        setRenameValue(folder.name);
-    }, [folder.name]);
     const handleChevronClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         onToggle();
@@ -594,12 +501,11 @@ function SidebarFolderItem({
         setShowDeleteDialog(false);
     }, [folder.id, onDeleteFolder]);
 
-    const handleRename = useCallback(() => {
-        if (onRenameFolder && renameValue.trim()) {
-            onRenameFolder(folder.id, renameValue.trim());
-            setShowRenameDialog(false);
+    const handleRename = useCallback((newName: string) => {
+        if (onRenameFolder) {
+            onRenameFolder(folder.id, newName);
         }
-    }, [folder.id, renameValue, onRenameFolder]);
+    }, [folder.id, onRenameFolder]);
 
     const handleMove = useCallback((folderId: string | null) => {
         if (onMoveItem) {
@@ -608,13 +514,6 @@ function SidebarFolderItem({
         }
     }, [folder.id, onMoveItem]);
 
-    // Auto-focus and select all text when dialog opens
-    useEffect(() => {
-        if (showRenameDialog && renameInputRef.current) {
-            renameInputRef.current.focus();
-            renameInputRef.current.select();
-        }
-    }, [showRenameDialog]);
 
     // Get child folders (folders with folderId === this folder's id)
     const childFolders = useMemo(() => {
@@ -730,7 +629,6 @@ function SidebarFolderItem({
                                 <DropdownMenuItem
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setRenameValue(folder.name);
                                         setIsDropdownOpen(false);
                                         setShowRenameDialog(true);
                                     }}
@@ -839,39 +737,13 @@ function SidebarFolderItem({
                 </AlertDialogContent>
             </AlertDialog>
             {/* Rename Dialog */}
-            <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
-                <DialogContent onClick={(e) => e.stopPropagation()}>
-                    <DialogHeader>
-                        <DialogTitle>Rename Folder</DialogTitle>
-                        <DialogDescription>
-                            Enter a new name for this folder.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <Input
-                            ref={renameInputRef}
-                            value={renameValue}
-                            onChange={(e) => setRenameValue(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && renameValue.trim()) {
-                                    handleRename();
-                                } else if (e.key === 'Escape') {
-                                    setShowRenameDialog(false);
-                                }
-                            }}
-                            placeholder="Folder name"
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowRenameDialog(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleRename} disabled={!renameValue.trim()}>
-                            Rename
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <RenameDialog
+                open={showRenameDialog}
+                onOpenChange={setShowRenameDialog}
+                currentName={folder.name}
+                itemType="folder"
+                onRename={handleRename}
+            />
             {/* Move to Dialog */}
             {onMoveItem && (
                 <MoveToDialog

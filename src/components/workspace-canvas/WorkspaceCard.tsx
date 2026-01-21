@@ -1,4 +1,4 @@
-import { MoreVertical, Trash2, Palette, CheckCircle2, FolderInput, FileText, Copy, X } from "lucide-react";
+import { MoreVertical, Trash2, Palette, CheckCircle2, FolderInput, FileText, Copy, X, Pencil } from "lucide-react";
 import { PiMouseScrollFill, PiMouseScrollBold } from "react-icons/pi";
 import { useCallback, useState, memo, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
@@ -50,6 +50,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import MoveToDialog from "@/components/modals/MoveToDialog";
+import RenameDialog from "@/components/modals/RenameDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -203,6 +204,7 @@ function WorkspaceCard({
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   // Get scroll lock state from Zustand store (persists across interactions)
   const isScrollLocked = useUIStore(selectItemScrollLocked(item.id));
@@ -318,7 +320,12 @@ function WorkspaceCard({
     onDeleteItem(item.id);
     setShowDeleteDialog(false);
     toast.success("Card deleted successfully");
-  }, [item.id, onDeleteItem, item.name]);
+  }, [item.id, onDeleteItem, item.name, posthog]);
+
+  const handleRename = useCallback((newName: string) => {
+    onUpdateItem(item.id, { name: newName });
+    toast.success("Card renamed");
+  }, [item.id, onUpdateItem]);
 
   // Handle copying note content as markdown
   const handleCopyMarkdown = useCallback(() => {
@@ -677,6 +684,10 @@ function WorkspaceCard({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem onSelect={() => setShowRenameDialog(true)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    <span>Rename</span>
+                  </DropdownMenuItem>
                   {onMoveItem && (
                     <>
                       <DropdownMenuItem onSelect={() => setShowMoveDialog(true)}>
@@ -961,6 +972,15 @@ function WorkspaceCard({
             </AlertDialogContent>
           </AlertDialog>
 
+          {/* Rename Dialog */}
+          <RenameDialog
+            open={showRenameDialog}
+            onOpenChange={setShowRenameDialog}
+            currentName={item.name || "Untitled"}
+            itemType={item.type}
+            onRename={handleRename}
+          />
+
           {/* Move to Dialog */}
           {onMoveItem && (
             <MoveToDialog
@@ -978,10 +998,14 @@ function WorkspaceCard({
             />
           )}
         </div>
-      </ContextMenuTrigger >
+      </ContextMenuTrigger>
 
       {/* Right-Click Context Menu */}
-      < ContextMenuContent className="w-48" >
+      <ContextMenuContent className="w-48">
+        <ContextMenuItem onSelect={() => setShowRenameDialog(true)}>
+          <Pencil className="mr-2 h-4 w-4" />
+          <span>Rename</span>
+        </ContextMenuItem>
         {onMoveItem && (
           <>
             <ContextMenuItem onSelect={() => setShowMoveDialog(true)}>
@@ -1015,9 +1039,9 @@ function WorkspaceCard({
           <Trash2 className="mr-2 h-4 w-4" />
           <span>Delete</span>
         </ContextMenuItem>
-      </ContextMenuContent >
+      </ContextMenuContent>
 
-    </ContextMenu >
+    </ContextMenu>
   );
 }
 
