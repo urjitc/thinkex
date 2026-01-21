@@ -23,7 +23,7 @@ interface MathEditContextValue {
     closeDialog: () => void;
 }
 
-const MathEditContext = createContext<MathEditContextValue | null>(null);
+export const MathEditContext = createContext<MathEditContextValue | null>(null);
 
 // Hook to access the math edit context
 export function useMathEdit() {
@@ -32,6 +32,60 @@ export function useMathEdit() {
         throw new Error("useMathEdit must be used within a MathEditProvider");
     }
     return context;
+}
+
+// Hook to auto-open math dialog when a new empty math element is created
+export function useAutoOpenMathDialog(
+    latex: string,
+    isReadOnly: boolean,
+    onSave: (latex: string) => void,
+    title: string
+) {
+    const dialogOpenedRef = useRef(false);
+    const onSaveRef = useRef(onSave);
+    
+    // Get the math edit context (may be null if provider not wrapped)
+    // Always call useContext unconditionally to follow Rules of Hooks
+    const mathEdit = useContext(MathEditContext);
+
+    // Keep onSaveRef up to date
+    useEffect(() => {
+        onSaveRef.current = onSave;
+    }, [onSave]);
+
+    // Auto-open dialog when a new empty math element is created
+    useEffect(() => {
+        // Only open if:
+        // 1. Element is editable (not read-only)
+        // 2. Math edit context is available
+        // 3. LaTeX is empty or just whitespace (newly created element)
+        // 4. Dialog hasn't been opened yet for this instance
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        
+        if (
+            !isReadOnly &&
+            mathEdit &&
+            !latex.trim() &&
+            !dialogOpenedRef.current
+        ) {
+            dialogOpenedRef.current = true;
+            // Use setTimeout to ensure the dialog opens after the component is fully mounted
+            timeoutId = setTimeout(() => {
+                mathEdit.openDialog({
+                    initialLatex: "",
+                    onSave: onSaveRef.current,
+                    title,
+                });
+            }, 0);
+        }
+
+        // Cleanup: clear timeout if component unmounts or dependencies change
+        return () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        };
+    }, [isReadOnly, mathEdit, latex, title]);
 }
 
 // Provider component that renders a single shared MathEditDialog
