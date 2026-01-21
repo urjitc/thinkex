@@ -215,6 +215,7 @@ export async function POST(req: Request) {
       userId,
       activeFolderId,
       clientTools: body.tools,
+      messages: cleanedMessages, // For quiz context extraction
     });
 
     // Stream the response

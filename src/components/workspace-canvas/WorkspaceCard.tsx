@@ -1,3 +1,4 @@
+import { QuizContent } from "./QuizContent";
 import { MoreVertical, Trash2, Palette, CheckCircle2, FolderInput, FileText, Copy, X, Pencil } from "lucide-react";
 import { PiMouseScrollFill, PiMouseScrollBold } from "react-icons/pi";
 import { useCallback, useState, memo, useRef, useEffect, useMemo } from "react";
@@ -519,6 +520,13 @@ function WorkspaceCard({
       }
     }
 
+    // Prevent opening modal for quiz cards as they are interactive
+    if (item.type === 'quiz') {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
     // For YouTube cards, handle click to play
     if (item.type === 'youtube') {
       // If we got here, it wasn't a drag (checked above)
@@ -757,18 +765,19 @@ function WorkspaceCard({
                   onNameChange={handleNameChange}
                   onNameCommit={handleNameCommit}
                   onSubtitleChange={handleSubtitleChange}
-                  readOnly={(item.type === 'note' || item.type === 'pdf') && !shouldShowPreview}
+                  readOnly={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview}
                   noMargin={true}
                   onTitleFocus={handleTitleFocus}
                   onTitleBlur={handleTitleBlur}
-                  allowWrap={(item.type === 'note' || item.type === 'pdf') && !shouldShowPreview}
+                  allowWrap={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview}
                 />
               )
               }
               {/* Subtle type label for narrow cards without preview */}
-              {(item.type === 'note' || item.type === 'pdf') && !shouldShowPreview && (
+              {/* Subtle type label for narrow cards without preview */}
+              {(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview && (
                 <span className="text-[10px] uppercase tracking-wider text-white/40 mt-auto">
-                  {item.type === 'note' ? 'Note' : 'PDF'}
+                  {item.type === 'note' ? 'Note' : item.type === 'pdf' ? 'PDF' : 'Quiz'}
                 </span>
               )}
             </div>
@@ -805,6 +814,20 @@ function WorkspaceCard({
                 </div>
               );
             })()}
+
+            {/* Quiz Content - render interactive quiz */}
+            {item.type === 'quiz' && shouldShowPreview && (
+              <div
+                className="flex-1 min-h-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <QuizContent
+                  item={item}
+                  onUpdateData={(updater) => onUpdateItem(item.id, { data: updater(item.data) as any })}
+                  isScrollLocked={isScrollLocked}
+                />
+              </div>
+            )}
 
             {/* Flashcard Content - render interactive flashcard */}
             {item.type === 'flashcard' && (() => {
@@ -1071,6 +1094,11 @@ export const WorkspaceCardMemoized = memo(WorkspaceCard, (prevProps, nextProps) 
     if (JSON.stringify(prevData) !== JSON.stringify(nextData)) return false;
   }
   if (prevProps.item.type === 'youtube' && nextProps.item.type === 'youtube') {
+    const prevData = prevProps.item.data;
+    const nextData = nextProps.item.data;
+    if (JSON.stringify(prevData) !== JSON.stringify(nextData)) return false;
+  }
+  if (prevProps.item.type === 'quiz' && nextProps.item.type === 'quiz') {
     const prevData = prevProps.item.data;
     const nextData = nextProps.item.data;
     if (JSON.stringify(prevData) !== JSON.stringify(nextData)) return false;
