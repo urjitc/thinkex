@@ -18,6 +18,7 @@ import { useRef, useState, useCallback } from "react";
 import { toast } from "sonner";
 import type { PdfData } from "@/lib/workspace-state/types";
 import { CreateYouTubeDialog } from "@/components/modals/CreateYouTubeDialog";
+import { focusComposerInput } from "@/lib/utils/composer-utils";
 
 interface SidebarQuickActionsProps {
     currentWorkspaceId: string;
@@ -91,8 +92,19 @@ export function SidebarQuickActions({ currentWorkspaceId, isChatExpanded, setIsC
     }, [api, isChatExpanded, setIsChatExpanded, setSelectedActions]);
 
     const handleQuizClick = useCallback(() => {
-        toast.info("Quizzes coming soon!");
-    }, []);
+        // Open chat if closed
+        if (setIsChatExpanded && !isChatExpanded) {
+            setIsChatExpanded(true);
+        }
+
+        // Fill composer with quiz creation prompt
+        api.composer().setText("Create a quiz about ");
+
+        // Focus the composer input
+        focusComposerInput();
+
+        toast.success("Quiz creation started");
+    }, [api, isChatExpanded, setIsChatExpanded]);
 
     // PDF Upload Logic (Adapted from WorkspaceSection/BottomActionBar)
     const handlePDFUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {

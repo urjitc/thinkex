@@ -33,7 +33,9 @@ import {
   ContextMenuSubTrigger,
 } from "@/components/ui/context-menu";
 
-import { FileText, Layers, Folder, Upload, Play, Plus, MoreHorizontal, Globe } from "lucide-react";
+import { FileText, Layers, Folder, Upload, Play, Plus, MoreHorizontal, Globe, Brain } from "lucide-react";
+import { LuBook } from "react-icons/lu";
+import { PiCardsThreeFill } from "react-icons/pi";
 import WorkspaceSettingsModal from "@/components/workspace/WorkspaceSettingsModal";
 import ShareWorkspaceDialog from "@/components/workspace/ShareWorkspaceDialog";
 import { CreateYouTubeDialog } from "@/components/modals/CreateYouTubeDialog";
@@ -42,6 +44,7 @@ import type { WorkspaceWithState } from "@/lib/workspace-state/types";
 import { ItemOpenPrompt } from "./ItemOpenPrompt";
 import { createPortal } from "react-dom";
 import { useAssistantApi } from "@assistant-ui/react";
+import { focusComposerInput } from "@/lib/utils/composer-utils";
 
 interface WorkspaceSectionProps {
   // Loading states
@@ -558,8 +561,8 @@ export function WorkspaceSection({
 
             <ContextMenuSub>
               <ContextMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
-                <MoreHorizontal className="size-4" />
-                Other
+                <LuBook className="size-4" />
+                Learn
               </ContextMenuSubTrigger>
               <ContextMenuSubContent>
                 <ContextMenuItem
@@ -570,9 +573,34 @@ export function WorkspaceSection({
                   }}
                   className="flex items-center gap-2 cursor-pointer"
                 >
-                  <Layers className="size-4" />
+                  <PiCardsThreeFill className="size-4" />
                   Flashcards
                 </ContextMenuItem>
+                <ContextMenuItem
+                  onSelect={() => {
+                    // Open chat if closed
+                    if (setIsChatExpanded && !isChatExpanded && isDesktop) {
+                      setIsChatExpanded(true);
+                    }
+                    // Fill composer with quiz creation prompt
+                    api.composer().setText("Create a quiz about ");
+                    // Focus the composer input
+                    focusComposerInput();
+                    toast.success("Quiz creation started");
+                  }}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Brain className="size-4" />
+                  Quiz
+                </ContextMenuItem>
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
+                <MoreHorizontal className="size-4" />
+                Other
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent>
                 <ContextMenuItem
                   onSelect={() => setShowYouTubeDialog(true)}
                   className="flex items-center gap-2 cursor-pointer"

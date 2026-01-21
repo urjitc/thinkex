@@ -1,6 +1,8 @@
 import type React from "react";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Search, X, ChevronRight, ChevronDown, FolderOpen, ChevronLeft, Plus, Upload, Layers, FileText, Folder, Settings, Share2, Play, MoreHorizontal, Globe } from "lucide-react";
+import { Search, X, ChevronRight, ChevronDown, FolderOpen, ChevronLeft, Plus, Upload, Layers, FileText, Folder, Settings, Share2, Play, MoreHorizontal, Globe, Brain } from "lucide-react";
+import { LuBook } from "react-icons/lu";
+import { PiCardsThreeFill } from "react-icons/pi";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -10,6 +12,7 @@ import ChatFloatingButton from "@/components/chat/ChatFloatingButton";
 import { useUIStore } from "@/lib/stores/ui-store";
 import { IconRenderer } from "@/hooks/use-icon-picker";
 import { useAssistantApi } from "@assistant-ui/react";
+import { focusComposerInput } from "@/lib/utils/composer-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -654,8 +657,8 @@ export default function WorkspaceHeader({
 
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
-                    <MoreHorizontal className="size-4" />
-                    Other
+                    <LuBook className="size-4" />
+                    Learn
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
                     <DropdownMenuItem
@@ -666,9 +669,34 @@ export default function WorkspaceHeader({
                       }}
                       className="flex items-center gap-2 cursor-pointer"
                     >
-                      <Layers className="size-4" />
+                      <PiCardsThreeFill className="size-4" />
                       Flashcards
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        // Open chat if closed
+                        if (setIsChatExpanded && !isChatExpanded) {
+                          setIsChatExpanded(true);
+                        }
+                        // Fill composer with quiz creation prompt
+                        api?.composer().setText("Create a quiz about ");
+                        // Focus the composer input
+                        focusComposerInput();
+                        toast.success("Quiz creation started");
+                      }}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <Brain className="size-4" />
+                      Quiz
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
+                    <MoreHorizontal className="size-4" />
+                    Other
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
                     <DropdownMenuItem
                       onClick={() => {
                         setShowYouTubeDialog(true);
