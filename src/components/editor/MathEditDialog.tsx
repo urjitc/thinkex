@@ -34,6 +34,49 @@ export function useMathEdit() {
     return context;
 }
 
+// Hook to auto-open math dialog when a new empty math element is created
+export function useAutoOpenMathDialog(
+    latex: string,
+    isReadOnly: boolean,
+    onSave: (latex: string) => void,
+    title: string
+) {
+    const dialogOpenedRef = useRef(false);
+    
+    // Try to get the math edit context (may not be available if provider not wrapped)
+    let mathEdit: ReturnType<typeof useMathEdit> | null = null;
+    try {
+        mathEdit = useMathEdit();
+    } catch {
+        // Context not available - will use legacy approach
+    }
+
+    // Auto-open dialog when a new empty math element is created
+    useEffect(() => {
+        // Only open if:
+        // 1. Element is editable (not read-only)
+        // 2. Math edit context is available
+        // 3. LaTeX is empty or just whitespace (newly created element)
+        // 4. Dialog hasn't been opened yet for this instance
+        if (
+            !isReadOnly &&
+            mathEdit &&
+            !latex.trim() &&
+            !dialogOpenedRef.current
+        ) {
+            dialogOpenedRef.current = true;
+            // Use setTimeout to ensure the dialog opens after the component is fully mounted
+            setTimeout(() => {
+                mathEdit.openDialog({
+                    initialLatex: "",
+                    onSave,
+                    title,
+                });
+            }, 0);
+        }
+    }, [isReadOnly, mathEdit, latex, onSave, title]);
+}
+
 // Provider component that renders a single shared MathEditDialog
 export function MathEditProvider({ children }: { children: React.ReactNode }) {
     const [isOpen, setIsOpen] = useState(false);

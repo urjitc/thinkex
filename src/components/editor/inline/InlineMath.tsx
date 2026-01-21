@@ -4,7 +4,7 @@ import { createReactInlineContentSpec } from "@blocknote/react";
 import { memo, useMemo, useCallback } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
-import { useMathEdit } from "../MathEditDialog";
+import { useMathEdit, useAutoOpenMathDialog } from "../MathEditDialog";
 import "../blocks/math-block.css";
 
 // Component for rendering inline math - respects read-only state
@@ -59,6 +59,9 @@ const InlineMathContent = memo(function InlineMathContent({ inlineContent, edito
       });
     }
   }, [isReadOnly, mathEdit, latex, handleSave]);
+
+  // Auto-open dialog when a new empty inline math is created
+  useAutoOpenMathDialog(latex, isReadOnly, handleSave, "Edit Inline Math");
 
   return (
     <span

@@ -4,7 +4,7 @@ import { createReactBlockSpec } from "@blocknote/react";
 import { memo, useMemo, useCallback } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
-import { useMathEdit } from "../MathEditDialog";
+import { useMathEdit, useAutoOpenMathDialog } from "../MathEditDialog";
 import "./math-block.css";
 
 // Component for rendering the math block - respects read-only state
@@ -56,6 +56,9 @@ const MathBlockContent = memo(function MathBlockContent(props: any) {
       });
     }
   }, [isReadOnly, mathEdit, latex, handleSave]);
+
+  // Auto-open dialog when a new empty math block is created
+  useAutoOpenMathDialog(latex, isReadOnly, handleSave, "Edit Math Block");
 
   // Always center block math, regardless of textAlignment prop
   return (
