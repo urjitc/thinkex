@@ -1018,11 +1018,26 @@ body.marquee-selecting iframe {
 .react-grid-item.react-draggable-dragging {
   transition: none !important;
   z-index: 1000;
-  opacity: 0.8;
+  opacity: 0.5;
 }
 
 .react-grid-item.react-draggable-dragging * {
   user-select: none;
+}
+
+/* Ensure YouTube and PDF preview cards show opacity during drag */
+/* The data-item-type is on the article element inside the grid item */
+.react-grid-item.react-draggable-dragging article[data-item-type="youtube"],
+.react-grid-item.react-draggable-dragging article[data-item-type="pdf"][data-has-preview="true"] {
+  opacity: 0.5 !important;
+}
+
+/* Ensure iframes and images in YouTube/PDF cards show opacity during drag */
+.react-grid-item.react-draggable-dragging article[data-item-type="youtube"] iframe,
+.react-grid-item.react-draggable-dragging article[data-item-type="youtube"] img,
+.react-grid-item.react-draggable-dragging article[data-item-type="pdf"][data-has-preview="true"] iframe,
+.react-grid-item.react-draggable-dragging article[data-item-type="pdf"][data-has-preview="true"] img {
+  opacity: 0.5 !important;
 }
 
 /* Disable transitions when manually resizing */
