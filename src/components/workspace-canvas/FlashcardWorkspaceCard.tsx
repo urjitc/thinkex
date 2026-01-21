@@ -44,6 +44,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import MoveToDialog from "@/components/modals/MoveToDialog";
+import RenameDialog from "@/components/modals/RenameDialog";
 
 interface FlashcardWorkspaceCardProps {
     item: Item;
@@ -191,6 +192,7 @@ export function FlashcardWorkspaceCard({
 
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showMoveDialog, setShowMoveDialog] = useState(false);
+    const [showRenameDialog, setShowRenameDialog] = useState(false);
     const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
     const [isFlipped, setIsFlipped] = useState(false);
     const [isFlipping, setIsFlipping] = useState(false);
@@ -256,6 +258,11 @@ export function FlashcardWorkspaceCard({
     const handleColorChange = useCallback((color: ColorResult) => {
         onUpdateItem(item.id, { color: color.hex as CardColor });
         setIsColorPickerOpen(false);
+    }, [item.id, onUpdateItem]);
+
+    const handleRename = useCallback((newName: string) => {
+        onUpdateItem(item.id, { name: newName });
+        toast.success("Flashcard renamed");
     }, [item.id, onUpdateItem]);
 
     // Helper function to hide tabs during flip animation
@@ -409,6 +416,10 @@ export function FlashcardWorkspaceCard({
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenuItem onSelect={() => setShowRenameDialog(true)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    <span>Rename</span>
+                                </DropdownMenuItem>
                                 {onMoveItem && (
                                     <>
                                         <DropdownMenuItem onSelect={() => setShowMoveDialog(true)}>
@@ -549,6 +560,15 @@ export function FlashcardWorkspaceCard({
                         </AlertDialogContent>
                     </AlertDialog>
 
+                    {/* Rename Dialog */}
+                    <RenameDialog
+                        open={showRenameDialog}
+                        onOpenChange={setShowRenameDialog}
+                        currentName={item.name || "Untitled"}
+                        itemType={item.type}
+                        onRename={handleRename}
+                    />
+
                     {/* Move to Dialog */}
                     {onMoveItem && allItems && workspaceName && (
                         <MoveToDialog
@@ -570,6 +590,10 @@ export function FlashcardWorkspaceCard({
 
             {/* Right-Click Context Menu */}
             <ContextMenuContent className="w-48">
+                <ContextMenuItem onSelect={() => setShowRenameDialog(true)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    <span>Rename</span>
+                </ContextMenuItem>
                 {onMoveItem && (
                     <>
                         <ContextMenuItem onSelect={() => setShowMoveDialog(true)}>
