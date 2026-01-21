@@ -171,46 +171,40 @@ export function WorkspaceGrid({
       return;
     }
 
-    // Use cursor position to find which folder is under the cursor
-    // Temporarily hide dragged element to get accurate elementFromPoint result
-    const draggedElement = element;
-    if (!draggedElement) return; // Safety check
-    const originalPointerEvents = draggedElement.style.pointerEvents;
-    draggedElement.style.pointerEvents = 'none';
-
     // Cast Event to MouseEvent to access clientX/clientY
     const mouseEvent = e as MouseEvent;
-    const elementUnderCursor = document.elementFromPoint(mouseEvent.clientX, mouseEvent.clientY);
+    const cursorX = mouseEvent.clientX;
+    const cursorY = mouseEvent.clientY;
 
-    // Restore pointer events
-    draggedElement.style.pointerEvents = originalPointerEvents;
-
-    if (!elementUnderCursor) {
-      if (hoveredFolderIdRef.current !== null) {
-        hoveredFolderIdRef.current = null;
-        window.dispatchEvent(new CustomEvent('folder-drag-hover', {
-          detail: { folderId: null, isHovering: false }
-        }));
-      }
-      return;
-    }
-
-    // Walk up the DOM tree to find folder element
-    let current: HTMLElement | null = elementUnderCursor as HTMLElement;
-    let folderElement: HTMLElement | null = null;
-
-    while (current && current !== document.body) {
-      // Check for data-folder-id attribute (we'll add this to FolderCard)
-      if (current.dataset.folderId) {
-        folderElement = current;
+    // Find all folder cards and check if cursor is within any folder's bounding box
+    // This is more reliable than elementFromPoint which can miss due to DOM structure
+    let hoveredFolder: string | null = null;
+    
+    // Get all folder items from all items
+    const folderItems = allItemsRef.current.filter(item => item.type === 'folder');
+    
+    // Check each folder card's bounding box
+    for (const folderItem of folderItems) {
+      // Skip if this is the folder being dragged
+      if (folderItem.id === draggedItemId) continue;
+      
+      // Find the folder card element by its ID
+      const folderCardElement = document.querySelector(`[data-folder-id="${folderItem.id}"]`) as HTMLElement;
+      if (!folderCardElement) continue;
+      
+      // Get bounding box of the folder card
+      const rect = folderCardElement.getBoundingClientRect();
+      
+      // Check if cursor is within the folder card's bounds
+      if (
+        cursorX >= rect.left &&
+        cursorX <= rect.right &&
+        cursorY >= rect.top &&
+        cursorY <= rect.bottom
+      ) {
+        hoveredFolder = folderItem.id;
         break;
       }
-      current = current.parentElement;
-    }
-
-    let hoveredFolder: string | null = null;
-    if (folderElement) {
-      hoveredFolder = folderElement.dataset.folderId || null;
     }
 
     // If dragging a folder onto another folder, check for circular references
