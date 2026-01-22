@@ -75,6 +75,21 @@ setup_env_file() {
         fi
         echo -e "${GREEN}Generated and set BETTER_AUTH_SECRET${RESET}"
     fi
+    
+    # Set STORAGE_TYPE to local for local development if not set or empty
+    if ! grep -q "^STORAGE_TYPE=" .env 2>/dev/null; then
+        echo -e "${YELLOW}Setting STORAGE_TYPE to local for local development...${RESET}"
+        echo "STORAGE_TYPE=local" >> .env
+        echo -e "${GREEN}Set STORAGE_TYPE=local${RESET}"
+    elif grep -q "^STORAGE_TYPE=$" .env 2>/dev/null; then
+        echo -e "${YELLOW}Setting STORAGE_TYPE to local for local development...${RESET}"
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "s|^STORAGE_TYPE=$|STORAGE_TYPE=local|" .env
+        else
+            sed -i "s|^STORAGE_TYPE=$|STORAGE_TYPE=local|" .env
+        fi
+        echo -e "${GREEN}Set STORAGE_TYPE=local${RESET}"
+    fi
 }
 
 # Main setup function
@@ -287,6 +302,18 @@ else
     }
 fi
 
+# Create auth schema and jwt() function for RLS policies (required by migration)
+# Note: This is a mock function for local development. Better Auth handles auth at the app level.
+echo ""
+echo -e "${YELLOW}Creating auth schema for RLS policies...${RESET}"
+if [ "$USE_DOCKER_POSTGRES" = true ]; then
+    docker-compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "CREATE SCHEMA IF NOT EXISTS auth;" 2>/dev/null || docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "CREATE SCHEMA IF NOT EXISTS auth;" 2>/dev/null || true
+    docker-compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS \$func\$ SELECT NULL::jsonb; \$func\$;" 2>/dev/null || docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS \$func\$ SELECT NULL::jsonb; \$func\$;" 2>/dev/null || true
+else
+    psql "$DB_URL" -c "CREATE SCHEMA IF NOT EXISTS auth;" 2>/dev/null || true
+    psql "$DB_URL" -c "CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS \$func\$ SELECT NULL::jsonb; \$func\$;" 2>/dev/null || true
+fi
+
 # Install dependencies
 echo ""
 echo -e "${YELLOW}Installing dependencies...${RESET}"
@@ -314,7 +341,7 @@ fi
 
 echo ""
 echo -e "${YELLOW}Pushing any remaining schema changes...${RESET}"
-pnpm db:push || {
+pnpm drizzle-kit push --force || {
     echo "Schema push completed or no changes needed."
 }
 
@@ -322,9 +349,18 @@ echo ""
 echo -e "${GREEN}✓ Setup complete!${RESET}"
 echo ""
 echo -e "${YELLOW}IMPORTANT: Please edit .env and configure:${RESET}"
-echo "   - GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET"
-echo "   - GOOGLE_GENERATIVE_AI_API_KEY"
-echo "   - Supabase credentials (if using Supabase storage)"
+echo ""
+echo -e "${RED}Required API Keys:${RESET}"
+echo "   - GOOGLE_GENERATIVE_AI_API_KEY (from Google AI Studio)"
+echo "   - NEXT_PUBLIC_ASSISTANT_BASE_URL (from Assistant Cloud)"
+echo "   - ASSISTANT_API_KEY (from Assistant Cloud)"
+echo ""
+echo -e "${YELLOW}Optional API Keys:${RESET}"
+echo "   - GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET (for OAuth login)"
+echo "   - Supabase credentials (if using Supabase storage):"
+echo "     * NEXT_PUBLIC_SUPABASE_URL"
+echo "     * NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY"
+echo "     * SUPABASE_SERVICE_ROLE_KEY"
 echo ""
 if [ "$USE_DOCKER_POSTGRES" = true ]; then
     echo "PostgreSQL is running in Docker. Useful commands:"
@@ -333,8 +369,8 @@ if [ "$USE_DOCKER_POSTGRES" = true ]; then
     echo "  - View logs:            docker-compose logs -f postgres"
     echo ""
 fi
-echo "To start the development server:"
-echo -e "  ${GREEN}pnpm dev${RESET}"
 echo ""
+echo -e "${GREEN}Starting development server...${RESET}"
 echo "Access ThinkEx at: http://localhost:3000"
 echo ""
+pnpm dev
