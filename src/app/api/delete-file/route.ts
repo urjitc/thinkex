@@ -149,11 +149,6 @@ export async function DELETE(request: NextRequest) {
         message: 'File deleted successfully',
       });
     }
-
-    return NextResponse.json({
-      success: true,
-      message: 'File deleted successfully',
-    });
   } catch (error) {
     console.error('Error in delete-file API route:', error);
     return NextResponse.json(
