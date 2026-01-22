@@ -56,15 +56,37 @@ ThinkEx is that desk, digitalized for the browser.
 
 ## Self-Hosting
 
-Follow these steps to run ThinkEx on your own infrastructure.
+ThinkEx can be self-hosted using Docker. This is the easiest way to get started.
 
-### Prerequisites
+Docker Compose sets up the application and PostgreSQL database automatically.
 
-*   Node.js (v20+)
-*   pnpm
-*   PostgreSQL database (local or hosted like Supabase/Neon)
+#### Prerequisites
 
-### Installation
+*   [Docker](https://docs.docker.com/get-docker/) (v20.10+)
+*   [Docker Compose](https://docs.docker.com/compose/install/) (v2.0+)
+
+#### Quick Start
+
+**Option 1: Automated Setup (Recommended)**
+
+Run the setup script to automatically configure and start everything:
+
+```bash
+git clone https://github.com/ThinkEx-OSS/thinkex.git
+cd thinkex
+./docker-setup.sh
+```
+
+The script will:
+- Check for Docker and Docker Compose
+- Create `.env` file from template
+- Generate `BETTER_AUTH_SECRET` automatically
+- Build and start Docker containers
+- Initialize the database schema
+
+You'll still need to edit `.env` to add your API keys (Google OAuth, Google AI, Supabase if needed).
+
+**Option 2: Manual Setup**
 
 1.  **Clone the repository**
     ```bash
@@ -72,49 +94,60 @@ Follow these steps to run ThinkEx on your own infrastructure.
     cd thinkex
     ```
 
-2.  **Install dependencies**
+2.  **Configure environment variables**
     ```bash
-    pnpm install
-    ```
-
-3.  **Environment Setup**
-    Create the local environment file:
-    ```bash
-    cp .env.example .env.local
+    cp docker-compose.env.example .env
     ```
     
-    Open `.env.local` and configure the following:
+    Edit `.env` and configure:
     
-    *   **Database**:
-        *   `DATABASE_URL`: PostgreSQL connection string.
-        *   `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL.
-        *   `SUPABASE_SERVICE_ROLE_KEY`: Service role key from Supabase dashboard.
-    *   **Auth**:
-        *   `BETTER_AUTH_SECRET`: Generate a random string (e.g., `openssl rand -base64 32`).
-    *   **AI**:
-        *   `GOOGLE_GENERATIVE_AI_API_KEY`: API key for Google Gemini.
-    *   **Google OAuth** (for login):
-        *   `GOOGLE_CLIENT_ID`
-        *   `GOOGLE_CLIENT_SECRET`
+    *   **Database**: PostgreSQL credentials (defaults work for local development)
+    *   **Better Auth**: Generate `BETTER_AUTH_SECRET` with `openssl rand -base64 32`
+    *   **Google OAuth**: Get credentials from [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+    *   **Supabase**: Your Supabase project URL and keys (for file storage, if using Supabase storage)
+    *   **Google AI**: API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
 
-4.  **Supabase Storage**
-    Create a storage bucket for file uploads:
-    1.  Go to Supabase Dashboard → Storage.
-    2.  Create a new bucket named `file-upload`.
-    3.  Set the bucket to **Public**.
-
-5.  **Database Setup**
-    Push the schema to your database:
+3.  **Start the services**
     ```bash
-    pnpm db:push
+    docker-compose up -d
     ```
-    *Note: Use `db:setup` if you want to run full migrations, but `db:push` is sufficient for syncing the schema.*
+    This starts the app in development mode with hot reloading. Changes to your code will automatically reload in the browser. The source code is mounted as a volume, so edits on your host machine are immediately reflected in the container.
 
-6.  **Run Development Server**
+4.  **Initialize the database**
     ```bash
-    pnpm dev
+    docker-compose exec app pnpm db:push
     ```
-    Access the app at [http://localhost:3000](http://localhost:3000).
+
+5.  **Access the application**
+    Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+#### Storage Configuration
+
+ThinkEx supports two storage backends for file uploads:
+
+**Option 1: Local File Storage** (Recommended for Self-Hosting)
+- Set `STORAGE_TYPE=local` in your `.env` file
+- Files are stored in the `./uploads` directory (persisted as a Docker volume)
+- No external dependencies required
+- Simple setup with full control over your data
+
+**Option 2: Supabase Storage** (Cloud-based)
+- Set `STORAGE_TYPE=supabase` in your `.env` file
+- Configure Supabase credentials:
+  - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
+  - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY`: Anon key from Supabase
+  - `SUPABASE_SERVICE_ROLE_KEY`: Service role key from Supabase
+- Create a storage bucket named `file-upload` and set it to **Public**
+
+#### Docker Commands
+
+*   **View logs**: `docker-compose logs -f app`
+*   **Stop services**: `docker-compose down`
+*   **Stop and remove volumes**: `docker-compose down -v` (⚠️ deletes database)
+*   **Rebuild after changes**: `docker-compose up -d --build`
+
+
+
 
 ## Contributing
 

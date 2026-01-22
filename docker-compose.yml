@@ -1,0 +1,96 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: thinkex-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-thinkex}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-thinkex_password_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-thinkex}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-thinkex}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - thinkex-network
+
+  # Next.js Application (Development Mode with Hot Reloading)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: thinkex-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      # Application
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      
+      # Database
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-thinkex}:${POSTGRES_PASSWORD:-thinkex_password_change_me}@postgres:5432/${POSTGRES_DB:-thinkex}
+      
+      # Better Auth
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-${NEXT_PUBLIC_APP_URL:-http://localhost:3000}}
+      
+      # Google OAuth
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      
+      # Storage Configuration
+      - STORAGE_TYPE=${STORAGE_TYPE:-local}
+      - UPLOADS_DIR=${UPLOADS_DIR:-/app/uploads}
+      
+      # Supabase (only needed if STORAGE_TYPE=supabase)
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-}
+      - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      
+      # Google AI
+      - GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY}
+      
+      # Assistant UI (optional)
+      - NEXT_PUBLIC_ASSISTANT_BASE_URL=${NEXT_PUBLIC_ASSISTANT_BASE_URL}
+      - ASSISTANT_API_KEY=${ASSISTANT_API_KEY}
+      
+      # Node environment
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+      # Increase Node.js memory limit (6GB for large Next.js apps with many dependencies)
+      - NODE_OPTIONS=--max-old-space-size=6144
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - thinkex-network
+    # Increase memory limit for the container (helps prevent OOM kills)
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 6G
+    volumes:
+      # Mount source code for hot reloading
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      # Mount uploads directory for local file storage
+      - uploads_data:/app/uploads
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+networks:
+  thinkex-network:
+    driver: bridge
