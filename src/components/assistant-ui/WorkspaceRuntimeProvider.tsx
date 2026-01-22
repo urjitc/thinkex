@@ -113,6 +113,10 @@ export function WorkspaceRuntimeProvider({
       toast.error("Authentication error", {
         description: "Your session may have expired. Please refresh the page.",
       });
+    } else if (errorMessage.includes("api key") || errorMessage.includes("api_key") || errorMessage.includes("googlegenerativeai") || errorMessage.includes("api key not defined") || errorMessage.includes("api key is not set")) {
+      toast.error("API key not defined", {
+        description: "Please configure GOOGLE_GENERATIVE_AI_API_KEY in your environment variables.",
+      });
     } else {
       // Generic error fallback
       toast.error("Something went wrong", {
