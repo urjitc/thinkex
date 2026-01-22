@@ -6,10 +6,11 @@ import { existsSync } from 'fs';
 // Serve files from local uploads directory
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
-    const filename = params.path.join('/');
+    const { path } = await params;
+    const filename = path.join('/');
     
     // Security: Prevent directory traversal
     if (filename.includes('..') || filename.includes('/')) {
