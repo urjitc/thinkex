@@ -56,37 +56,49 @@ ThinkEx is that desk, digitalized for the browser.
 
 ## Self-Hosting
 
-ThinkEx can be self-hosted using Docker. This is the easiest way to get started.
+ThinkEx can be self hosted for local development. The setup uses Docker for PostgreSQL (recommended) while running the Next.js app locally for hot reload.
 
-Docker Compose sets up the application and PostgreSQL database automatically.
+### Quick Start
 
 #### Prerequisites
 
-*   [Docker](https://docs.docker.com/get-docker/) (v20.10+)
-*   [Docker Compose](https://docs.docker.com/compose/install/) (v2.0+)
+*   [Node.js](https://nodejs.org/) (v20+)
+*   [pnpm](https://pnpm.io/) (will be installed automatically if missing)
+*   [Docker](https://docs.docker.com/get-docker/) (recommended for PostgreSQL) OR [PostgreSQL](https://www.postgresql.org/download/) (v12+) installed locally
 
-#### Quick Start
+#### Automated Setup
 
-**Option 1: Automated Setup (Recommended)**
-
-Run the setup script to automatically configure and start everything:
+Run the interactive setup script:
 
 ```bash
 git clone https://github.com/ThinkEx-OSS/thinkex.git
 cd thinkex
-./docker-setup.sh
+./setup.sh
 ```
 
 The script will:
-- Check for Docker and Docker Compose
+- Check prerequisites (Node.js, pnpm, Docker)
 - Create `.env` file from template
 - Generate `BETTER_AUTH_SECRET` automatically
-- Build and start Docker containers
+- Start PostgreSQL in Docker (or use local PostgreSQL if Docker is not available)
+- Configure database connection
+- Install dependencies
 - Initialize the database schema
 
-You'll still need to edit `.env` to add your API keys (Google OAuth, Google AI, Supabase if needed).
+After setup, start the development server:
 
-**Option 2: Manual Setup**
+```bash
+pnpm dev
+```
+
+Access ThinkEx at [http://localhost:3000](http://localhost:3000)
+
+**PostgreSQL Docker Commands:**
+- Stop PostgreSQL: `docker-compose down`
+- Start PostgreSQL: `docker-compose up -d`
+- View logs: `docker-compose logs -f postgres`
+
+#### Manual Setup
 
 1.  **Clone the repository**
     ```bash
@@ -94,31 +106,49 @@ You'll still need to edit `.env` to add your API keys (Google OAuth, Google AI, 
     cd thinkex
     ```
 
-2.  **Configure environment variables**
+2.  **Start PostgreSQL (Docker)**
     ```bash
-    cp docker-compose.env.example .env
+    docker-compose up -d postgres
+    ```
+    
+    Or use your local PostgreSQL installation.
+
+3.  **Install dependencies**
+    ```bash
+    pnpm install
+    ```
+
+4.  **Configure environment variables**
+    ```bash
+    cp .env.example .env
     ```
     
     Edit `.env` and configure:
     
-    *   **Database**: PostgreSQL credentials (defaults work for local development)
+    *   **Database**: Set `DATABASE_URL` to your PostgreSQL connection string
+      ```bash
+      # For Docker PostgreSQL:
+      DATABASE_URL=postgresql://thinkex:thinkex_password_change_me@localhost:5432/thinkex
+      
+      # For local PostgreSQL:
+      DATABASE_URL=postgresql://user:password@localhost:5432/thinkex
+      ```
     *   **Better Auth**: Generate `BETTER_AUTH_SECRET` with `openssl rand -base64 32`
     *   **Google OAuth**: Get credentials from [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
     *   **Supabase**: Your Supabase project URL and keys (for file storage, if using Supabase storage)
     *   **Google AI**: API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
 
-3.  **Start the services**
+5.  **Initialize the database**
     ```bash
-    docker-compose up -d
-    ```
-    This starts the app in development mode with hot reloading. Changes to your code will automatically reload in the browser. The source code is mounted as a volume, so edits on your host machine are immediately reflected in the container.
-
-4.  **Initialize the database**
-    ```bash
-    docker-compose exec app pnpm db:push
+    pnpm db:push
     ```
 
-5.  **Access the application**
+6.  **Start the development server**
+    ```bash
+    pnpm dev
+    ```
+
+7.  **Access the application**
     Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 #### Storage Configuration
@@ -127,7 +157,7 @@ ThinkEx supports two storage backends for file uploads:
 
 **Option 1: Local File Storage** (Recommended for Self-Hosting)
 - Set `STORAGE_TYPE=local` in your `.env` file
-- Files are stored in the `./uploads` directory (persisted as a Docker volume)
+- Files are stored in the `./uploads` directory
 - No external dependencies required
 - Simple setup with full control over your data
 
@@ -138,13 +168,6 @@ ThinkEx supports two storage backends for file uploads:
   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY`: Anon key from Supabase
   - `SUPABASE_SERVICE_ROLE_KEY`: Service role key from Supabase
 - Create a storage bucket named `file-upload` and set it to **Public**
-
-#### Docker Commands
-
-*   **View logs**: `docker-compose logs -f app`
-*   **Stop services**: `docker-compose down`
-*   **Stop and remove volumes**: `docker-compose down -v` (⚠️ deletes database)
-*   **Rebuild after changes**: `docker-compose up -d --build`
 
 
 
