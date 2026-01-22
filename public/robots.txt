@@ -14,7 +14,6 @@ Disallow: /_next/
 Disallow: /uploads/
 
 # Allow public share links (for forking/sharing workspaces)
-Allow: /api/share/
 
 # Sitemap (optional - add if you create a sitemap)
 # Sitemap: https://thinkex.app/sitemap.xml
