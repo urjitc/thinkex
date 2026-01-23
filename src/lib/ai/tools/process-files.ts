@@ -59,8 +59,8 @@ async function processLocalFiles(
             continue;
         }
 
-        // Security: Prevent directory traversal
-        if (filename.includes('..') || filename.includes('/')) {
+        // Security: Prevent directory traversal (slash and backslash for Windows)
+        if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
             logger.warn(`📁 [FILE_TOOL] Invalid filename detected: ${filename}`);
             continue;
         }
