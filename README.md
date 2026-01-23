@@ -1,4 +1,4 @@
-w<p align="center">
+<p align="center">
   <a href="https://thinkex.app">
     <img alt="ThinkEx" src="public/newreadmeimage.svg" width="500" />
   </a>
