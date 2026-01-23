@@ -10,17 +10,17 @@
 
 ## The Problem
 
-AI needs context to think well, and humans need space to think well. Current tools split these functions: the reasoning happens in isolated chat threads, while your information is scattered across tabs and windows.
+Today's apps and AI split what should be a single, fluid process. AI reasoning happens in isolated chat threads, while your information is scattered across tabs and windows.
 
-As a result, valuable insights gets buried in chat history. You find yourself explaining the same context repeatedly, and informatinos disappear into logs you never revisit.
+**This split prevents knowledge from compounding.** Each conversation starts from scratch. Insights don't connect to your existing work. You can't build on past thinking. Valuable insights get buried in chat history, and you find yourself explaining the same context repeatedly. Information disappears into logs you never revisit.
 
 ThinkEx solves this by making context explicit, organized, and persistent.
 
 ## What is ThinkEx?
 
-Think of a large desk where you spread out textbooks, notes, and papers to study. You look back and forth, connecting dots, comparing sources, and asking questions.
+ThinkEx is a visual thinking environment where notes, media, and AI conversations compound into lasting knowledge.
 
-ThinkEx is that desk on the browser, powered by AI.
+Think of a large desk where you spread out textbooks, notes, and papers to work. You look back and forth, connecting dots, comparing sources, and asking questions. ThinkEx brings that desk to your browser, where AI can help alongside you.
 
 1.  **See Everything**: Bring PDFs, videos, and notes onto a visual canvas. Organize them spatially to make sense of the information.
 2.  **Compare Sources**: Look across your sources side-by-side. Spot patterns and contradictions that only emerge when everything is visible.
@@ -43,6 +43,10 @@ ThinkEx is that desk on the browser, powered by AI.
 | Chat-First        | ChatGPT, Gemini, Claude  | Insights vanish into endless scroll and context resets every conversation. |
 | Notes-First       | Notion, Obsidian         | AI is bolted on and isolated from your info.     |
 | Retrieval-First   | NotebookLM              | Sources are trapped behind the interface where you can't see or work with them. |
+
+### ThinkEx is different
+
+Nothing disappears into a black box. You see what AI sees and control what it works with. And it's open source, so you get full transparency, no model lock-in, and a product driven by the community.
 
 ## Tech Stack
 
