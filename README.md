@@ -10,22 +10,22 @@
 
 ## The Problem
 
-AI needs context to think well, and humans need space to think well. Current tools split these functions: reasoning happens in chat logs, while information lives in scattered documents.
+AI needs context to think well, and humans need space to think well. Current tools split these functions: the reasoning happens in isolated chat threads, while your information is scattered across tabs and windows.
 
-As a result, valuable reasoning gets buried in chat history. You find yourself explaining the same context repeatedly, and insights disappear into logs you never revisit.
+As a result, valuable insights gets buried in chat history. You find yourself explaining the same context repeatedly, and informatinos disappear into logs you never revisit.
 
-ThinkEx solves this by making context explicit, structured, and persistent.
+ThinkEx solves this by making context explicit, organized, and persistent.
 
 ## What is ThinkEx?
 
-Think of a large desk where you spread out textbooks, notes, and papers to study. You look back and forth, connecting dots and comparing sources.
+Think of a large desk where you spread out textbooks, notes, and papers to study. You look back and forth, connecting dots, comparing sources, and asking questions.
 
-ThinkEx is that desk, digitalized for the browser.
+ThinkEx is that desk on the browser, powered by AI.
 
 1.  **See Everything**: Bring PDFs, videos, and notes onto a visual canvas. Organize them spatially to make sense of the information.
 2.  **Compare Sources**: Look across your sources side-by-side. Spot patterns and contradictions that only emerge when everything is visible.
 3.  **Targeted Reasoning**: Select specific items on your desk for the AI to analyze. Point to a note and a paragraph and ask for the connection.
-4.  **Capture Insights**: Extract findings into structured cards that become part of your permanent workspace.
+4.  **Capture Insights**: Extract findings into structured knowledge that become part of your permanent workspace.
 
 ## Features
 
@@ -34,17 +34,16 @@ ThinkEx is that desk, digitalized for the browser.
 *   **First-Class Media**: Native PDF viewing with highlights; YouTube videos with transcript-backed context.
 *   **Persistent Knowledge**: Saved cards (notes, flashcards, references) remain in your workspace.
 *   **Multi-Model**: Switch AI models per task without locking into a single provider.
-*   **Sharing**: Share or export workspaces with all context preserved.
+*   **Sharing**: Share or export workspaces with others
 
 ## Why Existing Tools Fall Short
 
 | Approach          | What It Does             | What It Loses                                     |
 | :---------------- | :----------------------- | :------------------------------------------------ |
 | **ThinkEx**       | **Integrated Reasoning** | --                                                |
-| Chat-first tools  | Powerful reasoning       | Memory (context vanishes in logs)                 |
-| Notes-first tools | Organization             | Reasoning (AI is not deeply integrated)           |
-| RAG systems       | Auto-retrieval           | Control (you can't see/adjust selection)          |
-| Long-context      | More tokens              | Understanding (coherence doesn't scale with size) |
+| Chat-first (ChatGPT, Gemini, etc.)  | Powerful reasoning       | Memory (context vanishes in logs)                 |
+| Notes-first (Notion, Obsidian) | Organization             | Reasoning (AI is not deeply integrated)           |
+| Retrivial-first (NotebookLM)| Auto-retrieval           | Control (you can't see/adjust selection)          |
 
 ## Tech Stack
 
