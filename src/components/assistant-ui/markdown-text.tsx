@@ -87,7 +87,7 @@ const MarkdownTextImpl = () => {
       // Remove background colors/highlights while leaving other styling intact
       style.removeProperty("background");
       style.removeProperty("background-color");
-      style.removeProperty("backgroundColor" as any);
+      // Lines 88-89 already remove background/background-color, so this line can be deleted
     });
 
     const html = wrapper.innerHTML;
