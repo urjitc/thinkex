@@ -110,7 +110,7 @@ export function FourWays() {
                       }`}
                   >
                     {/* Mobile: Fixed aspect ratio with object-cover */}
-                    <div className="relative w-full aspect-[4/3] h-[180px] overflow-hidden rounded-md border border-foreground/10 bg-muted/30 backdrop-blur-sm md:hidden">
+                    <div className="relative w-full aspect-[4/3] h-[180px] rounded-md border border-foreground/10 bg-muted/30 backdrop-blur-sm md:hidden">
                       <Image
                         src={way.image}
                         alt={way.title}
@@ -118,6 +118,7 @@ export function FourWays() {
                         loading="lazy"
                         sizes="100vw"
                         className="object-cover"
+                        draggable="false"
                         style={
                           way.image === "/sources.png"
                             ? { objectPosition: "left center" }
@@ -130,7 +131,7 @@ export function FourWays() {
                       />
                     </div>
                     {/* Desktop: Wider container */}
-                    <div className="hidden md:flex relative w-full h-[380px] overflow-hidden rounded-md border border-foreground/10 bg-muted/30 backdrop-blur-sm items-center justify-center">
+                    <div className="hidden md:flex relative w-full h-[380px] rounded-md border border-foreground/10 bg-muted/30 backdrop-blur-sm items-center justify-center">
                       <Image
                         src={way.image}
                         alt={way.title}
@@ -139,6 +140,7 @@ export function FourWays() {
                         loading="lazy"
                         sizes="50vw"
                         className="w-full h-full object-cover"
+                        draggable="false"
                         style={
                           way.image === "/sources.png"
                             ? { objectPosition: "left center" }
@@ -164,7 +166,7 @@ export function FourWays() {
             <div className="grid gap-8 md:gap-12 md:grid-cols-3">
               {/* Rich Block-Based Editor */}
               <div className="space-y-6">
-                <div className="relative aspect-video w-full overflow-hidden rounded-md border border-foreground/10 bg-muted/30 backdrop-blur-sm">
+                <div className="relative aspect-video w-full rounded-md border border-foreground/10 bg-muted/30 backdrop-blur-sm">
                   <Image
                     src="/editor2.png"
                     alt="Rich Block-Based Editor"
@@ -172,6 +174,7 @@ export function FourWays() {
                     loading="lazy"
                     sizes="(max-width: 768px) 100vw, 33vw"
                     className="object-cover"
+                    draggable="false"
                   />
                 </div>
                 <div className="space-y-3">
@@ -186,7 +189,7 @@ export function FourWays() {
 
               {/* Powerful Content Types */}
               <div className="space-y-6">
-                <div className="relative aspect-video w-full overflow-hidden rounded-md border border-foreground/10 bg-muted/30 backdrop-blur-sm">
+                <div className="relative aspect-video w-full rounded-md border border-foreground/10 bg-muted/30 backdrop-blur-sm">
                   <Image
                     src="/contenttypes.png"
                     alt="Powerful Content Types"
@@ -195,6 +198,7 @@ export function FourWays() {
                     sizes="(max-width: 768px) 100vw, 33vw"
                     className="object-cover"
                     style={{ objectPosition: "left center" }}
+                    draggable="false"
                   />
                 </div>
                 <div className="space-y-3">
@@ -209,7 +213,7 @@ export function FourWays() {
 
               {/* Share Workspaces */}
               <div className="space-y-6">
-                <div className="relative aspect-video w-full overflow-hidden rounded-md border border-foreground/10 bg-muted/30 backdrop-blur-sm">
+                <div className="relative aspect-video w-full rounded-md border border-foreground/10 bg-muted/30 backdrop-blur-sm">
                   <Image
                     src="/share2.png"
                     alt="Share Workspaces"
@@ -217,6 +221,7 @@ export function FourWays() {
                     loading="lazy"
                     sizes="(max-width: 768px) 100vw, 33vw"
                     className="object-cover"
+                    draggable="false"
                   />
                 </div>
                 <div className="space-y-3">

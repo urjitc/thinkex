@@ -145,7 +145,7 @@ export function UseCases() {
                                                         className={`
                                                             flex flex-col justify-center gap-2 px-3 py-4 rounded-md border border-black/5 dark:border-white/5 
                                                             text-sm font-medium ${item.color} ${item.size || 'col-span-1'}
-                                                            transition-transform hover:scale-[1.02] cursor-default overflow-hidden
+                                                            transition-transform hover:scale-[1.02] cursor-default pointer-events-none
                                                         `}
                                                     >
                                                         {renderVisual()}

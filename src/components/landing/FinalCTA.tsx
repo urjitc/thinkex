@@ -8,10 +8,10 @@ export function FinalCTA() {
   return (
     <section
       id="final-cta"
-      className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 pt-8 pb-16 md:pt-16 md:pb-24 sm:px-6 lg:px-8"
+      className="relative flex min-h-screen items-center justify-center px-4 pt-8 pb-16 md:pt-16 md:pb-24 sm:px-6 lg:px-8"
     >
       {/* Workspace Background Elements */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <FloatingWorkspaceCards bottomGradientHeight="20%" className="mt-[7%]" />
         {/* Extra Top Gradient for Final CTA blending */}
         <div

@@ -6,11 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Users, Github, Sparkles } from "lucide-react";
 // import { BackgroundCard, cardColors, type BackgroundCardData } from "./BackgroundCard";
 import { FloatingWorkspaceCards } from "./FloatingWorkspaceCards";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
 
 // Background cards logic moved to FloatingWorkspaceCards
 
@@ -18,10 +13,10 @@ export function Hero() {
   return (
     <section
       id="hero"
-      className="relative flex md:min-h-screen items-center justify-center overflow-hidden px-4 pt-16 pb-10 md:py-12 sm:px-4 lg:px-6"
+      className="relative flex md:min-h-screen items-center justify-center px-4 pt-16 pb-10 md:py-12 sm:px-4 lg:px-6"
     >
       {/* Workspace Background Elements */}
-      <div className="absolute inset-0 z-0 select-none">
+      <div className="absolute inset-0 z-0 select-none pointer-events-none overflow-hidden">
         <FloatingWorkspaceCards />
       </div>
 
@@ -99,53 +94,37 @@ export function Hero() {
             </Button>
 
             {/* Social Proof - User Avatars + Count */}
-            <HoverCard openDelay={200}>
-              <HoverCardTrigger asChild>
-                <div className="flex items-center gap-3 cursor-pointer group">
-                  {/* Stacked Avatars */}
-                  <div className="flex -space-x-2">
-                    {[
-                      "bg-gradient-to-br from-blue-400 to-blue-600",
-                      "bg-gradient-to-br from-emerald-400 to-emerald-600",
-                      "bg-gradient-to-br from-amber-400 to-amber-600",
-                      "bg-gradient-to-br from-rose-400 to-rose-600",
-                    ].map((gradient, i) => (
-                      <div
-                        key={i}
-                        className={`w-8 h-8 rounded-full ${gradient} ring-2 ring-background flex items-center justify-center text-white text-xs font-medium shadow-sm`}
-                      >
-                        {["U", "J", "A", "M"][i]}
-                      </div>
-                    ))}
+            <div className="flex items-center gap-3">
+              {/* Stacked Avatars */}
+              <div className="flex -space-x-2">
+                {[
+                  "bg-gradient-to-br from-blue-400 to-blue-600",
+                  "bg-gradient-to-br from-emerald-400 to-emerald-600",
+                  "bg-gradient-to-br from-amber-400 to-amber-600",
+                  "bg-gradient-to-br from-rose-400 to-rose-600",
+                ].map((gradient, i) => (
+                  <div
+                    key={i}
+                    className={`w-8 h-8 rounded-full ${gradient} ring-2 ring-background flex items-center justify-center text-white text-xs font-medium shadow-sm`}
+                  >
+                    {["U", "J", "A", "M"][i]}
                   </div>
-                  {/* Text */}
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium text-foreground group-hover:text-foreground/80 transition-colors">
-                      100+ weekly active users
-                    </span>
-                  </div>
-                </div>
-              </HoverCardTrigger>
-              <HoverCardContent className="w-[350px] sm:w-[450px] p-0 overflow-hidden border-none shadow-xl" sideOffset={10}>
-                <iframe
-                  width="100%"
-                  height="400"
-                  frameBorder="0"
-                  allowFullScreen
-                  src="https://us.posthog.com/embedded/wNOXac2TxOxawVOVKHkUGxe1BA1sJQ"
-                  key="4"
-                  sandbox="allow-scripts allow-same-origin allow-popups"
-                  className="bg-background"
-                />
-              </HoverCardContent>
-            </HoverCard>
+                ))}
+              </div>
+              {/* Text */}
+              <div className="flex flex-col items-start">
+                <span className="text-sm font-medium text-foreground">
+                  100+ weekly active users
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Mobile Demo Image - Only visible on mobile */}
           <div className="relative w-full md:hidden">
             <div className="relative w-full max-w-md mx-auto">
               <div className="rounded-md p-[1px] gradient-border-animated shadow-2xl">
-                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[calc(0.625rem-1px)] bg-background">
+                <div className="relative aspect-[4/3] w-full rounded-[calc(0.625rem-1px)] bg-background">
                   <Image
                     src="/demo.png"
                     alt="ThinkEx Demo"
@@ -153,6 +132,7 @@ export function Hero() {
                     priority
                     sizes="100vw"
                     className="object-cover"
+                    draggable="false"
                   />
                 </div>
               </div>
@@ -163,7 +143,7 @@ export function Hero() {
           <div className="relative w-full hidden md:block">
             <div className="relative w-full">
               <div className="rounded-md p-[1px] gradient-border-animated shadow-2xl">
-                <div className="relative aspect-[16/9] w-full overflow-hidden rounded-[calc(0.625rem-1px)] bg-background">
+                <div className="relative aspect-[16/9] w-full rounded-[calc(0.625rem-1px)] bg-background">
                   <Image
                     src="/demo.png"
                     alt="ThinkEx Demo"
@@ -171,6 +151,7 @@ export function Hero() {
                     priority
                     sizes="80vw"
                     className="object-fill"
+                    draggable="false"
                   />
                 </div>
               </div>

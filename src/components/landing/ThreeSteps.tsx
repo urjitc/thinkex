@@ -65,7 +65,7 @@ export function ThreeSteps() {
               >
                 {/* Image */}
                 <div className="relative">
-                  <div className="relative aspect-video w-full overflow-hidden rounded-md border border-foreground/10 bg-muted/30 backdrop-blur-sm">
+                  <div className="relative aspect-video w-full rounded-md border border-foreground/10 bg-muted/30 backdrop-blur-sm">
                     <Image
                       src={step.image}
                       alt={step.title}
@@ -74,6 +74,7 @@ export function ThreeSteps() {
                       sizes="(max-width: 768px) 100vw, 33vw"
                       className="object-cover"
                       style={step.id === "step-2" ? { objectPosition: "left center" } : undefined}
+                      draggable="false"
                     />
                   </div>
                 </div>

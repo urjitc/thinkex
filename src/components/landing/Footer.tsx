@@ -20,7 +20,7 @@ export function Footer() {
   };
 
   return (
-    <footer className="relative px-4 md:px-0 py-6 md:py-8 overflow-hidden">
+    <footer className="relative px-4 md:px-0 py-6 md:py-8">
       {/* Big Watermark Text */}
       <div className="absolute bottom-[0%] md:bottom-[-12%] left-1/2 -translate-x-1/2 w-full text-center pointer-events-none select-none overflow-hidden z-0 opacity-[0.03]">
         <span className="text-[25vw] md:text-[18vw] font-normal leading-none tracking-tighter whitespace-nowrap text-foreground">

@@ -49,7 +49,7 @@ export function FloatingWorkspaceCards({ bottomGradientHeight = '60%', className
     const isInView = useInView(containerRef, { margin: "100px" });
 
     return (
-        <div ref={containerRef} className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none select-none z-0">
+        <div ref={containerRef} className="absolute inset-0 w-full h-full pointer-events-none select-none z-0">
             {/* 
           Masonry Layout using CSS Columns 
           - 2 columns on mobile
