@@ -100,12 +100,7 @@ The script will:
 - Configure database connection
 - Install dependencies
 - Initialize the database schema
-
-After setup, start the development server:
-
-```bash
-pnpm dev
-```
+- Start the development server automatically
 
 Access ThinkEx at [http://localhost:3000](http://localhost:3000)
 
