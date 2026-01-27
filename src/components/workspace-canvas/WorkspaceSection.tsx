@@ -41,8 +41,6 @@ import ShareWorkspaceDialog from "@/components/workspace/ShareWorkspaceDialog";
 import { CreateYouTubeDialog } from "@/components/modals/CreateYouTubeDialog";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import type { WorkspaceWithState } from "@/lib/workspace-state/types";
-import { ItemOpenPrompt } from "./ItemOpenPrompt";
-import { createPortal } from "react-dom";
 import { useAssistantApi } from "@assistant-ui/react";
 import { focusComposerInput } from "@/lib/utils/composer-utils";
 
@@ -153,8 +151,6 @@ export function WorkspaceSection({
   );
   const selectedCardIds = useMemo(() => new Set(selectedCardIdsArray), [selectedCardIdsArray]);
   const clearCardSelection = useUIStore((state) => state.clearCardSelection);
-  const itemPrompt = useUIStore((state) => state.itemPrompt);
-  const setItemPrompt = useUIStore((state) => state.setItemPrompt);
   const openPanel = useUIStore((state) => state.openPanel);
   const setSelectedActions = useUIStore((state) => state.setSelectedActions);
 
@@ -698,22 +694,6 @@ export function WorkspaceSection({
         onOpenChange={setShowShareDialog}
       />
 
-      {/* Global Item Open Prompt */}
-      {itemPrompt && createPortal(
-        <ItemOpenPrompt
-          position={{ x: itemPrompt.x, y: itemPrompt.y }}
-          onReplace={() => {
-            setOpenModalItemId(itemPrompt.itemId);
-            setItemPrompt(null);
-          }}
-          onSplit={() => {
-            openPanel(itemPrompt.itemId, 'add');
-            setItemPrompt(null);
-          }}
-          onCancel={() => setItemPrompt(null)}
-        />,
-        document.body
-      )}
 
       {/* YouTube Dialog */}
       <CreateYouTubeDialog

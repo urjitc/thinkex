@@ -1,5 +1,5 @@
 import { QuizContent } from "./QuizContent";
-import { MoreVertical, Trash2, Palette, CheckCircle2, FolderInput, FileText, Copy, X, Pencil } from "lucide-react";
+import { MoreVertical, Trash2, Palette, CheckCircle2, FolderInput, FileText, Copy, X, Pencil, Columns } from "lucide-react";
 import { PiMouseScrollFill, PiMouseScrollBold } from "react-icons/pi";
 import { useCallback, useState, memo, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
@@ -28,8 +28,7 @@ import { useIsVisible } from "@/hooks/use-is-visible";
 import { getYouTubeEmbedUrl } from "@/lib/utils/youtube-url";
 import { YouTubeCardContent } from "./YouTubeCardContent";
 import { getLayoutForBreakpoint } from "@/lib/workspace-state/grid-layout-helpers";
-import { ItemOpenPrompt } from "@/components/workspace-canvas/ItemOpenPrompt";
-import { createPortal } from "react-dom";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -211,7 +210,6 @@ function WorkspaceCard({
   const isScrollLocked = useUIStore(selectItemScrollLocked(item.id));
   const toggleItemScrollLocked = useUIStore((state) => state.toggleItemScrollLocked);
   const [isDragging, setIsDragging] = useState(false);
-  const setItemPrompt = useUIStore((state) => state.setItemPrompt);
   const articleRef = useRef<HTMLElement>(null);
 
   // Measure card width to determine if we should show preview
@@ -544,22 +542,8 @@ function WorkspaceCard({
       return;
     }
 
-    // Check if another item is already open (and not this one)
-    // If so, show prompt to replace or split
-    // Only for items that open in panel (Note/PDF)
-    // AND only if grid has multiple columns (desktop-ish) - on mobile maybe just replace?
-    // Let's enable for all for now or check window width? Keeping simple.
-    if (openPanelIds.length > 0 && !openPanelIds.includes(item.id) && !maximizedItemId && (item.type === 'note' || item.type === 'pdf')) {
-      // Prevent default open
-      e.stopPropagation();
-
-      setItemPrompt({
-        itemId: item.id,
-        x: e.clientX,
-        y: e.clientY
-      });
-      return;
-    }
+    // Normal click always replaces - no prompt needed
+    // Split view is available via right-click context menu
 
     onOpenModal(item.id);
   }, [isEditingTitle, isOpenInPanel, item.id, item.type, onOpenModal, setOpenModalItemId, openPanelIds, isYouTubePlaying, setCardPlaying, maximizedItemId]);
@@ -1025,6 +1009,16 @@ function WorkspaceCard({
 
       {/* Right-Click Context Menu */}
       <ContextMenuContent className="w-48">
+        {/* Split View option - only for Note/PDF when another panel is already open */}
+        {(item.type === 'note' || item.type === 'pdf') && openPanelIds.length > 0 && !openPanelIds.includes(item.id) && !maximizedItemId && (
+          <>
+            <ContextMenuItem onSelect={() => openPanel(item.id, 'add')}>
+              <Columns className="mr-2 h-4 w-4" />
+              <span>Split View</span>
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        )}
         <ContextMenuItem onSelect={() => setShowRenameDialog(true)}>
           <Pencil className="mr-2 h-4 w-4" />
           <span>Rename</span>
