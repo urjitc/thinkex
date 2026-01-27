@@ -691,7 +691,7 @@ interface ComposerActionProps {
 
 const ComposerAction: FC<ComposerActionProps> = ({ items }) => {
   const { data: session } = useSession();
-  const aui = useAui();
+  useAui();
   const isAnonymous = session?.user?.isAnonymous ?? false;
   const selectedCardIdsArray = useUIStore(
     useShallow(selectSelectedCardIdsArray)
