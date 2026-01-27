@@ -27,7 +27,7 @@
   },
   "packageManager": "pnpm@10.14.0",
   "dependencies": {
-    "@ai-sdk/google": "^3.0.19",
+    "@ai-sdk/google": "^3.0.13",
     "@assistant-ui/react": "^0.12.1",
     "@assistant-ui/react-ai-sdk": "latest",
     "@assistant-ui/react-devtools": "^0.2.0",
