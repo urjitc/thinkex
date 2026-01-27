@@ -17,7 +17,7 @@ release).
 2. In the release notes, we will include the identification numbers from the
 GitHub Advisory Database (GHSA) and, if applicable, the Common Vulnerabilities
 and Exposures (CVE) identifier for the vulnerability.
-3. Once this grace period has passed, we will publish the vulnerability.
+3. Once a 90-day grace period has passed, we will publish the vulnerability.
 
 By adhering to this security policy, we aim to address security concerns
 effectively and responsibly in our open source software project.
