@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -33,7 +33,6 @@ export const DeepResearchToolUI = makeAssistantToolUI<DeepResearchArgs, DeepRese
         const queryClient = useQueryClient();
         const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
 
-        const toastShownRef = useRef(false);
         const isRateLimited = !!result?.rateLimited;
         const isComplete = status.type === "complete" || !!result?.noteId;
         const hasError = !!result?.error && !isRateLimited;
@@ -49,21 +48,23 @@ export const DeepResearchToolUI = makeAssistantToolUI<DeepResearchArgs, DeepRese
             }
         }, [status, result, workspaceId, queryClient]);
 
-        // Show toast when rate limit is exceeded (only once)
+        // Show toast when rate limit is exceeded (globally deduplicated by ID)
         useEffect(() => {
-            if (result?.rateLimited && !toastShownRef.current) {
-                toastShownRef.current = true;
-
+            if (result?.rateLimited) {
                 let timeStr = "24 hours";
                 if (result.resetAt) {
                     const resetDate = new Date(result.resetAt);
-                    const diffMs = resetDate.getTime() - Date.now();
-                    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-                    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                    timeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                    // Guard against invalid dates (NaN)
+                    if (!isNaN(resetDate.getTime())) {
+                        const diffMs = Math.max(0, resetDate.getTime() - Date.now());
+                        const hours = Math.floor(diffMs / (1000 * 60 * 60));
+                        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                        timeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                    }
                 }
 
                 toast("Daily limit reached", {
+                    id: "deep-research-rate-limit", // Prevents duplicate toasts globally
                     description: `Deep research will be available again in ${timeStr}.`,
                     duration: 5000,
                 });

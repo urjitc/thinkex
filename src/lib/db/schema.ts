@@ -183,7 +183,6 @@ export const deepResearchUsage = pgTable("deep_research_usage", {
 	userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
 	workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
 	interactionId: text("interaction_id"),
-	prompt: text("prompt"),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
 	index("idx_deep_research_usage_user_created").using("btree",
