@@ -50,7 +50,8 @@ export function useNavigateToItem() {
             setTimeout(() => {
                 const element = document.getElementById(`item-${itemId}`);
                 if (!element) {
-                    toast.error("Could not find item in workspace");
+                    // Element not found after folder switch - likely doesn't exist in DOM
+                    // The scroll logic won't work, so we should stop here
                     return;
                 }
 
