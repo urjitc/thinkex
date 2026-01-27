@@ -676,6 +676,16 @@ function WorkspaceCard({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
+                  {/* Split View option - only for Note/PDF when another panel is already open */}
+                  {(item.type === 'note' || item.type === 'pdf') && openPanelIds.length > 0 && !openPanelIds.includes(item.id) && !maximizedItemId && (
+                    <>
+                      <DropdownMenuItem onSelect={() => openPanel(item.id, 'add')}>
+                        <Columns className="mr-2 h-4 w-4" />
+                        <span>Split View</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem onSelect={() => setShowRenameDialog(true)}>
                     <Pencil className="mr-2 h-4 w-4" />
                     <span>Rename</span>
