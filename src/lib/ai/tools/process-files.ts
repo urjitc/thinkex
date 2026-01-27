@@ -1,5 +1,5 @@
 import { google } from "@ai-sdk/google";
-import { generateText } from "ai";
+import { generateText, tool, zodSchema } from "ai";
 import { z } from "zod";
 import { logger } from "@/lib/utils/logger";
 import { readFile } from "fs/promises";
@@ -206,12 +206,14 @@ Provide a clear, comprehensive analysis of the video content.`;
  * Create the processFiles tool
  */
 export function createProcessFilesTool() {
-    return {
+    return tool({
         description: "Process and analyze files including PDFs, images, documents, and videos. Handles local file URLs (/api/files/...), Supabase storage URLs (files uploaded to your workspace), and YouTube videos. Files are downloaded and analyzed directly by Gemini. You can provide custom instructions for what to extract or focus on. Use this for file URLs and video URLs, NOT for regular web pages.",
-        inputSchema: z.object({
-            jsonInput: z.string().describe("JSON string containing an object with 'urls' (array of file/video URLs) and optional 'instruction' (string for custom analysis). Example: '{\"urls\": [\"https://...storage.../file.pdf\"], \"instruction\": \"summarize key points\"}'"),
-        }),
-        execute: async ({ jsonInput }: { jsonInput: string }) => {
+        inputSchema: zodSchema(
+            z.object({
+                jsonInput: z.string().describe("JSON string containing an object with 'urls' (array of file/video URLs) and optional 'instruction' (string for custom analysis). Example: '{\"urls\": [\"https://...storage.../file.pdf\"], \"instruction\": \"summarize key points\"}'"),
+            })
+        ),
+        execute: async ({ jsonInput }) => {
             let parsed;
             try {
                 parsed = JSON.parse(jsonInput);
@@ -294,5 +296,5 @@ export function createProcessFilesTool() {
 
             return fileResults.join('\n\n---\n\n');
         },
-    };
+    });
 }

@@ -1,5 +1,6 @@
 import { google } from "@ai-sdk/google";
-import { streamText, convertToModelMessages, stepCountIs } from "ai";
+import { streamText, convertToModelMessages, stepCountIs, tool, zodSchema } from "ai";
+import type { UIMessage } from "ai";
 import { logger } from "@/lib/utils/logger";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -175,7 +176,7 @@ export async function POST(req: Request) {
     const session = await auth.api.getSession({ headers: headersObj });
     const userId = session?.user?.id || null;
 
-    const messages = body.messages || [];
+    const { messages = [] }: { messages?: UIMessage[] } = body;
     const system = body.system || "";
     workspaceId = extractWorkspaceId(body);
     activeFolderId = body.activeFolderId;

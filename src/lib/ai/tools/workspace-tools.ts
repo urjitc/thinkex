@@ -1,3 +1,4 @@
+import { tool, zodSchema } from "ai";
 import { z } from "zod";
 import { logger } from "@/lib/utils/logger";
 import { workspaceWorker } from "@/lib/ai/workers";
@@ -15,12 +16,15 @@ export interface WorkspaceToolContext {
  * Create the createNote tool
  */
 export function createNoteTool(ctx: WorkspaceToolContext) {
-    return {
+    return tool({
         description: "Create a note card. returns success message.\n\nCRITICAL CONSTRAINTS:\n1. 'content' MUST NOT start with the title.\n2. Start directly with body text.\n3. NO Mermaid diagrams.\n\nCRITICAL - MATHEMATICAL EXPRESSIONS: Use LaTeX with DOUBLE DOLLAR SIGNS ($$) for ALL math:\n- Use $$...$$ for ALL math expressions (both inline and block)\n- Single $ is for CURRENCY only (e.g., $19.99). NEVER use single $ for math\n- For inline math: $$E = mc^2$$ (same line as text)\n- For block math (separate lines): Put $$ delimiters on separate lines\n- Always ensure math blocks are properly closed with matching $$",
-        inputSchema: z.any().describe(
-            "JSON {title, content}. 'content': markdown body. DO NOT repeat title in content. Start with subheadings/text. No Mermaid. Use $$...$$ for ALL math (both inline and block). Single $ is for currency only."
+        inputSchema: zodSchema(
+            z.object({
+                title: z.string().describe("The title of the note card"),
+                content: z.string().describe("The markdown body content. DO NOT repeat title in content. Start with subheadings/text. No Mermaid. Use $$...$$ for ALL math (both inline and block). Single $ is for currency only."),
+            })
         ),
-        execute: async ({ title, content }: { title: string; content: string }) => {
+        execute: async ({ title, content }) => {
             // Validate inputs before use
             if (!title || typeof title !== 'string') {
                 return {
@@ -51,19 +55,25 @@ export function createNoteTool(ctx: WorkspaceToolContext) {
                 folderId: ctx.activeFolderId,
             });
         },
-    };
+    });
 }
 
 /**
  * Create the updateCard tool
  */
 export function createUpdateCardTool(ctx: WorkspaceToolContext) {
-    return {
+    return tool({
         description: "Update the content of an existing card. This tool COMPLETELY REPLACES the existing content. You must synthesize the FULL new content by combining the existing card content (from your context) with the user's requested changes. Do not just provide the diff; provide the complete new markdown content.\n\nCRITICAL - MATHEMATICAL EXPRESSIONS: Use LaTeX with DOUBLE DOLLAR SIGNS ($$) for ALL math:\n- Use $$...$$ for ALL math expressions (both inline and block)\n- Single $ is for CURRENCY only (e.g., $19.99). NEVER use single $ for math\n- For inline math: $$E = mc^2$$ (same line as text)\n- For block math (separate lines): Put $$ delimiters on separate lines\n- Always ensure math blocks are properly closed with matching $$\n- Add spaces around $$ symbols when math appears in lists or tables\n- Do not place punctuation immediately after math expressions.",
-        inputSchema: z.any().describe(
-            "A JSON object with 'id' (string) and 'markdown' (string) or 'content' (string) fields. The 'id' uniquely identifies the note to update. The 'markdown' or 'content' field contains the full note body ONLY (do not include the title as a header). Use $$...$$ for ALL math (both inline and block). Single $ is for currency only. Ensure math inside lists and tables has spaces around the $$ symbols. Do not place punctuation immediately after math expressions."
+        inputSchema: zodSchema(
+            z.object({
+                id: z.string().describe("The ID of the card to update"),
+                markdown: z.string().optional().describe("The full note body ONLY (do not include the title as a header). Use $$...$$ for ALL math (both inline and block). Single $ is for currency only."),
+                content: z.string().optional().describe("Alternative to 'markdown' - the full note body ONLY (do not include the title as a header). Use $$...$$ for ALL math (both inline and block). Single $ is for currency only."),
+            }).refine((data) => data.markdown !== undefined || data.content !== undefined, {
+                message: "Either 'markdown' or 'content' must be provided",
+            })
         ),
-        execute: async (input: any) => {
+        execute: async (input) => {
             logger.group("🎯 [UPDATE-CARD] Tool execution started", true);
             logger.debug("Raw input received:", {
                 inputType: typeof input,
@@ -131,19 +141,21 @@ export function createUpdateCardTool(ctx: WorkspaceToolContext) {
                 };
             }
         },
-    };
+    });
 }
 
 /**
  * Create the clearCardContent tool
  */
 export function createClearCardContentTool(ctx: WorkspaceToolContext) {
-    return {
+    return tool({
         description: "Clear/delete the content of a card while preserving its title. Use this when the user wants to delete the contents of a card.",
-        inputSchema: z.object({
-            id: z.string().describe("The ID of the card to clear"),
-        }),
-        execute: async ({ id }: { id: string }) => {
+        inputSchema: zodSchema(
+            z.object({
+                id: z.string().describe("The ID of the card to clear"),
+            })
+        ),
+        execute: async ({ id }) => {
             logger.debug("🎯 [ORCHESTRATOR] Delegating to Workspace Worker (clear):", { id });
 
             if (!ctx.workspaceId) {
@@ -159,19 +171,21 @@ export function createClearCardContentTool(ctx: WorkspaceToolContext) {
                 content: "",
             });
         },
-    };
+    });
 }
 
 /**
  * Create the deleteCard tool
  */
 export function createDeleteCardTool(ctx: WorkspaceToolContext) {
-    return {
+    return tool({
         description: "Permanently delete a card/note from the workspace. Use this when the user explicitly asks to delete or remove a card.",
-        inputSchema: z.object({
-            id: z.string().describe("The ID of the card to delete"),
-        }),
-        execute: async ({ id }: { id: string }) => {
+        inputSchema: zodSchema(
+            z.object({
+                id: z.string().describe("The ID of the card to delete"),
+            })
+        ),
+        execute: async ({ id }) => {
             logger.debug("🎯 [ORCHESTRATOR] Delegating to Workspace Worker (delete):", { id });
 
             if (!ctx.workspaceId) {
@@ -186,21 +200,22 @@ export function createDeleteCardTool(ctx: WorkspaceToolContext) {
                 itemId: id,
             });
         },
-    };
+    });
 }
 
 /**
  * Create the selectCards tool
  */
 export function createSelectCardsTool(ctx: WorkspaceToolContext) {
-    return {
+    return tool({
         description:
             "Select one or more cards by their TITLES and add them to the conversation context. This tool helps you surface specific cards when the user refers to them. The tool will perform fuzzy matching to find the best matching cards and return their full content immediately.",
-        inputSchema: z.object({
-            cardTitles: z.array(z.string()).describe("Array of card titles to search for and select"),
-        }),
-        execute: async (input: { cardTitles: string[] }) => {
-            const { cardTitles } = input;
+        inputSchema: zodSchema(
+            z.object({
+                cardTitles: z.array(z.string()).describe("Array of card titles to search for and select"),
+            })
+        ),
+        execute: async ({ cardTitles }) => {
 
             if (!cardTitles || cardTitles.length === 0) {
                 return {
@@ -286,5 +301,5 @@ export function createSelectCardsTool(ctx: WorkspaceToolContext) {
                 };
             }
         },
-    };
+    });
 }

@@ -1,5 +1,5 @@
 import { google } from "@ai-sdk/google";
-import { generateText } from "ai";
+import { generateText, tool, zodSchema } from "ai";
 import { z } from "zod";
 import { logger } from "@/lib/utils/logger";
 
@@ -7,12 +7,14 @@ import { logger } from "@/lib/utils/logger";
  * Create the processUrls tool for analyzing web pages
  */
 export function createProcessUrlsTool() {
-    return {
+    return tool({
         description: "Analyze web pages using Google's URL Context API. Extracts content, key information, and metadata from regular web URLs (http/https). Use this for web pages, articles, documentation, and other web content. For files (PDFs, images, documents) or videos, use the processFiles tool instead.",
-        inputSchema: z.object({
-            jsonInput: z.string().describe("JSON string containing an object with 'urls' (array of web URLs). Example: '{\"urls\": [\"https://example.com\"]}'"),
-        }),
-        execute: async ({ jsonInput }: { jsonInput: string }) => {
+        inputSchema: zodSchema(
+            z.object({
+                jsonInput: z.string().describe("JSON string containing an object with 'urls' (array of web URLs). Example: '{\"urls\": [\"https://example.com\"]}'"),
+            })
+        ),
+        execute: async ({ jsonInput }) => {
             let parsed;
             try {
                 parsed = JSON.parse(jsonInput);
@@ -108,5 +110,5 @@ Provide a clear, accurate answer based on the URL content.`;
                 };
             }
         },
-    };
+    });
 }
