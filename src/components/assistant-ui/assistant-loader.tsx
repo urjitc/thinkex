@@ -3,6 +3,7 @@
 import { useAuiState } from "@assistant-ui/react";
 import { useState, useEffect } from "react";
 import ShinyText from "@/components/ShinyText";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 const thinkingMessages = [
     "Thinking",
@@ -54,7 +55,14 @@ export const AssistantLoader = () => {
     if (!isRunning || !isMessageEmpty) return null;
 
     return (
-        <div className="flex items-center gap-2 py-2">
+        <div className="flex items-center gap-3 py-2">
+            <DotLottieReact
+                src="/logo.lottie"
+                loop
+                autoplay
+                mode="bounce"
+                className="w-4 h-4 self-center"
+            />
             <ShinyText
                 text={currentMessage}
                 disabled={false}

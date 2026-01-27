@@ -62,6 +62,7 @@
     "@gsap/react": "^2.1.2",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.2",
+    "@lottiefiles/dotlottie-react": "^0.17.13",
     "@posthog/ai": "^7.3.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "1.1.15",
