@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { tool, zodSchema } from "ai";
 import { z } from "zod";
 import { logger } from "@/lib/utils/logger";
 import { workspaceWorker } from "@/lib/ai/workers";
@@ -8,12 +9,14 @@ import type { WorkspaceToolContext } from "./workspace-tools";
  * Create the deepResearch tool
  */
 export function createDeepResearchTool(ctx: WorkspaceToolContext) {
-    return {
+    return tool({
         description: "Perform deep, multi-step research on a complex topic. Use this when the user explicitly asks for 'deep research' or when a simple web search is insufficient for the depth required. This tool IMMEDIATELY creates a special research card in the workspace that will stream progress and display the final report. You should ask clarifying questions BEFORE calling this tool if the request is vague. Once ready, call this tool with the refined topic/prompt.",
-        inputSchema: z.object({
-            prompt: z.string().describe("The detailed research topic and instructions."),
-        }),
-        execute: async ({ prompt }: { prompt: string }) => {
+        inputSchema: zodSchema(
+            z.object({
+                prompt: z.string().describe("The detailed research topic and instructions."),
+            })
+        ),
+        execute: async ({ prompt }) => {
             logger.debug("🎯 [DEEP-RESEARCH] Starting deep research for:", prompt);
 
             try {
@@ -68,5 +71,5 @@ export function createDeepResearchTool(ctx: WorkspaceToolContext) {
                 };
             }
         },
-    };
+    });
 }
