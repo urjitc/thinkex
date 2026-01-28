@@ -196,6 +196,55 @@ const ToolText: FC<
 ToolText.displayName = "ToolText";
 
 /**
+ * Inner component that handles result parsing inside the error boundary.
+ */
+const ExecuteCodeContent: FC<{
+  args: { task: string };
+  status: { type: string };
+  result: string | null;
+}> = ({ args, status, result }) => {
+  const isRunning = status.type === "running";
+  // Parse inside the boundary so errors are caught
+  const parsed = result != null ? parseStringResult(result) : null;
+
+  return (
+    <ToolRoot>
+      <ToolTrigger
+        active={isRunning}
+        label="Calculating"
+        icon={<CodeIcon className="aui-tool-trigger-icon size-4 shrink-0" />}
+      />
+
+      <ToolContent aria-busy={isRunning}>
+        <ToolText>
+          <div className="space-y-3">
+            <div>
+              <span className="text-xs font-medium text-muted-foreground/70">Task:</span>
+              <p className="mt-1 text-foreground">{args.task}</p>
+            </div>
+
+            {isRunning && (
+              <div className="text-xs text-muted-foreground/60">Executing code...</div>
+            )}
+
+            {parsed != null && (
+              <div>
+                <span className="text-xs font-medium text-muted-foreground/70">Result:</span>
+                <div className="mt-2">
+                  <StandaloneMarkdown>{parsed}</StandaloneMarkdown>
+                </div>
+              </div>
+            )}
+          </div>
+        </ToolText>
+      </ToolContent>
+    </ToolRoot>
+  );
+};
+
+ExecuteCodeContent.displayName = "ExecuteCodeContent";
+
+/**
  * Tool UI component for executeCode tool.
  * Displays code execution task and results in a collapsible format similar to Reasoning.
  */
@@ -204,42 +253,9 @@ export const ExecuteCodeToolUI = makeAssistantToolUI<{
 }, string>({
   toolName: "executeCode",
   render: function ExecuteCodeToolUI({ args, status, result }) {
-    const isRunning = status.type === "running";
-    const parsed = result != null ? parseStringResult(result) : null;
-
     return (
       <ToolUIErrorBoundary componentName="ExecuteCode">
-        <ToolRoot>
-          <ToolTrigger
-            active={isRunning}
-            label="Calculating"
-            icon={<CodeIcon className="aui-tool-trigger-icon size-4 shrink-0" />}
-          />
-
-          <ToolContent aria-busy={isRunning}>
-            <ToolText>
-              <div className="space-y-3">
-                <div>
-                  <span className="text-xs font-medium text-muted-foreground/70">Task:</span>
-                  <p className="mt-1 text-foreground">{args.task}</p>
-                </div>
-
-                {isRunning && (
-                  <div className="text-xs text-muted-foreground/60">Executing code...</div>
-                )}
-
-                {parsed != null && (
-                  <div>
-                    <span className="text-xs font-medium text-muted-foreground/70">Result:</span>
-                    <div className="mt-2">
-                      <StandaloneMarkdown>{parsed}</StandaloneMarkdown>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </ToolText>
-          </ToolContent>
-        </ToolRoot>
+        <ExecuteCodeContent args={args} status={status} result={result} />
       </ToolUIErrorBoundary>
     );
   },

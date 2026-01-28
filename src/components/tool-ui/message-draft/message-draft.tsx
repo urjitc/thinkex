@@ -328,9 +328,15 @@ export function MessageDraft(props: MessageDraftProps) {
 
       timerRef.current = setTimeout(async () => {
         clearTimers();
-        await onSend?.();
-        setSentAt(new Date());
-        setState("sent");
+        try {
+          await onSend?.();
+          setSentAt(new Date());
+          setState("sent");
+        } catch (error) {
+          console.error("[MessageDraft] Failed to send message:", error);
+          clearTimers();
+          setState("review");
+        }
       }, undoGracePeriod);
     }
   }, [state, undoGracePeriod, onSend, clearTimers]);

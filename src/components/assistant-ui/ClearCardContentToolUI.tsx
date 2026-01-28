@@ -38,6 +38,18 @@ export const ClearCardContentToolUI = makeAssistantToolUI({
           )}
         </div>
       );
+    } else if (status.type === "incomplete" && status.reason === "error") {
+      content = (
+        <div className="mb-4 flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 dark:border-red-800 dark:bg-red-950">
+          <div className="flex items-center gap-2">
+            <div className="size-4 rounded-full bg-red-600 dark:bg-red-400" />
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">Failed to clear card content</p>
+          </div>
+          {parsed?.message && (
+            <p className="text-xs text-red-700 dark:text-red-300">{parsed.message}</p>
+          )}
+        </div>
+      );
     } else if (status.type === "running") {
       content = <ToolUILoadingShell label="Clearing card content..." />;
     }

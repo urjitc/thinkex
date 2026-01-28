@@ -22,7 +22,7 @@ export const DeepResearchToolUI = makeAssistantToolUI<DeepResearchArgs, { noteId
     useOptimisticToolUpdate(status, result as any, workspaceId);
 
     const parsed = result != null ? parseDeepResearchResult(result) : null;
-    const isComplete = status.type === "complete" || !!parsed?.noteId;
+    const isComplete = status.type === "complete";
     const hasError = !!parsed?.error;
 
     return (

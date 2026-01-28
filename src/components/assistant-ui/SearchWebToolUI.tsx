@@ -196,6 +196,55 @@ const ToolText: FC<
 ToolText.displayName = "ToolText";
 
 /**
+ * Inner component that handles result parsing inside the error boundary.
+ */
+const SearchWebContent: FC<{
+  args: { query: string };
+  status: { type: string };
+  result: string | null;
+}> = ({ args, status, result }) => {
+  const isRunning = status.type === "running";
+  // Parse inside the boundary so errors are caught
+  const parsed = result != null ? parseStringResult(result) : null;
+
+  return (
+    <ToolRoot>
+      <ToolTrigger
+        active={isRunning}
+        label={isRunning ? "Searching web" : "Searched web"}
+        icon={<SearchIcon className="aui-tool-trigger-icon size-4 shrink-0" />}
+      />
+
+      <ToolContent aria-busy={isRunning}>
+        <ToolText>
+          <div className="space-y-3">
+            <div>
+              <span className="text-xs font-medium text-muted-foreground/70">Query:</span>
+              <p className="mt-1 text-foreground">{args.query}</p>
+            </div>
+
+            {isRunning && (
+              <div className="text-xs text-muted-foreground/60">Searching...</div>
+            )}
+
+            {parsed != null && (
+              <div>
+                <span className="text-xs font-medium text-muted-foreground/70">Results:</span>
+                <div className="mt-2">
+                  <StandaloneMarkdown>{parsed}</StandaloneMarkdown>
+                </div>
+              </div>
+            )}
+          </div>
+        </ToolText>
+      </ToolContent>
+    </ToolRoot>
+  );
+};
+
+SearchWebContent.displayName = "SearchWebContent";
+
+/**
  * Tool UI component for searchWeb tool.
  * Displays search query and results in a collapsible format similar to Reasoning.
  */
@@ -204,42 +253,9 @@ export const SearchWebToolUI = makeAssistantToolUI<{
 }, string>({
   toolName: "searchWeb",
   render: function SearchWebToolUI({ args, status, result }) {
-    const isRunning = status.type === "running";
-    const parsed = result != null ? parseStringResult(result) : null;
-
     return (
       <ToolUIErrorBoundary componentName="SearchWeb">
-        <ToolRoot>
-          <ToolTrigger
-            active={isRunning}
-            label={isRunning ? "Searching web" : "Searched web"}
-            icon={<SearchIcon className="aui-tool-trigger-icon size-4 shrink-0" />}
-          />
-
-          <ToolContent aria-busy={isRunning}>
-            <ToolText>
-              <div className="space-y-3">
-                <div>
-                  <span className="text-xs font-medium text-muted-foreground/70">Query:</span>
-                  <p className="mt-1 text-foreground">{args.query}</p>
-                </div>
-
-                {isRunning && (
-                  <div className="text-xs text-muted-foreground/60">Searching...</div>
-                )}
-
-                {parsed != null && (
-                  <div>
-                    <span className="text-xs font-medium text-muted-foreground/70">Results:</span>
-                    <div className="mt-2">
-                      <StandaloneMarkdown>{parsed}</StandaloneMarkdown>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </ToolText>
-          </ToolContent>
-        </ToolRoot>
+        <SearchWebContent args={args} status={status} result={result} />
       </ToolUIErrorBoundary>
     );
   },
