@@ -13,7 +13,7 @@ export function HomeContent() {
         <div className="flex-1"></div>
         
         {/* Hero Section - Centered */}
-        <div className="text-center w-full flex-shrink-0">
+        <div className="text-center w-full flex-shrink-0 pt-8 md:pt-12 pb-8 md:pb-12">
           <h1 className="text-2xl md:text-3xl font-normal text-foreground mb-6">
             What's on your mind?
           </h1>
