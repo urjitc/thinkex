@@ -84,7 +84,7 @@ function DashboardContent({
   // Track sign-in prompt for anonymous users
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
 
-  // Show sign-in prompt after 6 events for anonymous users
+  // Show sign-in prompt after 13 events for anonymous users
   useEffect(() => {
     // Only show for anonymous users
     if (!session?.user?.isAnonymous) {
@@ -106,8 +106,8 @@ function DashboardContent({
 
     const eventCount = eventLog.events?.length || 0;
 
-    // Show prompt after 6 events
-    if (eventCount >= 6) {
+    // Show prompt after 13 events
+    if (eventCount >= 13) {
       setShowSignInPrompt(true);
       localStorage.setItem(promptKey, 'true');
     }
