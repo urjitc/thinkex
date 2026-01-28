@@ -181,7 +181,7 @@ function WorkspaceSidebar({
         <SidebarHeader className="bg-sidebar" data-tour="sidebar">
           <div className="flex items-center justify-between py-2 px-3 min-h-[3rem] group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center">
             <Link
-              href="/"
+              href={isHomeRoute ? "/home" : "/"}
               className="flex items-center gap-2 group-data-[collapsible=icon]:hidden transition-all duration-[400ms] group/logo cursor-pointer"
               style={{
                 transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
