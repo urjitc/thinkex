@@ -59,7 +59,7 @@ export function AnonymousSessionHandler({ children }: { children: React.ReactNod
  */
 export function SidebarCoordinator({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={false}>
       {children}
     </SidebarProvider>
   );

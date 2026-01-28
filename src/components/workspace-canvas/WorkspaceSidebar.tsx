@@ -37,7 +37,6 @@ import WorkspaceList from "@/components/workspace/WorkspaceList";
 import WorkspaceItem from "@/components/workspace/WorkspaceItem";
 import WorkspaceSettingsModal from "@/components/workspace/WorkspaceSettingsModal";
 import ShareWorkspaceDialog from "@/components/workspace/ShareWorkspaceDialog";
-import { SidebarQuickActions } from "./SidebarQuickActions";
 import { AccountModal } from "@/components/auth/AccountModal";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -224,16 +223,8 @@ function WorkspaceSidebar({
 
                   return (
                     <>
-                      {/* Fixed section: Quick actions and active workspace */}
+                      {/* Fixed section: Active workspace */}
                       <div className="flex-shrink-0">
-                        {currentWorkspaceId && (
-                          <SidebarQuickActions
-                            currentWorkspaceId={currentWorkspaceId}
-                            isChatExpanded={isChatExpanded}
-                            setIsChatExpanded={setIsChatExpanded}
-                          />
-                        )}
-
                         <SidebarMenu>
                           <SidebarMenuItem>
                             <SidebarMenuSub className="mr-0 pr-0 border-l-0 px-1 ml-0">
