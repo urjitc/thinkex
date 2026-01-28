@@ -255,7 +255,8 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
             {/* Question */}
             <div className={cn(
                 "flex-1 p-2",
-                "overflow-y-auto"
+                "overflow-y-auto",
+                "workspace-card-readonly-editor"
             )}>
                 <div className="mb-6">
                     <div className="text-sm text-white prose prose-invert prose-sm max-w-none">
