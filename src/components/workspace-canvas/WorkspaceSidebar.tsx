@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { MoreVertical, LogOut, Layers, User, Mail, Play, Users, Globe, Plus, Upload, Tag, Home } from "lucide-react";
 import { useState, useCallback, memo } from "react";
 import { useSession, signOut } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 // import { useOnboardingStatus } from "@/hooks/user/use-onboarding-status";
 import {
@@ -68,6 +68,8 @@ function WorkspaceSidebar({
 }: WorkspaceSidebarProps) {
   const { data: session, isPending } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
+  const isHomeRoute = pathname === "/home";
 
   // Get workspace context
   const {
@@ -272,8 +274,8 @@ function WorkspaceSidebar({
       </SidebarContent>
 
       <SidebarFooter className="py-1.5">
-        {session?.user?.isAnonymous ? (
-          // Anonymous user footer - Sign in/Sign up
+        {session?.user?.isAnonymous && !isHomeRoute ? (
+          // Anonymous user footer - Sign in/Sign up (hidden on home route)
           <div className="flex flex-col gap-2 px-2 py-2 w-full">
             <p className="text-sm text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">
               Sign in to save your work and use unlimited AI

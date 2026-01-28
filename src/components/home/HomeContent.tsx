@@ -1,11 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { HomePromptInput } from "./HomePromptInput";
 // import { FeaturedWorkspaces } from "./FeaturedWorkspaces";
 import { WorkspaceGrid } from "./WorkspaceGrid";
 import { FloatingWorkspaceCards } from "@/components/landing/FloatingWorkspaceCards";
+import { Button } from "@/components/ui/button";
+import { useSession } from "@/lib/auth-client";
 
 export function HomeContent() {
+  const { data: session } = useSession();
+
   return (
     <div className="relative h-full w-full overflow-y-auto">
       {/* Floating Card Background */}
@@ -41,6 +46,50 @@ export function HomeContent() {
           <div className="flex justify-center w-full relative z-10">
             <HomePromptInput />
           </div>
+          
+          {/* Sign in message for anonymous users */}
+          {session?.user?.isAnonymous && (
+            <div className="relative w-full flex justify-center mt-6">
+              {/* Radial blur overlay */}
+              <div 
+                className="absolute -inset-8 rounded-full pointer-events-none"
+                style={{
+                  background: 'radial-gradient(circle, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.3) 30%, rgba(0, 0, 0, 0.1) 50%, transparent 70%)',
+                  filter: 'blur(20px)',
+                  zIndex: 0,
+                  width: 'calc(100% + 4rem)',
+                  height: '200px',
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              />
+              <div className="flex flex-col items-center gap-3 relative z-10">
+                <p className="text-sm text-muted-foreground">
+                  Sign in to save your work and use unlimited AI
+                </p>
+                <div className="flex items-center gap-2">
+                  <Link href="/auth/sign-in">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs"
+                    >
+                      Sign in
+                    </Button>
+                  </Link>
+                  <Link href="/auth/sign-up">
+                    <Button
+                      size="sm"
+                      className="h-8 text-xs"
+                    >
+                      Sign up
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -51,7 +100,10 @@ export function HomeContent() {
           {/* <FeaturedWorkspaces /> */}
 
           {/* Your Workspaces */}
-          <WorkspaceGrid />
+          <div className="bg-sidebar rounded-md p-6">
+            <h2 className="text-lg font-normal text-muted-foreground mb-4">Recent workspaces</h2>
+            <WorkspaceGrid />
+          </div>
         </div>
       </div>
     </div>
