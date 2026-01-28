@@ -16,6 +16,28 @@ export function WorkspaceGrid() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsWorkspace, setSettingsWorkspace] = useState<WorkspaceWithState | null>(null);
 
+  // Format date helper
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  // Get preview text from workspace
+  const getPreviewText = (workspace: WorkspaceWithState) => {
+    if (workspace.state?.items && workspace.state.items.length > 0) {
+      const firstItem = workspace.state.items[0];
+      if (firstItem.type === "note") {
+        const noteData = firstItem.data as { field1?: string; blockContent?: unknown };
+        if (noteData.field1) {
+          return noteData.field1.split("\n").slice(0, 3).join("\n");
+        }
+      }
+      return firstItem.name;
+    }
+    return "";
+  };
+
   const handleSettingsClick = (e: React.MouseEvent | React.KeyboardEvent, workspace: WorkspaceWithState) => {
     e.stopPropagation();
     setSettingsWorkspace(workspace);
@@ -68,8 +90,8 @@ export function WorkspaceGrid() {
           {/* Existing Workspaces */}
           {workspaces.map((workspace) => {
               const color = workspace.color as CardColor | undefined;
-              const bgColor = color ? getCardColorCSS(color, 0.1) : 'var(--card)';
               const borderColor = color ? getCardAccentColor(color, 0.5) : 'var(--sidebar-border)';
+              const previewText = getPreviewText(workspace);
 
               return (
                 <div
@@ -79,14 +101,14 @@ export function WorkspaceGrid() {
                   onClick={() => switchWorkspace(workspace.slug || workspace.id)}
                   onKeyDown={(e) => handleKeyDown(e, () => switchWorkspace(workspace.slug || workspace.id))}
                   className={cn(
-                    "group relative p-4 rounded-md shadow-sm min-h-[180px]",
+                    "group relative rounded-md shadow-sm min-h-[180px] overflow-hidden",
                     "hover:shadow-lg",
                     "transition-all duration-200 text-left cursor-pointer",
                     "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background",
-                    "flex flex-col items-start justify-between"
+                    "flex flex-col"
                   )}
                   style={{
-                    backgroundColor: bgColor,
+                    backgroundColor: 'hsl(var(--muted) / 0.4)',
                     borderWidth: '1px',
                     borderStyle: 'solid',
                     borderColor: borderColor,
@@ -98,28 +120,45 @@ export function WorkspaceGrid() {
                     e.currentTarget.style.borderColor = borderColor;
                   }}
                 >
-                  {/* Title */}
-                  <h3 className="font-normal text-lg text-foreground truncate group-hover:text-foreground/80 transition-colors w-full relative z-10">
-                    {workspace.name}
-                  </h3>
-
-                  {/* Centered Icon */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <IconRenderer
-                      icon={workspace.icon}
-                      className="h-12 w-12 opacity-30 group-hover:opacity-40 group-hover:scale-110 transition-all duration-200"
-                      style={{ color: workspace.color || "hsl(var(--primary))" }}
-                    />
+                  {/* Top section - content area */}
+                  <div className="flex-1 p-3 relative">
+                    {previewText ? (
+                      <div className="text-sm text-foreground whitespace-pre-wrap line-clamp-3">
+                        {previewText}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <IconRenderer
+                          icon={workspace.icon}
+                          className="h-12 w-12 opacity-30 group-hover:opacity-40 group-hover:scale-110 transition-all duration-200"
+                          style={{ color: workspace.color || "hsl(var(--primary))" }}
+                        />
+                      </div>
+                    )}
                   </div>
 
-                  {/* Settings Toggle */}
-                  <button
-                    type="button"
-                    onClick={(e) => handleSettingsClick(e, workspace)}
-                    className="absolute top-3 right-3 p-1.5 rounded-md hover:bg-sidebar-accent opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-20"
-                  >
-                    <MoreVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                  </button>
+                  {/* Bottom third - beige section with title, date, menu, and avatar */}
+                  <div className="h-1/3 flex flex-col justify-end px-4 pb-3 relative">
+                    {/* Title */}
+                    <h3 className="font-normal text-base text-foreground truncate mb-1">
+                      {workspace.name}
+                    </h3>
+
+                    {/* Date and Avatar Row */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(workspace.createdAt)}
+                      </span>
+                      {/* Settings Toggle */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleSettingsClick(e, workspace)}
+                        className="p-1 rounded-md hover:bg-sidebar-accent opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-20"
+                      >
+                        <MoreVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               );
             })}
