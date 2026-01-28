@@ -51,13 +51,14 @@ export async function GET() {
           .limit(1);
 
         if (existingWorkspaces.length > 0) {
-          // User already has a workspace, use that
-          redirectTo = `/workspace/${existingWorkspaces[0].slug}`;
+          // User already has a workspace, redirect to home
+          redirectTo = `/home`;
         } else {
           // Clone demo workspace using shared utility
           const userName = session.user.name || session.user.email || undefined;
-          const result = await cloneDemoWorkspace(userId, userName);
-          redirectTo = `/workspace/${result.slug}`;
+          await cloneDemoWorkspace(userId, userName);
+          // Redirect to home after creating demo workspace
+          redirectTo = `/home`;
         }
 
         // Mark onboarding as completed after successfully creating the workspace

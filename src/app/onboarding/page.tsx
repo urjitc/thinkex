@@ -11,7 +11,7 @@ import { AuthPageBackground } from "@/components/auth/AuthPageBackground";
  * This page is shown after signup to:
  * 1. Display a welcome message while the workspace is being created
  * 2. Call the onboarding API to create the user profile and demo workspace
- * 3. Redirect to the new workspace once ready
+ * 3. Redirect to home once ready
  */
 export default function OnboardingPage() {
     const router = useRouter();

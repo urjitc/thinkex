@@ -87,10 +87,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         const data = await response.json();
         // Reload workspaces to get the new one
         await loadWorkspaces();
-        // Redirect to the new workspace
-        if (data.slug) {
-          router.push(`/workspace/${data.slug}`);
-        }
+        // Redirect to home (workspace is created but user goes to home)
+        router.push("/home");
       } else {
         console.error("[WORKSPACE CONTEXT] Failed to create welcome workspace");
       }

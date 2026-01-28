@@ -12,7 +12,7 @@ import { signIn, useSession } from "@/lib/auth-client";
  * This page:
  * 1. Creates an anonymous session if one doesn't exist
  * 2. Creates a welcome workspace for the anonymous user
- * 3. Redirects to the workspace once ready
+ * 3. Redirects to home once ready
  */
 export default function GuestSetupPage() {
     const router = useRouter();
@@ -51,12 +51,8 @@ export default function GuestSetupPage() {
 
                 const data = await res.json();
 
-                // Step 4: Redirect to the workspace
-                if (data.slug) {
-                    router.replace(`/workspace/${data.slug}`);
-                } else {
-                    router.replace("/home");
-                }
+                // Step 4: Redirect to home (workspace is created but user goes to home)
+                router.replace("/home");
             } catch (error) {
                 console.error("Guest setup error:", error);
                 setErrorMessage((error as Error).message || "Something went wrong");
