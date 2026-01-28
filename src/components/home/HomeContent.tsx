@@ -6,11 +6,14 @@ import { WorkspaceGrid } from "./WorkspaceGrid";
 
 export function HomeContent() {
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden">
+    <div className="flex flex-col h-full w-full">
       {/* Main content area */}
-      <div className="flex-1 flex flex-col items-center justify-start px-6 pt-12 md:pt-16 pb-8 overflow-y-auto">
-        {/* Hero Section */}
-        <div className="text-center mb-12 w-full">
+      <div className="flex-1 flex flex-col items-center px-6 overflow-y-auto">
+        {/* Spacer to push hero down */}
+        <div className="flex-1"></div>
+        
+        {/* Hero Section - Centered */}
+        <div className="text-center w-full flex-shrink-0">
           <h1 className="text-2xl md:text-3xl font-normal text-foreground mb-6">
             What's on your mind?
           </h1>
@@ -19,8 +22,11 @@ export function HomeContent() {
           </div>
         </div>
 
+        {/* Spacer below hero */}
+        <div className="flex-1"></div>
+
         {/* Content Sections */}
-        <div className="w-full max-w-6xl space-y-12">
+        <div className="w-full max-w-6xl pb-8 space-y-12 flex-shrink-0">
           {/* Featured Workspaces */}
           {/* <FeaturedWorkspaces /> */}
 

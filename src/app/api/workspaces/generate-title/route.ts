@@ -44,7 +44,19 @@ const AVAILABLE_ICONS = [
 async function handlePOST(request: NextRequest) {
   await requireAuth();
 
-  const body = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch (error) {
+    if (error instanceof SyntaxError || error instanceof TypeError) {
+      return NextResponse.json(
+        { error: "invalid JSON payload" },
+        { status: 400 }
+      );
+    }
+    throw error;
+  }
+
   const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
 
   if (!prompt) {

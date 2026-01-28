@@ -136,6 +136,7 @@ export function HomePromptInput() {
         >
           {/* Prefix label */}
           <span
+            id="workspace-prompt-label"
             className={cn(
               "text-lg text-foreground whitespace-nowrap flex-shrink-0",
               "pl-4 pr-0"
@@ -156,6 +157,7 @@ export function HomePromptInput() {
               placeholder=""
               maxLength={300}
               autoFocus
+              aria-labelledby="workspace-prompt-label"
               style={{ 
                 fontSize: '1.125rem', 
                 lineHeight: '1.75rem',
