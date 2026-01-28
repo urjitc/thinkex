@@ -4,6 +4,8 @@ import { logger } from "@/lib/utils/logger";
 import { QuizQuestion, QuestionType } from "@/lib/workspace-state/types";
 import { generateItemId } from "@/lib/workspace-state/item-helpers";
 
+const DEFAULT_CHAT_MODEL_ID = "gemini-3-flash-preview";
+
 export type QuizWorkerParams = {
     topic?: string;                // Used only if no context provided
     contextContent?: string;       // Aggregated content from selected cards
@@ -176,7 +178,8 @@ For true_false questions, options should be exactly ["True", "False"] and correc
 
         // Standard text-only generation
         const result = await generateText({
-            model: google("gemini-2.5-flash"),
+            // Match the default chat model (see `src/app/api/chat/route.ts`)
+            model: google(DEFAULT_CHAT_MODEL_ID),
             prompt,
         });
 
