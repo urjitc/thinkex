@@ -2,7 +2,7 @@ import type React from "react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Search, X, ChevronRight, ChevronDown, FolderOpen, ChevronLeft, Plus, Upload, FileText, Folder, Settings, Share2, Play, MoreHorizontal, Globe, Brain } from "lucide-react";
 import { LuBook } from "react-icons/lu";
-import { PiCardsThreeFill } from "react-icons/pi";
+import { PiCardsThreeBold } from "react-icons/pi";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -785,7 +785,7 @@ export default function WorkspaceHeader({
                       }}
                       className="flex items-center gap-2 cursor-pointer"
                     >
-                      <PiCardsThreeFill className="size-4 text-muted-foreground" />
+                      <PiCardsThreeBold className="size-4 text-muted-foreground" />
                       Flashcards
                     </DropdownMenuItem>
                     <DropdownMenuItem

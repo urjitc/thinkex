@@ -5,7 +5,7 @@ import { useWorkspaceState } from "@/hooks/workspace/use-workspace-state";
 import { useQueryClient } from "@tanstack/react-query";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { X, Eye, FolderInput } from "lucide-react";
-import { PiCardsThreeFill } from "react-icons/pi";
+import { PiCardsThreeBold } from "react-icons/pi";
 import { logger } from "@/lib/utils/logger";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Button } from "@/components/ui/button";
@@ -114,7 +114,7 @@ const CreateFlashcardReceipt = ({
                             status?.type === "complete" ? "bg-purple-500/10 text-purple-600" : "bg-red-500/10 text-red-600"
                         )}>
                             {status?.type === "complete" ? (
-                                <PiCardsThreeFill className="size-4" />
+                                <PiCardsThreeBold className="size-4" />
                             ) : (
                                 <X className="size-4" />
                             )}

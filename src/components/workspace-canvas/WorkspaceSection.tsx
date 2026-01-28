@@ -35,7 +35,7 @@ import {
 
 import { FileText, Folder, Upload, Play, MoreHorizontal, Globe, Brain } from "lucide-react";
 import { LuBook } from "react-icons/lu";
-import { PiCardsThreeFill } from "react-icons/pi";
+import { PiCardsThreeBold } from "react-icons/pi";
 import WorkspaceSettingsModal from "@/components/workspace/WorkspaceSettingsModal";
 import ShareWorkspaceDialog from "@/components/workspace/ShareWorkspaceDialog";
 import { CreateYouTubeDialog } from "@/components/modals/CreateYouTubeDialog";
@@ -568,7 +568,7 @@ export function WorkspaceSection({
                   }}
                   className="flex items-center gap-2 cursor-pointer"
                 >
-                  <PiCardsThreeFill className="size-4 text-muted-foreground" />
+                  <PiCardsThreeBold className="size-4 text-muted-foreground" />
                   Flashcards
                 </ContextMenuItem>
                 <ContextMenuItem

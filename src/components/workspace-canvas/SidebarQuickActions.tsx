@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Upload, Folder, FileText, Play, Globe, Brain } from "lucide-react";
 import { LuBook } from "react-icons/lu";
-import { PiCardsThreeFill } from "react-icons/pi";
+import { PiCardsThreeBold } from "react-icons/pi";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -250,7 +250,7 @@ export function SidebarQuickActions({ currentWorkspaceId, isChatExpanded, setIsC
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                             <DropdownMenuItem onClick={handleFlashcardClick} className="cursor-pointer">
-                                <PiCardsThreeFill className="mr-2 h-4 w-4" />
+                                <PiCardsThreeBold className="mr-2 h-4 w-4" />
                                 <span>Flashcards</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={handleQuizClick} className="cursor-pointer">

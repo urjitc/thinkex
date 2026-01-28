@@ -10,8 +10,9 @@ import {
     Play,
     Search,
     LayoutGrid,
+    Brain,
 } from "lucide-react";
-import { PiCardsThreeFill } from "react-icons/pi";
+import { PiCardsThreeBold } from "react-icons/pi";
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import type { Item, CardType } from "@/lib/workspace-state/types";
@@ -28,7 +29,9 @@ function getCardTypeIcon(type: CardType) {
         case "pdf":
             return <File className="size-3.5 text-red-400" />;
         case "flashcard":
-            return <PiCardsThreeFill className="size-3.5 text-purple-400" />;
+            return <PiCardsThreeBold className="size-3.5 text-purple-400" />;
+        case "quiz":
+            return <Brain className="size-3.5 text-green-400" />;
         case "youtube":
             return <Play className="size-3.5 text-red-500" />;
         case "folder":
