@@ -26,7 +26,8 @@ import { ToolUIErrorBoundary } from "@/components/tool-ui/shared";
 import type { FlashcardResult } from "@/lib/ai/tool-result-schemas";
 import { parseFlashcardResult } from "@/lib/ai/tool-result-schemas";
 
-type CreateFlashcardArgs = {
+// Tool accepts z.any() (plain text format), so args can be string or object
+type CreateFlashcardArgs = string | {
     description?: string;
     title?: string;
     cards?: Array<{ front: string; back: string }>;

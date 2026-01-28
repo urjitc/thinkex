@@ -15,8 +15,8 @@ import { ToolUILoadingShell } from "@/components/assistant-ui/tool-ui-loading-sh
 import type { FlashcardResult } from "@/lib/ai/tool-result-schemas";
 import { parseFlashcardResult } from "@/lib/ai/tool-result-schemas";
 
-// Type definitions for the tool - args is now plain text format
-type UpdateFlashcardArgs = {
+// Tool accepts z.any() (plain text format), so args can be string or object
+type UpdateFlashcardArgs = string | {
     description?: string;  // Text format: "Deck: ...\nFront: ...\nBack: ..."
     id?: string;           // Legacy support
     cardsToAdd?: Array<{ front: string; back: string }>;  // Legacy support
