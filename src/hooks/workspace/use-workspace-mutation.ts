@@ -59,24 +59,38 @@ export function useWorkspaceMutation(workspaceId: string | null) {
         "events",
       ]);
 
-      // Use the cache's version field directly - this is the authoritative server version
-      // This is more reliable than calculating from events, especially during cache updates
-      const currentVersion = currentData?.version ?? 0;
-      const eventsCount = currentData?.events?.length ?? 0;
-      const optimisticEventsCount = currentData?.events?.filter(e => typeof e.version !== 'number').length ?? 0;
+      // Calculate the actual max version from all events in cache
+      // This is critical because after tool completions, events may have versions
+      // that are higher than the cache's version field
+      const events = currentData?.events ?? [];
+      const optimisticEventsCount = events.filter(e => typeof e.version !== 'number').length;
+      
+      // Find the max version from all events that have versions
+      // This accounts for tool events that were added with versions
+      const maxEventVersion = events
+        .filter(e => typeof e.version === 'number')
+        .reduce((max, e) => Math.max(max, e.version!), currentData?.version ?? 0);
+      
+      // Use the higher of: cache version or max event version
+      // This ensures we account for tool events that updated individual event versions
+      // but might not have updated the cache version field
+      const currentVersion = Math.max(currentData?.version ?? 0, maxEventVersion);
 
       // CRITICAL FIX: Account for optimistic events when calculating baseVersion
       // If there are optimistic events (pending mutations), they will increment the server version
       // So we need to use a baseVersion that accounts for those pending increments
-      // Note: optimisticEventsCount includes our own optimistic event (added in onMutate)
-      // So we subtract 1 to get the count of mutations that will complete before this one
-      // Example: If currentVersion=169 and optimisticEventsCount=2 (including ours), 
+      // Note: onMutate runs before mutationFn, so optimisticEventsCount includes our own
+      // optimistic event plus any other pending mutations. We subtract 1 to exclude our
+      // own event and only account for other mutations that will complete before this one.
+      // Example: If currentVersion=169 and optimisticEventsCount=2 (ours + 1 other), 
       // then 1 other mutation will complete first, making server version 170
       // So we should use baseVersion = 169 + (2-1) = 170
       const adjustedBaseVersion = currentVersion + Math.max(0, optimisticEventsCount - 1);
 
       logger.debug("🚀 [MUTATION] Starting mutation:", {
         workspaceId,
+        cacheVersion: currentData?.version ?? 0,
+        maxEventVersion,
         currentVersion,
         adjustedBaseVersion,
         optimisticEventsCount,

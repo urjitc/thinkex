@@ -1,50 +1,33 @@
 "use client";
 
-import { useEffect } from "react";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { ToolUIErrorBoundary } from "@/components/tool-ui/shared";
+import { parseDeepResearchResult } from "@/lib/ai/tool-result-schemas";
+import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 
 type DeepResearchArgs = {
-    prompt: string;
+  prompt: string;
 };
-
-type DeepResearchResult = {
-    interactionId?: string;
-    noteId?: string;
-    message?: string;
-    error?: string;
-};
-
-
 
 /**
- * DeepResearchToolUI - shows confirmation and triggers workspace refresh
- * Follows the same pattern as CreateNoteToolUI
+ * DeepResearchToolUI - shows confirmation and triggers workspace refresh via
+ * useOptimisticToolUpdate when the tool returns event data.
  */
-export const DeepResearchToolUI = makeAssistantToolUI<DeepResearchArgs, DeepResearchResult>({
-    toolName: "deepResearch",
-    render: function DeepResearchUI({ args, result, status }) {
-        const queryClient = useQueryClient();
-        const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
+export const DeepResearchToolUI = makeAssistantToolUI<DeepResearchArgs, { noteId?: string; error?: string }>({
+  toolName: "deepResearch",
+  render: function DeepResearchUI({ args, result, status }) {
+    const workspaceId = useWorkspaceStore((s) => s.currentWorkspaceId);
+    useOptimisticToolUpdate(status, result as any, workspaceId);
 
-        const isComplete = status.type === "complete" || !!result?.noteId;
-        const hasError = !!result?.error;
+    const parsed = result != null ? parseDeepResearchResult(result) : null;
+    const isComplete = status.type === "complete";
+    const hasError = !!parsed?.error;
 
-        // Trigger refetch when result is available
-        useEffect(() => {
-            if (status?.type === "complete" && result && result.noteId && !result.error) {
-                if (workspaceId) {
-                    queryClient.invalidateQueries({ queryKey: ["workspace", workspaceId, "events"] });
-                } else {
-                    queryClient.invalidateQueries({ queryKey: ["workspace"] });
-                }
-            }
-        }, [status, result, workspaceId, queryClient]);
-
-        return (
-            <div className="rounded-lg border border-border bg-muted/30 p-4 my-2">
+    return (
+      <ToolUIErrorBoundary componentName="DeepResearch">
+        <div className="rounded-lg border border-border bg-muted/30 p-4 my-2">
                 <div className="flex items-center gap-3">
                     {!isComplete && !hasError && (
                         <Loader2 className="size-5 animate-spin text-blue-500" />
@@ -68,16 +51,17 @@ export const DeepResearchToolUI = makeAssistantToolUI<DeepResearchArgs, DeepRese
                     </div>
                 </div>
 
-                {hasError && (
-                    <p className="text-xs text-red-500 mt-2">{result?.error}</p>
+                {hasError && parsed && (
+                    <p className="text-xs text-red-500 mt-2">{parsed.error}</p>
                 )}
 
                 {isComplete && !hasError && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                        📋 Check your workspace for the research card with live progress.
-                    </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    📋 Check your workspace for the research card with live progress.
+                  </p>
                 )}
-            </div>
-        );
-    },
+              </div>
+            </ToolUIErrorBoundary>
+    );
+  },
 });
