@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo } from "react";
 import { useWorkspaceState } from "@/hooks/workspace/use-workspace-state";
-import { useQueryClient } from "@tanstack/react-query";
 import { makeAssistantToolUI } from "@assistant-ui/react";
+import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
 import { CheckIcon, Loader2, X, Eye } from "lucide-react";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Button } from "@/components/ui/button";
@@ -146,22 +146,11 @@ const UpdateCardReceipt = ({ args, result, status }: UpdateCardReceiptProps) => 
 export const UpdateCardToolUI = makeAssistantToolUI<UpdateCardArgs, UpdateCardResult>({
   toolName: "updateCard",
   render: function UpdateCardUI({ args, result, status }) {
-    const queryClient = useQueryClient();
     const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
     const { state: workspaceState } = useWorkspaceState(workspaceId);
 
-    // Trigger refetch when result is available
-    useEffect(() => {
-      if (status?.type === "complete" && result && typeof result === "object" && "success" in result && result.success) {
-        if (workspaceId) {
-          queryClient.invalidateQueries({
-            queryKey: ["workspace", workspaceId, "events"],
-          });
-        } else {
-          queryClient.invalidateQueries({ queryKey: ["workspace"] });
-        }
-      }
-    }, [status, result, workspaceId, queryClient]);
+    // Apply optimistic update
+    useOptimisticToolUpdate(status, result as any, workspaceId);
 
     // Show receipt when result is available, or show loading state while updating
     if (result && typeof result === "object" && "success" in result && result.success) {

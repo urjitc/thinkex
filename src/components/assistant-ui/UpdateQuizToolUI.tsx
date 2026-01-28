@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { makeAssistantToolUI } from "@assistant-ui/react";
+import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
 import { X, Plus, GraduationCap } from "lucide-react";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { cn } from "@/lib/utils";
@@ -74,38 +74,8 @@ export const UpdateQuizToolUI = makeAssistantToolUI<UpdateQuizArgs, UpdateQuizRe
         const queryClient = useQueryClient();
         const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
 
-        // Track if we've already triggered refetch for this result
-        const hasRefetchedRef = useRef<string | null>(null);
-
-        // Trigger refetch when result is available (only once per result)
-        useEffect(() => {
-            if (status?.type === "complete" && result && result.success && workspaceId) {
-                // Use itemId as unique identifier to prevent duplicate refetches
-                // Fallback to args.quizId if result doesn't have ID (though it should)
-                const targetId = result.quizId || result.itemId || args.quizId;
-                const refetchKey = `${targetId}-${result.totalQuestions}`;
-                if (hasRefetchedRef.current === refetchKey) {
-                    return; // Already refetched for this result
-                }
-                hasRefetchedRef.current = refetchKey;
-
-                // Small delay to ensure database has processed the event
-                // Then invalidate cache and refetch to get fresh data
-                setTimeout(() => {
-                    // Invalidate the cache to force fresh fetch
-                    queryClient.invalidateQueries({
-                        queryKey: ["workspace", workspaceId, "events"],
-                    });
-                    // Then refetch
-                    queryClient.refetchQueries({
-                        queryKey: ["workspace", workspaceId, "events"],
-                        type: 'active'
-                    }).catch((err) => {
-                        console.error("❌ [UpdateQuizTool] Refetch failed:", err);
-                    });
-                }, 500); // 500ms delay for database processing
-            }
-        }, [status, result, workspaceId, queryClient]);
+        // Apply optimistic update
+        useOptimisticToolUpdate(status, result, workspaceId);
 
         // Show receipt when result is available
         if (result && result.success) {

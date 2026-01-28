@@ -10,6 +10,7 @@ import type { Item, NoteData, QuizData, QuizQuestion } from "@/lib/workspace-sta
 import { markdownToBlocks } from "@/lib/editor/markdown-to-blocks";
 import { executeWorkspaceOperation } from "./common";
 import { loadWorkspaceState } from "@/lib/workspace/state-loader";
+import type { WorkspaceEvent } from "@/lib/workspace/events";
 
 /**
  * WORKER 3: Workspace Management Agent
@@ -38,7 +39,7 @@ export async function workspaceWorker(
         };
         folderId?: string;
     }
-): Promise<{ success: boolean; message: string; itemId?: string; cardsAdded?: number }> {
+): Promise<{ success: boolean; message: string; itemId?: string; cardsAdded?: number; event?: WorkspaceEvent; version?: number }> {
     // Serialize operations on the same workspace
     return executeWorkspaceOperation(params.workspaceId, async () => {
         try {
@@ -205,6 +206,8 @@ export async function workspaceWorker(
                     itemId,
                     message: `Created ${itemType} "${item.name}" successfully`,
                     cardCount,
+                    event,
+                    version: result?.version,
                 };
             }
 
@@ -332,6 +335,8 @@ export async function workspaceWorker(
                         success: true,
                         itemId: params.itemId,
                         message: `Updated note successfully`,
+                        event,
+                        version: result?.version,
                     };
                 } catch (error: any) {
                     logger.group("❌ [UPDATE-NOTE] Error during update operation", false);
@@ -432,6 +437,8 @@ export async function workspaceWorker(
                     itemId: params.itemId,
                     cardsAdded: newCards.length,
                     message: `Added ${newCards.length} card${newCards.length !== 1 ? 's' : ''} to flashcard deck`,
+                    event,
+                    version: result?.version,
                 };
             }
 
@@ -539,6 +546,8 @@ export async function workspaceWorker(
                     questionsAdded: questionsToAdd.length,
                     totalQuestions: updatedData.questions.length,
                     message: `Added ${questionsToAdd.length} question${questionsToAdd.length !== 1 ? 's' : ''} to quiz`,
+                    event,
+                    version: result?.version,
                 };
             }
 
@@ -583,6 +592,8 @@ export async function workspaceWorker(
                     success: true,
                     itemId: params.itemId,
                     message: `Deleted note successfully`,
+                    event,
+                    version: result?.version,
                 };
             }
 

@@ -1,28 +1,17 @@
 "use client";
 
 import { makeAssistantToolUI } from "@assistant-ui/react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import ShinyText from "@/components/ShinyText";
+import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
 
 export const DeleteCardToolUI = makeAssistantToolUI({
     toolName: "deleteCard",
     render: ({ status, result }) => {
-        const queryClient = useQueryClient();
         const currentWorkspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
-        const hasInvalidatedRef = useRef(false);
 
-        // Invalidate queries when the tool completes successfully
-        useEffect(() => {
-            if (status.type === 'complete' && result && typeof result === 'object' && 'success' in result && result.success && !hasInvalidatedRef.current) {
-                // Invalidate workspace events query to refresh the UI
-                if (currentWorkspaceId) {
-                    queryClient.invalidateQueries({ queryKey: ["workspace", currentWorkspaceId, "events"] });
-                    hasInvalidatedRef.current = true;
-                }
-            }
-        }, [status.type, result, queryClient, currentWorkspaceId]);
+        // Apply optimistic update
+        useOptimisticToolUpdate(status, result as any, currentWorkspaceId);
 
         // Show success state
         if (status.type === "complete" && result && typeof result === "object" && "success" in result && result.success) {

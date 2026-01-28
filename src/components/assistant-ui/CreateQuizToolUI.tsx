@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useWorkspaceState } from "@/hooks/workspace/use-workspace-state";
-import { useQueryClient } from "@tanstack/react-query";
 import { makeAssistantToolUI } from "@assistant-ui/react";
+import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
 import { X, Eye, GraduationCap, FolderInput } from "lucide-react";
 import { logger } from "@/lib/utils/logger";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
@@ -221,17 +221,8 @@ export const CreateQuizToolUI = makeAssistantToolUI<CreateQuizArgs, CreateQuizRe
             logger.debug("🎯 [CreateQuizTool] Render:", { args, result, status: status?.type });
         }, [args, result, status]);
 
-        // Trigger refetch when result is available
-        useEffect(() => {
-            if (status?.type === "complete" && result && result.success) {
-                logger.debug("🔄 [CreateQuizTool] Triggering refetch for completed quiz");
-                if (workspaceId) {
-                    queryClient.invalidateQueries({ queryKey: ["workspace", workspaceId, "events"] });
-                } else {
-                    queryClient.invalidateQueries({ queryKey: ["workspace"] });
-                }
-            }
-        }, [status, result, workspaceId, queryClient]);
+        // Apply optimistic update
+        useOptimisticToolUpdate(status, result, workspaceId);
 
         // Show receipt when result is available
         if (result && result.success) {

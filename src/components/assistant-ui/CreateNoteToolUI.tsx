@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useWorkspaceState } from "@/hooks/workspace/use-workspace-state";
-import { useQueryClient } from "@tanstack/react-query";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { CheckIcon, X, Eye, FolderInput } from "lucide-react";
 import { logger } from "@/lib/utils/logger";
@@ -13,6 +12,7 @@ import ShinyText from "@/components/ShinyText";
 import MoveToDialog from "@/components/modals/MoveToDialog";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
+import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
 
 
 
@@ -206,7 +206,6 @@ const CreateNoteReceipt = ({
 export const CreateNoteToolUI = makeAssistantToolUI<CreateNoteArgs, CreateNoteResult>({
   toolName: "createNote",
   render: function CreateNoteCardUI({ args, result, status }) {
-    const queryClient = useQueryClient();
     const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
     const { state: workspaceState } = useWorkspaceState(workspaceId);
     const operations = useWorkspaceOperations(workspaceId, workspaceState || initialState);
@@ -214,6 +213,9 @@ export const CreateNoteToolUI = makeAssistantToolUI<CreateNoteArgs, CreateNoteRe
     // Get workspace metadata from context
     const workspaceContext = useWorkspaceContext();
     const currentWorkspace = workspaceContext.workspaces.find(w => w.id === workspaceId);
+
+    // Apply optimistic update
+    useOptimisticToolUpdate(status, result, workspaceId);
 
     // Debug logging for render function
     useEffect(() => {
@@ -226,18 +228,6 @@ export const CreateNoteToolUI = makeAssistantToolUI<CreateNoteArgs, CreateNoteRe
       logger.debug("Result itemId:", result?.itemId);
       logger.groupEnd();
     }, [args, result, status, workspaceId]);
-
-    // Trigger refetch when result is available
-    useEffect(() => {
-      if (status?.type === "complete" && result && result.success) {
-        logger.debug("🔄 [CreateNoteTool] Triggering refetch for completed note");
-        if (workspaceId) {
-          queryClient.invalidateQueries({ queryKey: ["workspace", workspaceId, "events"] });
-        } else {
-          queryClient.invalidateQueries({ queryKey: ["workspace"] });
-        }
-      }
-    }, [status, result, workspaceId, queryClient]);
 
     // Show receipt when result is available, or show loading state while creating
     if (result && result.success) {

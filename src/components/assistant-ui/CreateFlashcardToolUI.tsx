@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useWorkspaceState } from "@/hooks/workspace/use-workspace-state";
-import { useQueryClient } from "@tanstack/react-query";
 import { makeAssistantToolUI } from "@assistant-ui/react";
+import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
 import { X, Eye, FolderInput } from "lucide-react";
 import { PiCardsThreeBold } from "react-icons/pi";
 import { logger } from "@/lib/utils/logger";
@@ -217,17 +217,8 @@ export const CreateFlashcardToolUI = makeAssistantToolUI<CreateFlashcardArgs, Cr
             logger.groupEnd();
         }, [args, result, status, workspaceId]);
 
-        // Trigger refetch when result is available
-        useEffect(() => {
-            if (status?.type === "complete" && result && result.success) {
-                logger.debug("🔄 [CreateFlashcardTool] Triggering refetch for completed flashcards");
-                if (workspaceId) {
-                    queryClient.invalidateQueries({ queryKey: ["workspace", workspaceId, "events"] });
-                } else {
-                    queryClient.invalidateQueries({ queryKey: ["workspace"] });
-                }
-            }
-        }, [status, result, workspaceId, queryClient]);
+        // Apply optimistic update
+        useOptimisticToolUpdate(status, result, workspaceId);
 
         // Show receipt when result is available, or show loading state while creating
         if (result && result.success) {

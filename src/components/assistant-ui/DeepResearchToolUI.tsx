@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
 
 type DeepResearchArgs = {
     prompt: string;
@@ -26,22 +25,13 @@ type DeepResearchResult = {
 export const DeepResearchToolUI = makeAssistantToolUI<DeepResearchArgs, DeepResearchResult>({
     toolName: "deepResearch",
     render: function DeepResearchUI({ args, result, status }) {
-        const queryClient = useQueryClient();
         const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
 
         const isComplete = status.type === "complete" || !!result?.noteId;
         const hasError = !!result?.error;
 
-        // Trigger refetch when result is available
-        useEffect(() => {
-            if (status?.type === "complete" && result && result.noteId && !result.error) {
-                if (workspaceId) {
-                    queryClient.invalidateQueries({ queryKey: ["workspace", workspaceId, "events"] });
-                } else {
-                    queryClient.invalidateQueries({ queryKey: ["workspace"] });
-                }
-            }
-        }, [status, result, workspaceId, queryClient]);
+        // Apply optimistic update (if event is available in result)
+        useOptimisticToolUpdate(status, result as any, workspaceId);
 
         return (
             <div className="rounded-lg border border-border bg-muted/30 p-4 my-2">

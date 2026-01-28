@@ -1,29 +1,19 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import ShinyText from "@/components/ShinyText";
+import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
 
 
 
 export const ClearCardContentToolUI = makeAssistantToolUI({
     toolName: "clearCardContent",
     render: function ClearCardContentUI({ result, status }) {
-        const queryClient = useQueryClient();
         const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
-        const hasTriggeredRefetch = useRef(false);
 
-        // When the tool completes successfully, invalidate queries immediately
-        useEffect(() => {
-            if (status.type === "complete" && result && typeof result === "object" && "success" in result && result.success && !hasTriggeredRefetch.current) {
-                hasTriggeredRefetch.current = true;
-                queryClient.invalidateQueries({
-                    queryKey: ["workspace", workspaceId, "events"],
-                });
-            }
-        }, [status, result, workspaceId, queryClient]);
+        // Apply optimistic update
+        useOptimisticToolUpdate(status, result as any, workspaceId);
 
         // Show success state
         if (status.type === "complete" && result && typeof result === "object" && "success" in result && result.success) {
