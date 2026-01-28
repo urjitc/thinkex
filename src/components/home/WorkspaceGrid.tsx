@@ -9,11 +9,10 @@ import { cn } from "@/lib/utils";
 import WorkspaceSettingsModal from "@/components/workspace/WorkspaceSettingsModal";
 import type { WorkspaceWithState } from "@/lib/workspace-state/types";
 import { getCardColorCSS, getCardAccentColor, type CardColor } from "@/lib/workspace-state/colors";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export function WorkspaceGrid() {
   const { setShowCreateWorkspaceModal } = useUIStore();
-  const { workspaces, switchWorkspace, loadWorkspaces, loadingWorkspaces } = useWorkspaceContext();
+  const { workspaces, switchWorkspace, loadWorkspaces } = useWorkspaceContext();
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsWorkspace, setSettingsWorkspace] = useState<WorkspaceWithState | null>(null);
 
@@ -71,33 +70,7 @@ export function WorkspaceGrid() {
           </div>
 
           {/* Existing Workspaces */}
-          {loadingWorkspaces ? (
-            // Show 12 skeleton cards while loading
-            Array.from({ length: 12 }).map((_, index) => (
-              <div
-                key={`skeleton-${index}`}
-                className={cn(
-                  "relative p-4 rounded-md shadow-sm min-h-[180px]",
-                  "flex flex-col items-start justify-between",
-                  "bg-card border border-sidebar-border"
-                )}
-              >
-                {/* Title skeleton */}
-                <Skeleton className="h-6 w-32 mb-auto" />
-
-                {/* Centered Icon skeleton */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <Skeleton className="h-12 w-12 rounded-md" />
-                </div>
-
-                {/* Settings button skeleton */}
-                <div className="absolute top-3 right-3">
-                  <Skeleton className="h-5 w-5 rounded-md" />
-                </div>
-              </div>
-            ))
-          ) : (
-            workspaces.map((workspace) => {
+          {workspaces.map((workspace) => {
               const color = workspace.color as CardColor | undefined;
               const bgColor = color ? getCardColorCSS(color, 0.25) : 'var(--card)';
               const borderColor = color ? getCardAccentColor(color, 0.5) : 'var(--sidebar-border)';
@@ -153,8 +126,7 @@ export function WorkspaceGrid() {
                   </button>
                 </div>
               );
-            })
-          )}
+            })}
         </div>
       </div>
 
