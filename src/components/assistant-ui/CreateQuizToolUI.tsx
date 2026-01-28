@@ -140,9 +140,6 @@ const CreateQuizReceipt = ({ args, result, status, moveItemToFolder, allItems = 
                                             </span>
                                         );
                                     })()}
-                                    <span className="text-xs text-muted-foreground">
-                                        {result.isContextBased ? "From selected content" : "General knowledge"}
-                                    </span>
                                 </div>
                             </div>
                             {moveItemToFolder && (
