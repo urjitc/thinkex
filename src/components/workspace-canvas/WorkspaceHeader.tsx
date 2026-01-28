@@ -123,7 +123,7 @@ export default function WorkspaceHeader({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
   const isWorkspaceRoute = pathname.startsWith("/workspace");
-  
+
   // Track drag hover state for breadcrumb elements
   const [hoveredBreadcrumbTarget, setHoveredBreadcrumbTarget] = useState<string | null>(null); // 'root' or folderId
   const isDraggingRef = useRef(false);
@@ -196,18 +196,18 @@ export default function WorkspaceHeader({
     const handleDragHover = (e: Event) => {
       const customEvent = e as CustomEvent;
       const { folderId, isHovering } = customEvent.detail || {};
-      
+
       // Track drag state - if we get a hover event, dragging is active
       if (isHovering !== undefined) {
         isDraggingRef.current = isHovering;
       }
-      
+
       if (isHovering) {
         // When folderId is null, it means hovering over root (breadcrumb target)
         // When folderId is a string, it means hovering over a folder (could be breadcrumb or card)
         // We need to check if it's actually a breadcrumb target by checking data attributes
         let foundTarget: string | null = null;
-        
+
         if (folderId === null) {
           // Hovering over root - check if there's a root breadcrumb target
           const rootTargets = document.querySelectorAll('[data-breadcrumb-target="root"]');
@@ -221,7 +221,7 @@ export default function WorkspaceHeader({
             foundTarget = folderId;
           }
         }
-        
+
         // Only show visual feedback if it's actually a breadcrumb target
         // (The validation in WorkspaceGrid already ensures it's a valid drop, so we can show feedback)
         setHoveredBreadcrumbTarget(foundTarget);
@@ -231,7 +231,7 @@ export default function WorkspaceHeader({
     };
 
     window.addEventListener('folder-drag-hover', handleDragHover);
-    
+
     return () => {
       window.removeEventListener('folder-drag-hover', handleDragHover);
     };
@@ -354,10 +354,10 @@ export default function WorkspaceHeader({
           {isWorkspaceRoute && (
             <Link
               href="/home"
-              className="group flex items-center mr-1 shrink-0 rounded-md p-1 cursor-pointer"
+              className="group flex items-center mr-2 shrink-0 rounded-md cursor-pointer"
               aria-label="ThinkEx"
             >
-              <div className="transition-transform duration-200 group-hover:scale-110">
+              <div className="relative h-6 w-6 flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
                 <Image
                   src="/newlogothinkex.svg"
                   alt="ThinkEx Logo"
@@ -434,7 +434,7 @@ export default function WorkspaceHeader({
               // When at root level, show dropdown menu on click
               ((onOpenSettings || onOpenShare) ? (<DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button 
+                  <button
                     data-breadcrumb-target="root"
                     className={cn(
                       "flex items-center gap-1.5 min-w-0 rounded transition-colors hover:bg-sidebar-accent cursor-pointer px-1 py-0.5 -mx-1 -my-0.5",
@@ -471,7 +471,7 @@ export default function WorkspaceHeader({
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
-              </DropdownMenu>) : (<div 
+              </DropdownMenu>) : (<div
                 data-breadcrumb-target="root"
                 className={cn(
                   "flex items-center gap-1.5 min-w-0",
@@ -498,7 +498,7 @@ export default function WorkspaceHeader({
                     <span className="text-sidebar-foreground/50 mx-1 font-bold">/</span>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button 
+                        <button
                           data-breadcrumb-target="folder"
                           data-folder-id={folderPath[folderPath.length - 1].id}
                           className={cn(
@@ -584,21 +584,21 @@ export default function WorkspaceHeader({
                   /* Show root, dropdown with all middle folders, and last for 2+ levels */
                   (<>
                     <span className="text-sidebar-foreground/50 mx-1 font-bold">/</span>
-                    <HoverCard 
-                      open={ellipsisDropdownOpen} 
+                    <HoverCard
+                      open={ellipsisDropdownOpen}
                       onOpenChange={setEllipsisDropdownOpen}
                       openDelay={0}
                       closeDelay={100}
                     >
                       <HoverCardTrigger asChild>
-                        <button 
+                        <button
                           className="flex items-center gap-1 min-w-0 rounded transition-colors hover:bg-sidebar-accent px-1 py-0.5 -mx-1 -my-0.5 text-sidebar-foreground/70 hover:text-sidebar-foreground"
                         >
                           <span className="truncate font-medium">...</span>
                         </button>
                       </HoverCardTrigger>
-                      <HoverCardContent 
-                        align="start" 
+                      <HoverCardContent
+                        align="start"
                         className="max-w-[200px] p-1 !animate-none data-[state=open]:!animate-none data-[state=closed]:!animate-none"
                       >
                         <div className="flex flex-col">
