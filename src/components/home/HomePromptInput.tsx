@@ -111,8 +111,8 @@ export function HomePromptInput() {
           onClick={() => inputRef.current?.focus()}
           className={cn(
             "relative flex items-center gap-0 min-h-[60px] w-full",
-            "bg-muted/50 border-2 border-sidebar-border/50 rounded-md",
-            "focus-within:border-primary/50 focus-within:bg-muted/80",
+            "bg-sidebar border border-sidebar-border/50 rounded-md",
+            "focus-within:border-sidebar-foreground/20 focus-within:bg-sidebar",
             "transition-all duration-200",
             "cursor-text"
           )}
