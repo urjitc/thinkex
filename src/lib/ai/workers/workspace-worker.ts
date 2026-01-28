@@ -221,8 +221,8 @@ export async function workspaceWorker(
                 // The database uses FOR UPDATE which serializes, but parallel creates may still
                 // read the same baseVersion before the lock, causing conflicts. Retry with the
                 // conflict version (which the DB returns) to handle this gracefully.
-                let baseVersion: number;
-                let appendResult: { version: number; conflict: boolean };
+                let baseVersion = 0;
+                let appendResult: { version: number; conflict: boolean } = { version: 0, conflict: false };
                 const maxRetries = 2; // Conflicts should be rare due to FOR UPDATE lock
                 let retryCount = 0;
 
@@ -230,7 +230,12 @@ export async function workspaceWorker(
                 const currentVersionResult = await db.execute(sql`
           SELECT get_workspace_version(${params.workspaceId}::uuid) as version
         `);
-                baseVersion = currentVersionResult[0]?.version || 0;
+                const baseVersionRaw = currentVersionResult[0]?.version;
+                baseVersion =
+                    typeof baseVersionRaw === "number"
+                        ? baseVersionRaw
+                        : Number(baseVersionRaw) || 0;
+                appendResult = { version: baseVersion, conflict: false };
 
                 while (retryCount <= maxRetries) {
                     const eventResult = await db.execute(sql`

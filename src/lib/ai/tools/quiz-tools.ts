@@ -29,19 +29,21 @@ export function createQuizTool(ctx: WorkspaceToolContext) {
             }).passthrough()
         ),
         execute: async (args: unknown) => {
-            // Extract and validate args - .passthrough() allows extra properties during streaming
-            const parsedArgs = args as { 
-                topic?: string; 
-                contextContent?: string;
-                sourceCardIds?: string[];
-                sourceCardNames?: string[];
-                difficulty?: "easy" | "medium" | "hard";
-            } | null;
-            const topic = parsedArgs?.topic;
-            const contextContent = parsedArgs?.contextContent;
-            const sourceCardIds = parsedArgs?.sourceCardIds;
-            const sourceCardNames = parsedArgs?.sourceCardNames;
-            const difficulty = parsedArgs?.difficulty || "medium";
+            // Validate args using Zod schema - .passthrough() allows extra properties during streaming
+            const createQuizSchema = z.object({
+                topic: z.string().optional(),
+                contextContent: z.string().optional(),
+                sourceCardIds: z.array(z.string()).optional(),
+                sourceCardNames: z.array(z.string()).optional(),
+                difficulty: z.enum(["easy", "medium", "hard"]).optional().default("medium"),
+            }).passthrough();
+            
+            const parsedArgs = createQuizSchema.parse(args);
+            const topic = parsedArgs.topic;
+            const contextContent = parsedArgs.contextContent;
+            const sourceCardIds = parsedArgs.sourceCardIds;
+            const sourceCardNames = parsedArgs.sourceCardNames;
+            const difficulty = parsedArgs.difficulty || "medium";
             logger.debug("🎯 [CREATE-QUIZ] Tool execution started:", { topic, hasContext: !!contextContent, difficulty });
 
             if (!ctx.workspaceId) {
@@ -142,16 +144,18 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
             }).passthrough()
         ),
         execute: async (args: unknown) => {
-            // Extract and validate args - .passthrough() allows extra properties during streaming
-            const parsedArgs = args as { 
-                quizId?: string;
-                topic?: string; 
-                contextContent?: string;
-                sourceCardIds?: string[];
-                sourceCardNames?: string[];
-            } | null;
-            const quizId = parsedArgs?.quizId;
-            const explicitTopic = parsedArgs?.topic;
+            // Validate args using Zod schema - .passthrough() allows extra properties during streaming
+            const updateQuizSchema = z.object({
+                quizId: z.string(),
+                topic: z.string().optional(),
+                contextContent: z.string().optional(),
+                sourceCardIds: z.array(z.string()).optional(),
+                sourceCardNames: z.array(z.string()).optional(),
+            }).passthrough();
+            
+            const parsedArgs = updateQuizSchema.parse(args);
+            const quizId = parsedArgs.quizId;
+            const explicitTopic = parsedArgs.topic;
 
             logger.debug("🎯 [UPDATE-QUIZ] Tool execution started:", { quizId, explicitTopic });
 

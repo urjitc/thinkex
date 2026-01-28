@@ -22,6 +22,12 @@ type UpdateFlashcardArgs = string | {
     cardsToAdd?: Array<{ front: string; back: string }>;  // Legacy support
 };
 
+function isUpdateFlashcardArgsObject(
+    args: UpdateFlashcardArgs
+): args is Exclude<UpdateFlashcardArgs, string> {
+    return typeof args === "object" && args !== null;
+}
+
 import { useUIStore } from "@/lib/stores/ui-store";
 
 interface UpdateFlashcardReceiptProps {
@@ -61,7 +67,8 @@ const UpdateFlashcardReceipt = ({ args, result, status }: UpdateFlashcardReceipt
         return item?.name || "Flashcard Deck";
     }, [result.deckName, result.itemId, workspaceState?.items]);
 
-    const cardsAdded = result.cardsAdded ?? args.cardsToAdd?.length ?? 0;
+    const argsObj = isUpdateFlashcardArgsObject(args) ? args : null;
+    const cardsAdded = result.cardsAdded ?? argsObj?.cardsToAdd?.length ?? 0;
 
     const handleViewCard = () => {
         if (!result.itemId) return;
