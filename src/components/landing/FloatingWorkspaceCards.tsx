@@ -42,7 +42,7 @@ const EXTRA_CARDS: FloatingCardData[] = [
     { type: 'quiz', title: 'JavaScript Basics', content: 'What is a closure?', color: '#8B5CF6' },
     { type: 'note', title: 'Project Roadmap Q1', color: '#EC4899' },
     { type: 'folder', title: 'Design System', itemCount: 67, color: '#14B8A6' },
-    { type: 'youtube', youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', thumbnailUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/sddefault.jpg' },
+    { type: 'youtube', youtubeUrl: 'https://www.youtube.com/watch?v=aXRTczANuIs', thumbnailUrl: 'https://img.youtube.com/vi/aXRTczANuIs/sddefault.jpg' },
     { type: 'flashcard', content: 'Explain the concept of recursion', color: '#EF4444' },
     { type: 'note', title: 'Team Meeting Notes', color: '#F97316' },
     { type: 'pdf', title: 'System_Architecture.pdf', color: '#6366F1', aspectRatio: '1/1.1' },
