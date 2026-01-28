@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePostHog } from 'posthog-js/react';
@@ -218,6 +219,13 @@ function DashboardContent({
     }
   );
 
+  // Expand chat when landing with ?createFrom=... (create workspace from home prompt)
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("createFrom")) {
+      setIsChatExpanded(true);
+    }
+  }, [searchParams, setIsChatExpanded]);
 
   // Reset JSON view when there are no items
   useEffect(() => {

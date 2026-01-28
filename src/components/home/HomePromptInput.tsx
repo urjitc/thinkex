@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowUp, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,33 +10,35 @@ import { Textarea } from "@/components/ui/textarea";
 import Typewriter, { TypewriterClass } from "typewriter-effect";
 
 const PLACEHOLDER_OPTIONS = [
-  "climate change impacts",
-  "quantum computing applications",
-  "neural network architectures",
-  "CRISPR gene editing",
-  "renewable energy systems",
-  "machine learning ethics",
-  "space exploration missions",
-  "biotechnology advances",
-  "sustainable agriculture",
-  "artificial intelligence safety",
-  "blockchain technology",
-  "cancer immunotherapy",
-  "ocean acidification",
-  "renewable energy storage",
-  "autonomous vehicles",
-  "precision medicine",
-  "carbon capture technology",
-  "synthetic biology",
-  "quantum cryptography",
-  "fusion energy research",
+  "learning Spanish",
+  "meal planning",
+  "productivity tips",
+  "hiking trails nearby",
+  "interior design ideas",
+  "beginner guitar",
+  "healthy breakfast recipes",
+  "weekend trip ideas",
+  "mindfulness and meditation",
+  "budgeting and saving",
+  "home workout routines",
+  "book recommendations",
+  "gardening basics",
+  "morning routines",
+  "travel photography",
+  "cooking for beginners",
+  "personal finance",
+  "storytelling and writing",
+  "coffee brewing at home",
+  "day trips and getaways",
 ];
 
 const baseText = "Create a workspace for ";
 
 export function HomePromptInput() {
+  const router = useRouter();
   const [value, setValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typewriterRef = useRef<TypewriterClass | null>(null);
 
@@ -86,17 +89,47 @@ export function HomePromptInput() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!value.trim()) return;
+    const prompt = value.trim();
+    if (!prompt || isLoading) return;
 
-    toast.info("Coming soon", {
-      description: "Workspace creation from prompts will be available soon!",
-    });
+    setIsLoading(true);
+    try {
+      const titleRes = await fetch("/api/workspaces/generate-title", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      if (!titleRes.ok) {
+        const err = await titleRes.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to generate title");
+      }
+      const { title } = (await titleRes.json()) as { title: string };
 
-    setValue("");
-    if (typewriterRef.current) {
-      typewriterRef.current.start();
+      const createRes = await fetch("/api/workspaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: title }),
+      });
+      if (!createRes.ok) {
+        const err = await createRes.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to create workspace");
+      }
+      const { workspace } = (await createRes.json()) as { workspace: { slug: string } };
+
+      setValue("");
+      if (typewriterRef.current) {
+        typewriterRef.current.start();
+      }
+      router.push(
+        `/dashboard/${workspace.slug}?createFrom=${encodeURIComponent(prompt)}`
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      toast.error("Could not create workspace", { description: msg });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -169,26 +202,29 @@ export function HomePromptInput() {
                 onInit={(typewriter) => {
                   typewriterRef.current = typewriter;
                   
-                  // Paste base text instantly (only once, outside the loop)
                   typewriter.pasteString(baseText, null);
                   
                   const cycleOptions = () => {
-                    // Cycle through options with animation
-                    PLACEHOLDER_OPTIONS.forEach((option, index) => {
+                    const start = Math.floor(Math.random() * PLACEHOLDER_OPTIONS.length);
+                    const ordered = [
+                      ...PLACEHOLDER_OPTIONS.slice(start),
+                      ...PLACEHOLDER_OPTIONS.slice(0, start),
+                    ];
+                    ordered.forEach((option, index) => {
                       if (index === 0) {
                         typewriter.typeString(option);
                       } else {
+                        const prevLen = ordered[index - 1].length;
                         typewriter
                           .pauseFor(2000)
-                          .deleteChars(PLACEHOLDER_OPTIONS[index - 1].length)
+                          .deleteChars(prevLen)
                           .typeString(option);
                       }
                     });
-                    
-                    // After last option, delete it and restart the cycle
+                    const lastLen = ordered[ordered.length - 1].length;
                     typewriter
                       .pauseFor(2000)
-                      .deleteChars(PLACEHOLDER_OPTIONS[PLACEHOLDER_OPTIONS.length - 1].length)
+                      .deleteChars(lastLen)
                       .callFunction(() => {
                         cycleOptions();
                       });
@@ -211,7 +247,7 @@ export function HomePromptInput() {
           <Button
             type="submit"
             size="icon"
-            disabled={!value.trim()}
+            disabled={!value.trim() || isLoading}
             className={cn(
               "absolute right-2 top-1/2 -translate-y-1/2 z-20",
               "h-9 w-9 rounded-full",
