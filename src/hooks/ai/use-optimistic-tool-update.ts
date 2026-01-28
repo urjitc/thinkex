@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { EventResponse } from "@/lib/workspace/events";
 import type { WorkspaceEvent } from "@/lib/workspace/events";
@@ -11,8 +11,17 @@ interface ToolResult {
 }
 
 /**
- * Hook to apply optimistic updates when a tool completes
- * Replaces invalidateQueries pattern with direct cache updates
+ * Apply an optimistic cache update when a tool completes (receipt phase).
+ * Uses cache-as-source-of-truth, no refs or module state.
+ *
+ * Rules:
+ * - Empty cache (e.g. hard refresh): skip. Let the normal fetch populate.
+ * - Event already in cached.events (delta): skip.
+ * - result.version <= cached.snapshot?.version: event is in snapshot, skip.
+ * - Else: append event to cache.
+ *
+ * Durable across refresh (we never overwrite empty cache) and correct when
+ * events are compressed into a snapshot.
  */
 export function useOptimisticToolUpdate(
   status: { type: string } | undefined,
@@ -20,47 +29,58 @@ export function useOptimisticToolUpdate(
   workspaceId: string | null
 ) {
   const queryClient = useQueryClient();
-  const hasAppliedUpdateRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (
-      status?.type === "complete" &&
-      result?.success &&
-      result.event &&
-      workspaceId
+      status?.type !== "complete" ||
+      !result?.success ||
+      !result.event ||
+      !workspaceId
     ) {
-      const resultKey = result.event.id ?? result.itemId;
-      if (resultKey == null) {
-        return; // Cannot dedupe or apply without event.id or itemId
-      }
-      if (hasAppliedUpdateRef.current === resultKey) {
-        return; // Already applied
-      }
-      hasAppliedUpdateRef.current = resultKey;
+      return;
+    }
+    const eventId = result.event.id;
+    if (!eventId) return;
 
-      // Cancel any pending refetches
-      queryClient.cancelQueries({
-        queryKey: ["workspace", workspaceId, "events"],
-      });
+    const cached = queryClient.getQueryData<EventResponse>([
+      "workspace",
+      workspaceId,
+      "events",
+    ]);
 
-      // Optimistically update cache
-      queryClient.setQueryData<EventResponse>(
-        ["workspace", workspaceId, "events"],
-        (old) => {
-          if (!old) {
-            return {
-              events: [{ ...result.event! }],
-              version: result.version ?? 0,
-            };
-          }
+    if (!cached) return;
+    if (!Array.isArray(cached.events)) return;
 
+    const alreadyInDelta = cached.events.some((e) => e.id === eventId);
+    if (alreadyInDelta) return;
+
+    const snapshotVersion = cached.snapshot?.version;
+    if (
+      typeof snapshotVersion === "number" &&
+      typeof result.version === "number" &&
+      result.version <= snapshotVersion
+    ) {
+      return;
+    }
+
+    queryClient.setQueryData<EventResponse>(
+      ["workspace", workspaceId, "events"],
+      (old) => {
+        if (!old) {
           return {
-            ...old,
-            events: [...old.events, { ...result.event! }],
-            version: result.version ?? old.version,
+            events: [{ ...result.event!, version: result.version }],
+            version: result.version ?? 0,
           };
         }
-      );
-    }
+        return {
+          ...old,
+          events: [
+            ...old.events,
+            { ...result.event!, version: result.version ?? old.version },
+          ],
+          version: result.version ?? old.version,
+        };
+      }
+    );
   }, [status, result, workspaceId, queryClient]);
 }
