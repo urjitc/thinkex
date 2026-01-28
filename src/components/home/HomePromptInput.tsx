@@ -106,12 +106,16 @@ export function HomePromptInput() {
         const err = await titleRes.json().catch(() => ({}));
         throw new Error(err.error || "Failed to generate title");
       }
-      const { title } = (await titleRes.json()) as { title: string };
+      const { title, icon, color } = (await titleRes.json()) as { title: string; icon?: string; color?: string };
 
       const createRes = await fetch("/api/workspaces", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: title }),
+        body: JSON.stringify({ 
+          name: title,
+          icon: icon || null,
+          color: color || null,
+        }),
       });
       if (!createRes.ok) {
         const err = await createRes.json().catch(() => ({}));
