@@ -50,7 +50,7 @@ const ToolRoot: FC<
             ref={collapsibleRef}
             open={isOpen}
             onOpenChange={handleOpenChange}
-            className={cn("aui-tool-root mb-4 w-full", className)}
+            className={cn("aui-tool-root mb-2 w-full", className)}
             style={
                 {
                     "--animation-duration": `${ANIMATION_DURATION}ms`,
@@ -235,89 +235,109 @@ const YouTubeSearchContent: FC<{
     };
 
     return (
-        <ToolRoot defaultOpen={true}>
-            <ToolTrigger
-                active={isRunning}
-                label={isRunning ? "Searching YouTube" : "YouTube Results"}
-                icon={isRunning
-                    ? <Loader2 className="aui-tool-trigger-icon size-4 shrink-0 animate-spin" />
-                    : <Youtube className="aui-tool-trigger-icon size-4 shrink-0" />
-                }
-            />
-
-            <ToolContent aria-busy={isRunning}>
-                <div className="pt-4 pl-4 space-y-3">
-                    {/* Query Info */}
-                    <div>
-                        <span className="text-xs font-medium text-muted-foreground/70">Query:</span>
-                        <p className="mt-1 text-foreground">{args.query}</p>
+        <div className="my-1 flex w-full flex-col overflow-hidden rounded-md border border-border/50 bg-card/50 text-card-foreground shadow-sm">
+            {/* Header */}
+            <div className="flex w-full items-center justify-between px-2 py-2 border-b border-border/50">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="text-red-400">
+                        {isRunning ? (
+                            <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                            <Youtube className="size-4" />
+                        )}
                     </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-xs font-medium truncate">
+                            {isRunning ? "Searching YouTube..." : "YouTube Search"}
+                        </span>
+                        {status.type === "complete" && result && (
+                            <span className="text-[10px] text-muted-foreground">
+                                {result.videos?.length || 0} videos found
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
 
-                    {/* Results */}
-                    {status.type === "complete" && result && (
-                        <div className="mt-2">
-                            {!result.success || !result.videos || result.videos.length === 0 ? (
-                                <div className="flex items-center gap-2 text-muted-foreground p-2 border rounded-md">
-                                    <span className="text-sm">No videos found.</span>
-                                    {result.message && <p className="text-xs text-red-500">{result.message}</p>}
-                                </div>
-                            ) : (
-                                <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-1">
-                                    <div className="text-xs text-muted-foreground mb-1">
-                                        {result.videos.length} videos found
-                                    </div>
-                                    {result.videos.map((video) => (
-                                        <div
-                                            key={video.id}
-                                            className="flex gap-3 group p-2 rounded-md hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
-                                        >
-                                            {/* Thumbnail */}
-                                            <div className="relative shrink-0 w-32 aspect-video rounded-md overflow-hidden bg-muted">
-                                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                <img
-                                                    src={video.thumbnailUrl}
-                                                    alt={video.title}
-                                                    className="object-cover w-full h-full"
-                                                />
-                                            </div>
-
-                                            {/* Content */}
-                                            <div className="flex flex-col flex-1 min-w-0 gap-1">
-                                                <h4 className="font-medium text-sm line-clamp-2 leading-tight" title={video.title}>
-                                                    {video.title}
-                                                </h4>
-                                                <p className="text-xs text-muted-foreground line-clamp-1">
-                                                    {video.channelTitle} • {new Date(video.publishedAt).toLocaleDateString()}
-                                                </p>
-                                            </div>
-
-                                            {/* Action */}
-                                            <div className="shrink-0 flex items-center">
-                                                <Button
-                                                    variant={addedVideos.has(video.id) ? "secondary" : "default"}
-                                                    size="sm"
-                                                    className="h-8 px-3"
-                                                    onClick={() => handleAddVideo(video)}
-                                                    disabled={addedVideos.has(video.id) || addingVideos.has(video.id)}
-                                                >
-                                                    {addedVideos.has(video.id) ? (
-                                                        <Check className="h-3 w-3" />
-                                                    ) : addingVideos.has(video.id) ? (
-                                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                                    ) : (
-                                                        <Plus className="h-3 w-3" />
-                                                    )}
-                                                </Button>
+            {/* Results */}
+            {status.type === "complete" && result && (
+                <div className="p-2">
+                    {!result.success || !result.videos || result.videos.length === 0 ? (
+                        <div className="flex items-center gap-2 text-muted-foreground p-2 border rounded-md">
+                            <span className="text-sm">No videos found.</span>
+                            {result.message && <p className="text-xs text-red-500">{result.message}</p>}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto pr-1">
+                            {result.videos.map((video) => (
+                                <div
+                                    key={video.id}
+                                    className={cn(
+                                        "flex w-full items-center justify-between overflow-hidden rounded-md px-2 py-2",
+                                        !addedVideos.has(video.id) && !addingVideos.has(video.id) && "cursor-pointer hover:bg-accent transition-colors"
+                                    )}
+                                    onClick={() => {
+                                        if (!addedVideos.has(video.id) && !addingVideos.has(video.id)) {
+                                            handleAddVideo(video);
+                                        }
+                                    }}
+                                >
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        {/* Thumbnail */}
+                                        <div className="relative shrink-0 w-16 aspect-video rounded-sm overflow-hidden bg-muted">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img
+                                                src={video.thumbnailUrl}
+                                                alt={video.title}
+                                                className="object-cover w-full h-full"
+                                            />
+                                        </div>
+                                        
+                                        {/* Video Info */}
+                                        <div className="flex flex-col min-w-0 flex-1">
+                                            <h4 className="font-medium text-sm line-clamp-1 leading-tight text-foreground" title={video.title}>
+                                                {video.title}
+                                            </h4>
+                                            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                                                <Youtube className="size-3" />
+                                                <span className="line-clamp-1">
+                                                    {video.channelTitle}
+                                                </span>
                                             </div>
                                         </div>
-                                    ))}
+                                    </div>
+
+                                    {/* Action */}
+                                    <div className="flex items-center gap-1">
+                                        <Button
+                                            variant={addedVideos.has(video.id) ? "secondary" : "outline"}
+                                            size="sm"
+                                            className="h-6 gap-1 text-[10px] px-2"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleAddVideo(video);
+                                            }}
+                                            disabled={addedVideos.has(video.id) || addingVideos.has(video.id)}
+                                        >
+                                            {addedVideos.has(video.id) ? (
+                                                <Check className="h-3 w-3" />
+                                            ) : addingVideos.has(video.id) ? (
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <Plus className="h-3 w-3" />
+                                                    <span>Add</span>
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
                                 </div>
-                            )}
+                            ))}
                         </div>
                     )}
                 </div>
-            </ToolContent>
-        </ToolRoot>
+            )}
+        </div>
     );
 };
 
