@@ -139,7 +139,17 @@ export const UpdateCardToolUI = makeAssistantToolUI<UpdateCardArgs, WorkspaceRes
 
     useOptimisticToolUpdate(status, result as any, workspaceId);
 
-    const parsed = result != null ? parseWorkspaceResult(result) : null;
+    // Don't try to parse while still running - wait for completion
+    let parsed: WorkspaceResult | null = null;
+    if (status.type !== "running" && result != null) {
+        try {
+            parsed = parseWorkspaceResult(result);
+        } catch (err) {
+            // Log the error but don't throw - we'll show error state below
+            console.error("📝 [UpdateCardTool] Failed to parse result:", err);
+            parsed = null;
+        }
+    }
 
     let content: ReactNode = null;
 

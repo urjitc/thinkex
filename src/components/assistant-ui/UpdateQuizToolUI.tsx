@@ -63,17 +63,18 @@ export const UpdateQuizToolUI = makeAssistantToolUI<UpdateQuizArgs, QuizResult>(
 
     useOptimisticToolUpdate(status, result, workspaceId);
 
+    // Don't try to parse while still running - wait for completion
     let parsed: QuizResult | null = null;
-    try {
-        // With the new Output.object() approach, the quiz worker returns clean structured data
-        // so we can parse normally without special streaming handling
-        parsed = result != null ? parseQuizResult(result) : null;
-    } catch (err) {
-        // If we're still running, ignore parsing errors (likely partial data)
-        if (status.type !== "running") {
-            throw err;
+    if (status.type !== "running" && result != null) {
+        try {
+            // With the new Output.object() approach, the quiz worker returns clean structured data
+            // so we can parse normally without special streaming handling
+            parsed = parseQuizResult(result);
+        } catch (err) {
+            // Log the error but don't throw - we'll show error state below
+            console.error("🎯 [UpdateQuizTool] Failed to parse result:", err);
+            parsed = null;
         }
-        // Otherwise, continue with parsed = null
     }
 
     let content: ReactNode = null;

@@ -206,7 +206,17 @@ export const CreateNoteToolUI = makeAssistantToolUI<CreateNoteArgs, WorkspaceRes
 
     useOptimisticToolUpdate(status, result, workspaceId);
 
-    const parsed = result != null ? parseWorkspaceResult(result) : null;
+    // Don't try to parse while still running - wait for completion
+    let parsed: WorkspaceResult | null = null;
+    if (status.type !== "running" && result != null) {
+        try {
+            parsed = parseWorkspaceResult(result);
+        } catch (err) {
+            // Log the error but don't throw - we'll show error state below
+            logger.error("🎨 [CreateNoteTool] Failed to parse result:", err);
+            parsed = null;
+        }
+    }
 
     useEffect(() => {
       logger.group(`🎨 [CreateNoteTool] RENDER CALLED`, true);

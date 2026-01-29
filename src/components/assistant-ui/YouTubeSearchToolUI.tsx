@@ -268,12 +268,12 @@ const YouTubeSearchContent: FC<{
                             {result.message && <p className="text-xs text-red-500">{result.message}</p>}
                         </div>
                     ) : (
-                        <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto pr-1">
+                        <div className="flex flex-col gap-2 overflow-y-auto pr-1" style={{ maxHeight: 'min(50vh, 400px)' }}>
                             {result.videos.map((video) => (
                                 <div
                                     key={video.id}
                                     className={cn(
-                                        "flex w-full items-center justify-between overflow-hidden rounded-md px-2 py-2",
+                                        "flex w-full items-center justify-between overflow-hidden rounded-md px-2 py-2 min-h-[72px]",
                                         !addedVideos.has(video.id) && !addingVideos.has(video.id) && "cursor-pointer hover:bg-accent transition-colors"
                                     )}
                                     onClick={() => {
