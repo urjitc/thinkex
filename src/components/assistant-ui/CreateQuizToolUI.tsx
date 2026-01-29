@@ -204,12 +204,15 @@ export const CreateQuizToolUI = makeAssistantToolUI<CreateQuizArgs, QuizResult>(
 
         let parsed: QuizResult | null = null;
         try {
+            // With the new Output.object() approach, the quiz worker returns clean structured data
+            // so we can parse normally without special streaming handling
             parsed = result != null ? parseQuizResult(result) : null;
         } catch (err) {
             // If we're still running, ignore parsing errors (likely partial data)
             if (status.type !== "running") {
                 throw err;
             }
+            // Otherwise, continue with parsed = null
         }
 
         let content: ReactNode = null;
