@@ -21,7 +21,7 @@ type UpdateQuizArgs = {
 
 const UpdateQuizReceipt = ({ result, status }: { result: QuizResult; status: any }) => {
     return (
-    <div className="my-1 flex w-full items-center justify-between overflow-hidden rounded-md border bg-card/50 text-card-foreground shadow-sm px-2 py-2">
+    <div className="my-1 flex w-full items-center justify-between overflow-hidden rounded-md border border-border/50 bg-card/50 text-card-foreground shadow-sm px-2 py-2">
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <div className={cn(
           status?.type === "complete" ? "text-green-400" : "text-red-400"

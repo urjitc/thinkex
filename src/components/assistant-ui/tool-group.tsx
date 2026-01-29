@@ -178,7 +178,7 @@ function ToolGroupContent({
     >
       <div
         className={cn(
-          "flex flex-col gap-2 p-4",
+          "flex flex-col gap-2 p-2",
           "group-data-[variant=outline]/tool-group-root:border-t group-data-[variant=outline]/tool-group-root:border-border/50",
           "group-data-[variant=muted]/tool-group-root:border-t",
         )}
@@ -215,12 +215,6 @@ const ToolGroupImpl: FC<
 
   // Default to open, user can manually toggle
   const [open, setOpen] = useState(true);
-
-  // Only group when there are more than 1 consecutive tool call.
-  // IMPORTANT: this check must stay *after* hooks to avoid conditional hook calls.
-  if (toolCount <= 1) {
-    return <>{children}</>;
-  }
 
   return (
     // Auto-expand while streaming, auto-collapse when done
