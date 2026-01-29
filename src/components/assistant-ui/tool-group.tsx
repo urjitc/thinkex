@@ -213,12 +213,8 @@ const ToolGroupImpl: FC<
     return lastIndex >= startIndex && lastIndex <= endIndex;
   });
 
-  // Auto-open while streaming; auto-close when streaming ends.
-  // Still allows manual user toggle when not streaming.
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    setOpen(isToolGroupStreaming);
-  }, [isToolGroupStreaming]);
+  // Default to open, user can manually toggle
+  const [open, setOpen] = useState(true);
 
   // Only group when there are more than 1 consecutive tool call.
   // IMPORTANT: this check must stay *after* hooks to avoid conditional hook calls.
