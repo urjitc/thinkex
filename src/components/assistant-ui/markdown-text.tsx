@@ -149,7 +149,19 @@ function normalizeCustomMathTags(input: string): string {
     .replace(/\\{1,2}\(([\s\S]*?)\\{1,2}\)/g, (_, content) => `$$${content.trim()}$$`)
     // Convert \[ ... \] to $$...$$ (block math) - streamdown needs newlines for block triggers
     .replace(
-    /\\{1,2}\[([\s\S]*?)\\{1,2}\]/g,
-    (_, content) => `$$\n${content.trim()}\n$$`
-  ));
+      /\\{1,2}\[([\s\S]*?)\\{1,2}\]/g,
+      (_, content) => `$$\n${content.trim()}\n$$`
+    )
+    // Convert single $ ... $ to $$...$$ (inline math), but avoid currency like $10 or $5.50
+    // We use (^|[^\$]) to ensure it's not preceded by match (ignoring $$)
+    // and (?!\$) to ensure it's not followed by $ (ignoring $$)
+    .replace(/(^|[^\$])\$([^\$\n]+?)\$(?!\$)/g, (match, prefix, content) => {
+      // If content is purely numeric (with optional commas/periods), treat as currency
+      if (/^[\d,\.]+$/.test(content.trim())) {
+        return match; // Keep as-is (currency)
+      }
+      // Otherwise, convert to math.
+      // prefix is the character before the first $ (or empty string)
+      return `${prefix}$$${content.trim()}$$`;
+    }));
 }

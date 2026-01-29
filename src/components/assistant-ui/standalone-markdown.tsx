@@ -67,6 +67,15 @@ function normalizeCustomMathTags(input: string): string {
       .replace(/\\{1,2}\(([\s\S]*?)\\{1,2}\)/g, (_, content) => `$$${content.trim()}$$`)
       // Convert \[ ... \] to $$...$$ (LaTeX block math)
       .replace(/\\{1,2}\[([\s\S]*?)\\{1,2}\]/g, (_, content) => `$$${content.trim()}$$`)
+      // Convert single $ ... $ to $$...$$ (inline math), but avoid currency like $10 or $5.50
+      .replace(/(^|[^\$])\$([^\$\n]+?)\$(?!\$)/g, (match, prefix, content) => {
+        // If content is purely numeric (with optional commas/periods), treat as currency
+        if (/^[\d,\.]+$/.test(content.trim())) {
+          return match; // Keep as-is (currency)
+        }
+        // Otherwise, convert to math
+        return `${prefix}$$${content.trim()}$$`;
+      })
   );
 }
 
