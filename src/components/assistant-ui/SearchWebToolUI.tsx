@@ -114,7 +114,7 @@ const ToolTrigger: FC<{
       {icon}
       <span className="aui-tool-trigger-label-wrapper relative inline-block leading-none">
         {active ? (
-          <ShinyText 
+          <ShinyText
             text={label}
             disabled={false}
             speed={1.5}
@@ -251,7 +251,7 @@ SearchWebContent.displayName = "SearchWebContent";
 export const SearchWebToolUI = makeAssistantToolUI<{
   query: string;
 }, string>({
-  toolName: "searchWeb",
+  toolName: "googleSearch",
   render: function SearchWebToolUI({ args, status, result }) {
     return (
       <ToolUIErrorBoundary componentName="SearchWeb">

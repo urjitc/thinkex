@@ -6,7 +6,7 @@
 import { frontendTools } from "@assistant-ui/react-ai-sdk";
 import { createProcessFilesTool } from "./process-files";
 import { createProcessUrlsTool } from "./process-urls";
-import { createSearchWebTool, createExecuteCodeTool } from "./search-code";
+import { createGoogleSearchTool, createExecuteCodeTool } from "./search-code";
 import {
     createNoteTool,
     createUpdateCardTool,
@@ -51,7 +51,7 @@ export function createChatTools(config: ChatToolsConfig): Record<string, any> {
         processUrls: createProcessUrlsTool(),
 
         // Search & code execution
-        searchWeb: createSearchWebTool(),
+        googleSearch: createGoogleSearchTool(),
         executeCode: createExecuteCodeTool(),
 
         // Workspace operations
