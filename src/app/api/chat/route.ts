@@ -140,7 +140,10 @@ YOUTUBE SEARCH GUIDANCE:
 If the user asks to "add a youtube video" or "search for a video" but does not provide a specific topic (e.g., "add a video for this workspace"), you MUST inference a relevant search query based on the current workspace context, selected cards, or recent conversation history. Do NOT ask the user for a topic if meaningful context is available. Use the 'searchYoutube' tool directly with your inferred query.
 
 CONFIDENCE THRESHOLD:
-If you are uncertain about a fact's accuracy or currency, prefer to search rather than risk providing outdated information.`);
+If you are uncertain about a fact's accuracy or currency, prefer to search rather than risk providing outdated information.
+
+CITATION REQUIREMENT:
+When using search results (grounding), you must include the date of each article/source if available.`);
 
   // Add file detection hint if file URLs are present
   if (fileUrls.length > 0) {
@@ -258,7 +261,17 @@ export async function POST(req: Request) {
     });
 
     // Prepare provider options
-    let providerOptions: any = {};
+    let providerOptions: any = {
+      google: {
+        grounding: {
+          googleSearchRetrieval: {
+            dynamicRetrievalConfig: {
+              mode: 'MODE_DYNAMIC',
+            },
+          },
+        },
+      },
+    };
 
     const result = streamText({
       model: model,
