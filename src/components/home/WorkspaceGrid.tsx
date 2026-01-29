@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FolderPlus, MoreVertical } from "lucide-react";
 import { useUIStore } from "@/lib/stores/ui-store";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
@@ -18,6 +18,7 @@ export function WorkspaceGrid() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsWorkspace, setSettingsWorkspace] = useState<WorkspaceWithState | null>(null);
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
+  const hasAttemptedWelcomeWorkspace = useRef(false);
 
   // Lazy workspace creation for anonymous users
   useEffect(() => {
@@ -25,8 +26,10 @@ export function WorkspaceGrid() {
       if (!session?.user?.isAnonymous) return;
       if (workspaces.length > 0) return; // Already has workspaces
       if (isCreatingWorkspace) return; // Already creating
+      if (hasAttemptedWelcomeWorkspace.current) return; // Avoid retry loop
 
       setIsCreatingWorkspace(true);
+      hasAttemptedWelcomeWorkspace.current = true;
       try {
         const res = await fetch("/api/guest/create-welcome-workspace", {
           method: "POST",
