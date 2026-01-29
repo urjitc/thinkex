@@ -271,7 +271,7 @@ export const useUIStore = create<UIState>()(
 
         return {
           openPanelIds: newPanelIds,
-          maximizedItemId: null, // Reset maximized when opening panels
+          maximizedItemId: itemId, // Maximize by default when opening panels
           selectedCardIds: newSelectedCardIds,
           panelAutoSelectedCardIds: newPanelAutoSelectedCardIds,
         };
@@ -391,7 +391,7 @@ export const useUIStore = create<UIState>()(
 
           return {
             openPanelIds: [id, ...state.openPanelIds.slice(1)],
-            maximizedItemId: null,
+            maximizedItemId: id, // Maximize by default
             selectedCardIds: newSelectedCardIds,
             panelAutoSelectedCardIds: newPanelAutoSelectedCardIds,
           };

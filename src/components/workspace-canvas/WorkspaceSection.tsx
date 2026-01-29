@@ -93,9 +93,6 @@ interface WorkspaceSectionProps {
   titleInputRef: RefObject<HTMLInputElement>;
   scrollAreaRef: RefObject<HTMLDivElement>;
 
-  // Modal
-  modalManager?: React.ReactNode;
-
   // Workspace metadata
   workspaceTitle?: string;
   workspaceIcon?: string | null;
@@ -134,7 +131,6 @@ export function WorkspaceSection({
   onShowHistory,
   titleInputRef,
   scrollAreaRef,
-  modalManager,
   workspaceTitle,
   workspaceIcon,
   workspaceColor,
@@ -572,8 +568,6 @@ export function WorkspaceSection({
           isCompactMode={isItemPanelOpen && isChatExpanded}
         />
       )}
-      {/* Modal Manager - scoped to workspace panel only */}
-      {modalManager}
       {/* Move To Dialog */}
       {showMoveDialog && selectedCardIdsArray.length > 0 && (
         <MoveToDialog

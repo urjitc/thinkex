@@ -36,6 +36,8 @@ interface DashboardLayoutProps {
   // Component slots
   workspaceSection: React.ReactNode;
   panels: React.ReactNode[];  // Array of panel elements to render (max 2)
+  modalManager?: React.ReactNode; // Add modalManager as a separate prop
+  maximizedItemId?: string | null; // Add maximized item ID
 }
 
 /**
@@ -60,6 +62,8 @@ export function DashboardLayout({
   onMultiSelect,
   workspaceSection,
   panels,
+  modalManager,
+  maximizedItemId,
 }: DashboardLayoutProps) {
   // Get sidebar control to auto-close when panels open
   const { setOpen } = useSidebar();
@@ -161,7 +165,7 @@ export function DashboardLayout({
                   {!!currentWorkspaceId && workspaceHeader}
 
                   {/* Below header: sidebar + workspace content */}
-                  <div className="flex flex-1 overflow-hidden">
+                  <div className="flex flex-1 overflow-hidden relative">
                     <Sidebar
                       side="left"
                       variant="sidebar"
@@ -182,8 +186,16 @@ export function DashboardLayout({
 
                     <SidebarInset className="flex flex-col relative overflow-hidden">
                       <WorkspaceCanvasDropzone>{workspaceSection}</WorkspaceCanvasDropzone>
+                      
+                      {/* Hide workspace content when item is maximized for better performance */}
+                      {maximizedItemId && (
+                        <div className="absolute inset-0 bg-background pointer-events-none" />
+                      )}
                     </SidebarInset>
                   </div>
+                  
+                  {/* Modal Manager - positioned here to cover entire workspace area including header */}
+                  {modalManager}
                 </div>
               </ResizablePanel>
 
@@ -212,7 +224,9 @@ export function DashboardLayout({
                           defaultSize={panels.length >= 2 ? 50 : 100 * PANEL_DEFAULTS.ITEM_PANEL_SPLIT_RATIO}
                           minSize={20}
                         >
-                          {panel}
+                          <div className="h-full relative">
+                            {panel}
+                          </div>
                         </ResizablePanel>
                       </React.Fragment>
                     );

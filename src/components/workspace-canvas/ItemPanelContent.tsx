@@ -38,6 +38,7 @@ export function ItemPanelContent({
     const isChatExpanded = useUIStore((state) => state.isChatExpanded);
     const setIsChatExpanded = useUIStore((state) => state.setIsChatExpanded);
     const isDesktop = true;
+    const [isAnimating, setIsAnimating] = useState(true);
 
     const isPdf = item.type === 'pdf';
     const pdfData = item.data as PdfData;
@@ -58,17 +59,6 @@ export function ItemPanelContent({
         <div>
             <div className="flex items-center justify-between py-2 px-3">
                 <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden mr-2">
-                    {(isMaximized || isLeftPanel) && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <SidebarTrigger />
-                            </TooltipTrigger>
-                            <TooltipContent side="right">
-                                Toggle Sidebar <kbd className="ml-1 pointer-events-none inline-flex h-5 select-none items-center gap-1 font-mono text-sm font-medium text-muted-foreground opacity-100">{formatKeyboardShortcut('S', true)}</kbd>
-                            </TooltipContent>
-                        </Tooltip>
-                    )}
-
                     <ItemHeader
                         id={item.id}
                         name={item.name}
@@ -127,23 +117,37 @@ export function ItemPanelContent({
 
     return (
         <div
-            className="w-full h-full flex flex-col overflow-hidden relative"
+            className={`w-full h-full flex flex-col overflow-hidden relative ${
+                isAnimating 
+                    ? 'animate-[scale-in_0.15s_ease-out]' 
+                    : ''
+            }`}
             style={{
                 backgroundColor,
                 backdropFilter: "blur(24px)",
                 WebkitBackdropFilter: "blur(24px)",
+                animation: isAnimating 
+                    ? 'scaleIn 0.15s ease-out' 
+                    : undefined,
+                transformOrigin: 'center',
             }}
+            onAnimationEnd={() => setIsAnimating(false)}
         >
             {/* Header - PDF has integrated controls, others use standard header */}
             {!isPdf && renderStandardHeader()}
 
             {/* Content */}
             <div
-                className={isPdf ? "flex-1 flex flex-col min-h-0" : "flex-1 overflow-y-auto modal-scrollable flex flex-col"}
+                className={`${isPdf ? "flex-1 flex flex-col min-h-0" : "flex-1 overflow-y-auto modal-scrollable flex flex-col"} ${
+                    isAnimating ? 'animate-[fade-in_0.2s_ease-out_0.05s_both]' : ''
+                }`}
                 style={!isPdf ? {
                     ['--scrollbar-color' as string]: item.color
                         ? getWhiteTintedColor(item.color, 0.7, 0.2)
                         : "rgba(255, 255, 255, 0.2)",
+                    animation: isAnimating && !isPdf 
+                        ? 'fadeIn 0.2s ease-out 0.05s both' 
+                        : undefined,
                 } : undefined}
             >
                 {isPdf && pdfData?.fileUrl ? (

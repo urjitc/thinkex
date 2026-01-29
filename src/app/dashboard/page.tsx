@@ -458,9 +458,10 @@ function DashboardContent({
             workspaceTitle={currentWorkspaceTitle}
             workspaceIcon={currentWorkspaceIcon}
             workspaceColor={currentWorkspaceColor}
-            modalManager={modalManagerElement}
           />
         }
+        modalManager={modalManagerElement}
+        maximizedItemId={maximizedItemId}
       />
 
       <WorkspaceSettingsModal
