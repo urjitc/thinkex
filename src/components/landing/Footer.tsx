@@ -52,15 +52,7 @@ export function Footer() {
               {copied ? "Copied!" : "hello@thinkex.app"}
             </button>
 
-            <div className="text-sm text-muted-foreground/60 max-w-md leading-relaxed">
-              <p>
-                Building in the AI productivity market, ThinkEx is a visual thinking environment where notes, media, and AI conversations compound into lasting knowledge.
-              </p>
-              <p className="mt-2 italic">
-                <span className="text-foreground/80">Status:</span> v1.0 publicly available
-              </p>
-            </div>
-
+            
             <div className="flex flex-row flex-wrap items-center gap-4 text-sm text-muted-foreground/60 pt-6 hidden md:flex">
               <span className="opacity-70">© {currentYear} ThinkEx Inc. All rights reserved.</span>
               <Link href="#" className="hover:text-foreground transition-colors cursor-not-allowed opacity-70 w-fit">Privacy Policy</Link>
