@@ -1,5 +1,8 @@
 import { google } from "@ai-sdk/google";
-import { streamText, convertToModelMessages, stepCountIs, tool, zodSchema } from "ai";
+import { streamText, convertToModelMessages, stepCountIs, tool, zodSchema, wrapLanguageModel } from "ai";
+import { devToolsMiddleware } from "@ai-sdk/devtools";
+import { PostHog } from "posthog-node";
+import { withTracing } from "@posthog/ai";
 import type { UIMessage } from "ai";
 import { logger } from "@/lib/utils/logger";
 import { auth } from "@/lib/auth";
@@ -222,8 +225,24 @@ export async function POST(req: Request) {
     const finalSystemPrompt = systemPromptParts.join('');
 
     // Get model
-    const modelId = body.modelId || "gemini-3-flash-preview";
-    const model = google(modelId);
+    const modelId = body.modelId || "gemini-2.5-flash-lite";
+    // Initialize PostHog client
+    const posthogClient = new PostHog(process.env.POSTHOG_API_KEY || "disabled", {
+      host: process.env.POSTHOG_HOST || "https://us.i.posthog.com",
+      disabled: !process.env.POSTHOG_API_KEY,
+    });
+
+    const model = wrapLanguageModel({
+      model: withTracing(google(modelId), posthogClient, {
+        posthogDistinctId: userId || "anonymous",
+        posthogProperties: {
+          workspaceId,
+          activeFolderId,
+          modelId,
+        },
+      }),
+      middleware: devToolsMiddleware(),
+    });
 
     // Create tools using the modular factory
     const tools = createChatTools({
