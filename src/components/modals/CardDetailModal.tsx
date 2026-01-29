@@ -85,7 +85,7 @@ export function CardDetailModal({
 
   return (
     <div
-      className="absolute inset-0 z-30 flex items-center justify-center overflow-hidden card-detail-modal"
+      className="absolute inset-0 z-30 flex items-center justify-center overflow-hidden card-detail-modal bg-background border-t border-sidebar-border"
     >
       {/* Backdrop with blur */}
       <div

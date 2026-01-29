@@ -412,6 +412,30 @@ function DashboardContent({
               onOpenSettings={() => setShowWorkspaceSettings(true)}
               onOpenShare={() => setShowWorkspaceShare(true)}
               isItemPanelOpen={panels.length > 0}
+
+              // Active Item Props
+              activeItems={(() => {
+                if (maximizedItemId) {
+                  const item = state.items?.find(i => i.id === maximizedItemId);
+                  return item ? [item] : [];
+                }
+                // If not maximized, show open panels (split view) in breadcrumb too
+                if (openPanelIds.length > 0) {
+                  return openPanelIds
+                    .map(id => state.items?.find(i => i.id === id))
+                    .filter((i): i is NonNullable<typeof i> => !!i);
+                }
+                return [];
+              })()}
+              activeItemMode={maximizedItemId ? 'maximized' : (panels.length > 0 ? 'split' : null)}
+              onCloseActiveItem={(id) => {
+                operations.flushPendingChanges(id);
+                closePanel(id);
+                if (maximizedItemId === id) setMaximizedItemId(null);
+              }}
+              onMinimizeActiveItem={() => setMaximizedItemId(null)}
+              onMaximizeActiveItem={(id) => setMaximizedItemId(id)}
+              onUpdateActiveItem={operations.updateItem}
             />
           ) : null
         }

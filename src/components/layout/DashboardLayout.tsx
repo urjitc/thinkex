@@ -186,16 +186,16 @@ export function DashboardLayout({
 
                     <SidebarInset className="flex flex-col relative overflow-hidden">
                       <WorkspaceCanvasDropzone>{workspaceSection}</WorkspaceCanvasDropzone>
-                      
+
                       {/* Hide workspace content when item is maximized for better performance */}
                       {maximizedItemId && (
                         <div className="absolute inset-0 bg-background pointer-events-none" />
                       )}
+
+                      {/* Modal Manager - positioned here to cover strictly the workspace content area (below header) */}
+                      {modalManager}
                     </SidebarInset>
                   </div>
-                  
-                  {/* Modal Manager - positioned here to cover entire workspace area including header */}
-                  {modalManager}
                 </div>
               </ResizablePanel>
 

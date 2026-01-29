@@ -38,7 +38,6 @@ export function ItemPanelContent({
     const isChatExpanded = useUIStore((state) => state.isChatExpanded);
     const setIsChatExpanded = useUIStore((state) => state.setIsChatExpanded);
     const isDesktop = true;
-    const [isAnimating, setIsAnimating] = useState(true);
 
     const isPdf = item.type === 'pdf';
     const pdfData = item.data as PdfData;
@@ -117,37 +116,25 @@ export function ItemPanelContent({
 
     return (
         <div
-            className={`w-full h-full flex flex-col overflow-hidden relative ${
-                isAnimating 
-                    ? 'animate-[scale-in_0.15s_ease-out]' 
-                    : ''
-            }`}
+            className="w-full h-full flex flex-col overflow-hidden relative"
             style={{
                 backgroundColor,
                 backdropFilter: "blur(24px)",
                 WebkitBackdropFilter: "blur(24px)",
-                animation: isAnimating 
-                    ? 'scaleIn 0.15s ease-out' 
-                    : undefined,
                 transformOrigin: 'center',
             }}
-            onAnimationEnd={() => setIsAnimating(false)}
         >
-            {/* Header - PDF has integrated controls, others use standard header */}
-            {!isPdf && renderStandardHeader()}
+            {/* Header - PDF has integrated controls, others use standard header.
+                When maximized, the header is integrated into the WorkspaceHeader, so we hide it here. */}
+            {!isPdf && !isMaximized && renderStandardHeader()}
 
             {/* Content */}
             <div
-                className={`${isPdf ? "flex-1 flex flex-col min-h-0" : "flex-1 overflow-y-auto modal-scrollable flex flex-col"} ${
-                    isAnimating ? 'animate-[fade-in_0.2s_ease-out_0.05s_both]' : ''
-                }`}
+                className={`${isPdf ? "flex-1 flex flex-col min-h-0" : "flex-1 overflow-y-auto modal-scrollable flex flex-col"}`}
                 style={!isPdf ? {
                     ['--scrollbar-color' as string]: item.color
                         ? getWhiteTintedColor(item.color, 0.7, 0.2)
                         : "rgba(255, 255, 255, 0.2)",
-                    animation: isAnimating && !isPdf 
-                        ? 'fadeIn 0.2s ease-out 0.05s both' 
-                        : undefined,
                 } : undefined}
             >
                 {isPdf && pdfData?.fileUrl ? (
