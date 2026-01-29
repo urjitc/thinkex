@@ -183,10 +183,17 @@ export const deepResearchUsage = pgTable("deep_research_usage", {
 	userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
 	workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
 	interactionId: text("interaction_id"),
+	requestId: text("request_id").notNull(),
+	status: text("status").notNull().default("pending"), // "pending" | "completed" | "failed"
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	completedAt: timestamp("completed_at", { withTimezone: true, mode: 'string' }),
 }, (table) => [
 	index("idx_deep_research_usage_user_created").using("btree",
 		table.userId.asc().nullsLast().op("text_ops"),
 		table.createdAt.desc().nullsFirst().op("timestamptz_ops")
+	),
+	unique("deep_research_usage_request_id_key").on(table.requestId),
+	index("idx_deep_research_usage_status").using("btree",
+		table.status.asc().nullsLast().op("text_ops")
 	),
 ]);

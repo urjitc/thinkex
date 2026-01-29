@@ -1,10 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
 import { tool, zodSchema } from "ai";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 import { logger } from "@/lib/utils/logger";
 import { workspaceWorker } from "@/lib/ai/workers";
 import type { WorkspaceToolContext } from "./workspace-tools";
-import { checkAndRecordDeepResearchUsage } from "@/lib/services/rate-limit";
+import {
+    reserveDeepResearchUsage,
+    completeDeepResearchUsage,
+    failDeepResearchUsage
+} from "@/lib/services/rate-limit";
 
 /**
  * Format reset time for user-friendly display
@@ -31,6 +36,10 @@ export function createDeepResearchTool(ctx: WorkspaceToolContext) {
         execute: async ({ prompt }) => {
             logger.debug("🎯 [DEEP-RESEARCH] Starting deep research for:", prompt);
 
+            // Generate idempotency key for this request
+            const requestId = randomUUID();
+            let usageId: string | null = null;
+
             try {
                 // Auth check
                 if (!ctx.userId) {
@@ -55,13 +64,11 @@ export function createDeepResearchTool(ctx: WorkspaceToolContext) {
                     throw new Error("No workspace context available");
                 }
 
-                // Atomic rate limit check + record (prevents race condition bypass)
-                // Using a placeholder interactionId that will be updated after creation
-                const tempInteractionId = `pending-${Date.now()}`;
-                const rateLimit = await checkAndRecordDeepResearchUsage(
+                // Reserve a usage slot atomically (works with connection pooling)
+                const rateLimit = await reserveDeepResearchUsage(
                     ctx.userId,
                     ctx.workspaceId,
-                    tempInteractionId
+                    requestId
                 );
 
                 if (!rateLimit.allowed) {
@@ -71,6 +78,14 @@ export function createDeepResearchTool(ctx: WorkspaceToolContext) {
                         resetAt: rateLimit.resetAt?.toISOString(),
                         userMessage: rateLimit.error || `You've reached your daily deep research limit (2 per 24 hours). Available again in ${timeStr}.`,
                     };
+                }
+
+                // Store usageId for completion/failure tracking
+                usageId = rateLimit.usageId;
+
+                // Log if this was a duplicate request (idempotency)
+                if (rateLimit.wasDuplicate) {
+                    logger.info("🔄 [DEEP-RESEARCH] Duplicate request detected, reusing reservation:", requestId);
                 }
 
                 const client = new GoogleGenAI({
@@ -103,15 +118,31 @@ export function createDeepResearchTool(ctx: WorkspaceToolContext) {
 
                 logger.debug("🎯 [DEEP-RESEARCH] Research note created:", noteResult.itemId);
 
+                // Complete the usage reservation with real interactionId
+                if (usageId) {
+                    const completed = await completeDeepResearchUsage(usageId, interaction.id);
+                    if (!completed) {
+                        logger.warn("⚠️ [DEEP-RESEARCH] Failed to update usage record with interactionId");
+                    }
+                }
+
                 return {
                     noteId: noteResult.itemId,
                     interactionId: interaction.id,
                     message: "Deep research started. Check the new research card in your workspace to see progress.",
                 };
-            } catch (error: any) {
+            } catch (error: unknown) {
                 logger.error("❌ [DEEP-RESEARCH] Error:", error);
+
+                // Rollback the reservation if we had one
+                if (usageId) {
+                    logger.debug("🔄 [DEEP-RESEARCH] Rolling back usage reservation due to error");
+                    await failDeepResearchUsage(usageId);
+                }
+
+                const errorMessage = error instanceof Error ? error.message : "Failed to start deep research";
                 return {
-                    error: error?.message || "Failed to start deep research"
+                    error: errorMessage
                 };
             }
         },
