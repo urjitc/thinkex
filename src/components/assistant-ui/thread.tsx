@@ -63,6 +63,7 @@ import { CreateFlashcardToolUI } from "@/components/assistant-ui/CreateFlashcard
 import { UpdateFlashcardToolUI } from "@/components/assistant-ui/UpdateFlashcardToolUI";
 import { SearchWebToolUI } from "@/components/assistant-ui/SearchWebToolUI";
 import { YouTubeSearchToolUI } from "@/components/assistant-ui/YouTubeSearchToolUI";
+import { AddYoutubeVideoToolUI } from "@/components/assistant-ui/AddYoutubeVideoToolUI";
 import { ExecuteCodeToolUI } from "@/components/assistant-ui/ExecuteCodeToolUI";
 import { FileProcessingToolUI } from "@/components/assistant-ui/FileProcessingToolUI";
 import { URLContextToolUI } from "@/components/assistant-ui/URLContextToolUI";
@@ -135,6 +136,7 @@ export const Thread: FC<ThreadProps> = ({ items = [] }) => {
         <SelectCardsToolUI />
         <SearchWebToolUI />
         <YouTubeSearchToolUI />
+        <AddYoutubeVideoToolUI />
         <ExecuteCodeToolUI />
         <FileProcessingToolUI />
         <URLContextToolUI />

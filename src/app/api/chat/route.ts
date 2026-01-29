@@ -238,12 +238,36 @@ export async function POST(req: Request) {
       count: cleanedMessages.length,
     });
 
+    // Prepare provider options
+    let providerOptions: any = {};
+
+    if (modelId.includes("gemini-3")) {
+      providerOptions = {
+        google: {
+          thinkingConfig: {
+            thinkingLevel: 'high',
+            includeThoughts: true,
+          },
+        },
+      };
+    } else if (modelId.includes("gemini-2.5")) {
+      providerOptions = {
+        google: {
+          thinkingConfig: {
+            thinkingBudget: 8192,
+            includeThoughts: true,
+          },
+        },
+      };
+    }
+
     const result = streamText({
       model: model,
       system: finalSystemPrompt,
       messages: cleanedMessages,
       stopWhen: stepCountIs(25),
       tools,
+      providerOptions,
       onFinish: ({ usage, finishReason }) => {
         const usageInfo = {
           inputTokens: usage?.inputTokens,
