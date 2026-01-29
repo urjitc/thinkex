@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, RotateCcw, Search, Maximize, Minimize, ChevronUp, ChevronDown, MoreHorizontal, Expand, Shrink, PenLine, Camera } from 'lucide-react';
 import { LuLayoutList } from "react-icons/lu";
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { formatKeyboardShortcut } from '@/lib/utils/keyboard-shortcut';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -264,19 +263,8 @@ export function PdfPanelHeader({
         <div className="flex flex-col">
             {/* Main Header Row */}
             <div className="flex items-center justify-between py-2 px-3 gap-2">
-                {/* Left: Sidebar trigger (when maximized) + Thumbnails + Title */}
+                {/* Left: Thumbnails + Title */}
                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                    {(isMaximized || isLeftPanel) && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <SidebarTrigger />
-                            </TooltipTrigger>
-                            <TooltipContent side="right">
-                                Toggle Sidebar <kbd className="ml-1 pointer-events-none inline-flex h-5 select-none items-center gap-1 font-mono text-sm font-medium text-muted-foreground opacity-100">{formatKeyboardShortcut('S', true)}</kbd>
-                            </TooltipContent>
-                        </Tooltip>
-                    )}
-
                     {/* Thumbnail Toggle */}
                     <Tooltip>
                         <TooltipTrigger asChild>
