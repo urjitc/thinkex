@@ -238,13 +238,12 @@ export const useUIStore = create<UIState>()(
       }),
 
       closePanel: (itemId) => set((state) => {
-        // Just clear everything since we only have one item
+        // Clear everything including selection
         return {
           openPanelIds: [],
           maximizedItemId: null,
-          // We could optionally deselect the card here, but keeping it selected is often better UX
-          // for single view workflows. Let's keep existing behavior of NOT clearing selection on close
-          // unless we want to be strict. For now, let's just close the panel.
+          selectedCardIds: new Set(),
+          panelAutoSelectedCardIds: new Set(),
         };
       }),
 
@@ -252,6 +251,7 @@ export const useUIStore = create<UIState>()(
         return {
           openPanelIds: [],
           maximizedItemId: null,
+          selectedCardIds: new Set(),
           panelAutoSelectedCardIds: new Set(),
         };
       }),
