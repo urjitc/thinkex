@@ -104,8 +104,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     loadWorkspaces();
   }, [loadWorkspaces]);
 
-  // Note: Welcome workspace creation is now handled by /guest-setup page
-  // This prevents jarring dashboard flash
+  // Note: Welcome workspace creation is now handled lazily in WorkspaceGrid
+  // This prevents jarring dashboard flash and provides better UX
 
   // Switch workspace
   const switchWorkspace = useCallback(
