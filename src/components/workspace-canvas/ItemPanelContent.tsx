@@ -154,10 +154,10 @@ export function ItemPanelContent({
                                         onMaximize={onMaximize}
                                         showThumbnails={showThumbnails}
                                         onToggleThumbnails={() => setShowThumbnails(!showThumbnails)}
-                                        showAnnotations={annotationControls?.showAnnotations}
-                                        onToggleAnnotations={annotationControls?.toggleAnnotations}
+
                                         isRightmostPanel={isRightmostPanel}
                                         isLeftPanel={isLeftPanel}
+                                        renderInPortal={isMaximized}
                                     />
                                 </div>
                             )}

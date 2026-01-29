@@ -745,36 +745,37 @@ export default function WorkspaceHeader({
 
         {/* Right Side: Save Indicator + Search + Chat Button */}
         {activeItemMode === 'maximized' && activeItems.length === 1 ? (
-              // Maximized Mode: Show Item Controls
-              <div className="flex items-center gap-2 pointer-events-auto">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => onMinimizeActiveItem?.(activeItems[0].id)}
-                      className="h-8 w-8 flex items-center justify-center rounded-md border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
-                      aria-label="Restore"
-                    >
-                      <Minimize className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Restore to Panel</TooltipContent>
-                </Tooltip>
+          // Maximized Mode: Show Item Controls
+          <div className="flex items-center gap-2 pointer-events-auto">
+            <div id="workspace-header-portal" className="flex items-center gap-2" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => onMinimizeActiveItem?.(activeItems[0].id)}
+                  className="h-8 w-8 flex items-center justify-center rounded-md border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
+                  aria-label="Restore"
+                >
+                  <Minimize className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Restore to Panel</TooltipContent>
+            </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => onCloseActiveItem?.(activeItems[0].id)}
-                      className="h-8 w-8 flex items-center justify-center rounded-md border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
-                      aria-label="Close"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Close</TooltipContent>
-                </Tooltip>
-              </div>
-            ) : (
-              // Default Mode: Standard Workspace Controls
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => onCloseActiveItem?.(activeItems[0].id)}
+                  className="h-8 w-8 flex items-center justify-center rounded-md border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Close</TooltipContent>
+            </Tooltip>
+          </div>
+        ) : (
+          // Default Mode: Standard Workspace Controls
           <div className="flex items-center gap-2 pointer-events-auto">
             {/* Save Indicator - hidden in compact mode */}
             {!isCompactMode && (
