@@ -6,11 +6,10 @@
 import { frontendTools } from "@assistant-ui/react-ai-sdk";
 import { createProcessFilesTool } from "./process-files";
 import { createProcessUrlsTool } from "./process-urls";
-import { createSearchWebTool, createExecuteCodeTool } from "./search-code";
+import { createExecuteCodeTool } from "./search-code";
 import {
     createNoteTool,
     createUpdateCardTool,
-    createClearCardContentTool,
     createDeleteCardTool,
     createSelectCardsTool,
     type WorkspaceToolContext,
@@ -19,6 +18,7 @@ import { createFlashcardsTool, createUpdateFlashcardsTool } from "./flashcard-to
 import { createQuizTool, createUpdateQuizTool } from "./quiz-tools";
 import { createDeepResearchTool } from "./deep-research";
 import { createSearchYoutubeTool, createAddYoutubeVideoTool } from "./youtube-tools";
+import { createWebSearchTool } from "./web-search";
 import { logger } from "@/lib/utils/logger";
 
 export interface ChatToolsConfig {
@@ -52,13 +52,13 @@ export function createChatTools(config: ChatToolsConfig): Record<string, any> {
         processUrls: createProcessUrlsTool(),
 
         // Search & code execution
-        searchWeb: createSearchWebTool(),
+        webSearch: createWebSearchTool(),
         executeCode: createExecuteCodeTool(),
 
         // Workspace operations
         createNote: createNoteTool(ctx),
         updateCard: createUpdateCardTool(ctx),
-        clearCardContent: createClearCardContentTool(ctx),
+
         deleteCard: createDeleteCardTool(ctx),
         selectCards: createSelectCardsTool(ctx),
 
