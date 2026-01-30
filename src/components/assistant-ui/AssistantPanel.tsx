@@ -119,7 +119,7 @@ function CreateFromPromptHandler({
 
     setIsChatExpanded?.(true);
 
-    const wrapped = `Update the preexisting contents of this workspace to be about linear algebra only add one quality YouTube video.`;
+    const wrapped = `Update the preexisting contents of this workspace to be about ${createFrom}. Only add one quality YouTube video.`;
 
     let attempts = 0;
     const maxAttempts = 12;
