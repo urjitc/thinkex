@@ -505,6 +505,15 @@ export const useUIStore = create<UIState>()(
         workspacePanelSize: initialState.workspacePanelSize,
       }),
 
+      // Chat actions
+      setIsChatExpanded: (expanded) => set({ isChatExpanded: expanded }),
+      toggleChatExpanded: () => set((state) => ({ isChatExpanded: !state.isChatExpanded })),
+      setIsChatMaximized: (maximized) => set({ isChatMaximized: maximized }),
+      toggleChatMaximized: () => set((state) => ({ isChatMaximized: !state.isChatMaximized })),
+      setIsThreadListVisible: (visible) => set({ isThreadListVisible: visible }),
+      toggleThreadListVisible: () => set((state) => ({ isThreadListVisible: !state.isThreadListVisible })),
+      setWorkspacePanelSize: (size) => set({ workspacePanelSize: size }),
+
       closeAllModals: () => set((state) => {
         // Only remove auto-selected cards from selection
         const newSelectedCardIds = new Set(state.selectedCardIds);
