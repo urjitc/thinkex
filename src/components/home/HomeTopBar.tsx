@@ -27,7 +27,7 @@ export function HomeTopBar({ scrollY, searchQuery, onSearchChange }: HomeTopBarP
         "transition-all duration-300"
       )}
       style={{
-        backgroundColor: `rgba(0, 0, 0, ${bgOpacity})`,
+        backgroundColor: `hsl(240 5.9% 10% / ${bgOpacity})`,
       }}
     >
       {/* Left: Logo */}
@@ -62,7 +62,7 @@ export function HomeTopBar({ scrollY, searchQuery, onSearchChange }: HomeTopBarP
             placeholder="Search workspaces..."
             aria-label="Search workspaces"
             className={cn(
-              "w-96 pl-9 h-9",
+              "w-96 pl-9 h-10",
               "bg-background/80 backdrop-blur-xl",
               "border border-white/10 rounded-lg",
               "shadow-[0_0_30px_-10px_rgba(255,255,255,0.1)]",
