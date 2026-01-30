@@ -323,13 +323,15 @@ function WorkspaceSidebar({
                       align="end"
                       sideOffset={4}
                     >
-                      <DropdownMenuItem
-                        onClick={handleShowJsonViewToggle}
-                        className="cursor-pointer"
-                      >
-                        <Layers className="mr-2 h-4 w-4" />
-                        <span>{showJsonView ? "Card View" : "JSON View"}</span>
-                      </DropdownMenuItem>
+                      {isDev && (
+                        <DropdownMenuItem
+                          onClick={handleShowJsonViewToggle}
+                          className="cursor-pointer"
+                        >
+                          <Layers className="mr-2 h-4 w-4" />
+                          <span>{showJsonView ? "Card View" : "JSON View"}</span>
+                        </DropdownMenuItem>
+                      )}
                       {/* {isDev && (
                         <DropdownMenuItem
                           onClick={handleToggleOnboarding}
