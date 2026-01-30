@@ -5,7 +5,7 @@ import { HomePromptInput } from "./HomePromptInput";
 import { DynamicTagline } from "./DynamicTagline";
 import { WorkspaceGrid } from "./WorkspaceGrid";
 import { HomeTopBar } from "./HomeTopBar";
-import { FloatingWorkspaceCards } from "@/components/landing/FloatingWorkspaceCards";
+import { ParallaxBentoBackground } from "./ParallaxBentoBackground";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,7 @@ export function HomeContent() {
   const queryClient = useQueryClient();
   const [scrollY, setScrollY] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [mousePosition, setMousePosition] = useState({ x: 0.5, y: 0.5 });
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Scroll tracking
@@ -31,6 +32,28 @@ export function HomeContent() {
     el?.addEventListener("scroll", handleScroll);
     return () => el?.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Mouse tracking for hero glow intensity
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({
+        x: e.clientX / window.innerWidth,
+        y: e.clientY / window.innerHeight,
+      });
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  // Calculate glow intensity based on distance from hero center
+  const centerX = 0.5;
+  const centerY = 0.45; // Hero is slightly above center
+  const distance = Math.sqrt(
+    Math.pow(mousePosition.x - centerX, 2) +
+    Math.pow(mousePosition.y - centerY, 2)
+  );
+  // Glow is strongest at center (distance=0), fades as you move away
+  const glowIntensity = Math.max(0, 1 - distance * 2);
 
   const handleCreateBlankWorkspace = async () => {
     try {
@@ -70,25 +93,40 @@ export function HomeContent() {
 
       {/* Scrollable Content - scroll-pt-20 creates 80px hero peek when snapped to workspaces */}
       <div ref={scrollRef} className="relative h-full w-full overflow-y-auto snap-y snap-mandatory scroll-pt-20">
-        {/* Floating Card Background */}
-        <div className="absolute inset-0 z-0 select-none pointer-events-none overflow-hidden">
-          <FloatingWorkspaceCards
-            bottomGradientHeight="40%"
-            opacity="opacity-10 md:opacity-15"
-            includeExtraCards={true}
-          />
-        </div>
+        {/* Parallax Bento Background */}
+        <ParallaxBentoBackground className="z-0 select-none pointer-events-none" />
+
+        {/* Gradient fade from hero to workspaces section */}
+        <div
+          className="fixed bottom-0 left-0 right-0 h-[40vh] pointer-events-none z-[5]"
+          style={{
+            background: 'linear-gradient(to bottom, transparent 0%, hsl(var(--background)) 100%)',
+          }}
+        />
 
         {/* Hero Section - Full screen height, vertically centered */}
         <div className="relative z-10 h-screen flex flex-col items-center justify-center text-center px-6 snap-start">
           <div className="w-full max-w-2xl relative">
-            {/* Subtle ambient blur behind hero content */}
+            {/* Hero glow - intensifies on mouse approach */}
+            <div
+              className="absolute -inset-20 rounded-3xl pointer-events-none transition-opacity duration-300"
+              style={{
+                background: `radial-gradient(ellipse at center,
+                  rgba(147, 197, 253, ${0.35 + glowIntensity * 0.35}) 0%,
+                  rgba(167, 139, 250, ${0.25 + glowIntensity * 0.25}) 35%,
+                  transparent 70%)`,
+                filter: `blur(${35 + glowIntensity * 25}px)`,
+                opacity: 0.8 + glowIntensity * 0.2,
+                zIndex: 0,
+              }}
+            />
+            {/* Dark ambient blur for text readability */}
             <div
               className="absolute -inset-8 rounded-3xl pointer-events-none"
               style={{
-                background: 'radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.3) 40%, transparent 70%)',
+                background: 'radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.25) 40%, transparent 70%)',
                 filter: 'blur(20px)',
-                zIndex: 0,
+                zIndex: 1,
               }}
             />
 
