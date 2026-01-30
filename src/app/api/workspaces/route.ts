@@ -65,9 +65,16 @@ async function handlePOST(request: NextRequest) {
   const body = await request.json();
   const { name, description, template, is_public, icon, color, initialState: customInitialState } = body;
 
-  // Server-side safeguard: only allow blank template workspaces
-  // This ensures all new workspaces start from an empty state
-  const effectiveTemplate: WorkspaceTemplate = "blank";
+  // Use the provided template, defaulting to "blank"
+  const effectiveTemplate: WorkspaceTemplate = (template && [
+    "blank",
+    "getting_started",
+    "project_management",
+    "knowledge_base",
+    "team_planning"
+  ].includes(template))
+    ? template
+    : "blank";
 
   if (typeof name !== "string" || name.trim() === "") {
     return NextResponse.json({ error: "Name is required and must be a string" }, { status: 400 });

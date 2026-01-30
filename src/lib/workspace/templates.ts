@@ -17,12 +17,23 @@ function generateDistinctColors(count: number): CardColor[] {
  * Workspace templates with pre-filled content
  */
 export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
+  {
+    name: "Blank",
+    description: "Start from scratch",
+    template: "blank",
+    initialState: {
+      items: [],
+      globalTitle: "",
+      globalDescription: "",
+      itemsCreated: 0,
+    },
+  },
   (() => {
     const sampleColors = generateDistinctColors(4);
     return {
-      name: "Blank",
+      name: "Getting Started",
       description: "Start with sample content",
-      template: "blank",
+      template: "getting_started",
       initialState: {
         items: [
           {
@@ -79,7 +90,7 @@ export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
         ],
         globalTitle: "",
         globalDescription: "",
-        itemsCreated: 6,
+        itemsCreated: 4,
       },
     };
   })(),

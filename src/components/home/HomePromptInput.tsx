@@ -106,10 +106,11 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
       const createRes = await fetch("/api/workspaces", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           name: title,
           icon: icon || null,
           color: color || null,
+          template: "getting_started", // Auto-include sample content (quiz/flashcards) for home prompt (magic feeling)
         }),
       });
       if (!createRes.ok) {
@@ -173,8 +174,8 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
               maxLength={300}
               autoFocus
               aria-labelledby="workspace-prompt-label"
-              style={{ 
-                fontSize: '1.125rem', 
+              style={{
+                fontSize: '1.125rem',
                 lineHeight: '1.75rem',
                 height: 'auto',
                 minHeight: '60px',
