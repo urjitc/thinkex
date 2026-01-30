@@ -19,7 +19,7 @@ const DeleteCardInner: FC<{
 }> = ({ result, status }) => {
   // Don't try to parse while still running - wait for completion
   let parsed: any = null;
-  if (status.type !== "running" && result != null) {
+  if (status.type === "complete" && result != null) {
     try {
       parsed = parseWorkspaceResult(result);
     } catch (err) {

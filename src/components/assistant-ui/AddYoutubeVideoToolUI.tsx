@@ -35,7 +35,7 @@ const AddYoutubeVideoReceipt = ({
   };
 
   return (
-    <div 
+    <div
       className={cn(
         "my-1 flex w-full items-center justify-between overflow-hidden rounded-md border border-border/50 bg-card/50 text-card-foreground shadow-sm px-2 py-2",
         status?.type === "complete" && result.itemId && "cursor-pointer hover:bg-accent transition-colors"
@@ -63,7 +63,7 @@ const AddYoutubeVideoReceipt = ({
           )}
         </div>
       </div>
-      
+
       <div className="flex items-center gap-1">
         {status?.type === "complete" && result.itemId && (
           <Button
@@ -93,14 +93,14 @@ export const AddYoutubeVideoToolUI = makeAssistantToolUI<AddYoutubeVideoArgs, Wo
 
     // Don't try to parse while still running - wait for completion
     let parsed: WorkspaceResult | null = null;
-    if (status.type !== "running" && result != null) {
-        try {
-            parsed = parseWorkspaceResult(result);
-        } catch (err) {
-            // Log the error but don't throw - we'll show error state below
-            console.error("🎥 [AddYoutubeVideoTool] Failed to parse result:", err);
-            parsed = null;
-        }
+    if (status.type === "complete" && result != null) {
+      try {
+        parsed = parseWorkspaceResult(result);
+      } catch (err) {
+        // Log the error but don't throw - we'll show error state below
+        console.error("🎥 [AddYoutubeVideoTool] Failed to parse result:", err);
+        parsed = null;
+      }
     }
 
     let content: ReactNode = null;

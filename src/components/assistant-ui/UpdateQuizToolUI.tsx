@@ -43,7 +43,7 @@ const UpdateQuizReceipt = ({ result, status }: { result: QuizResult; status: any
   };
 
   return (
-    <div 
+    <div
       className={cn(
         "my-1 flex w-full items-center justify-between overflow-hidden rounded-md border border-border/50 bg-card/50 text-card-foreground shadow-sm px-2 py-2",
         status?.type === "complete" && targetId && "cursor-pointer hover:bg-accent transition-colors"
@@ -71,7 +71,7 @@ const UpdateQuizReceipt = ({ result, status }: { result: QuizResult; status: any
           )}
         </div>
       </div>
-      
+
       <div className="flex items-center gap-1">
         {status?.type === "complete" && targetId && (
           <Button
@@ -101,16 +101,16 @@ export const UpdateQuizToolUI = makeAssistantToolUI<UpdateQuizArgs, QuizResult>(
 
     // Don't try to parse while still running - wait for completion
     let parsed: QuizResult | null = null;
-    if (status.type !== "running" && result != null) {
-        try {
-            // With the new Output.object() approach, the quiz worker returns clean structured data
-            // so we can parse normally without special streaming handling
-            parsed = parseQuizResult(result);
-        } catch (err) {
-            // Log the error but don't throw - we'll show error state below
-            console.error("🎯 [UpdateQuizTool] Failed to parse result:", err);
-            parsed = null;
-        }
+    if (status.type === "complete" && result != null) {
+      try {
+        // With the new Output.object() approach, the quiz worker returns clean structured data
+        // so we can parse normally without special streaming handling
+        parsed = parseQuizResult(result);
+      } catch (err) {
+        // Log the error but don't throw - we'll show error state below
+        console.error("🎯 [UpdateQuizTool] Failed to parse result:", err);
+        parsed = null;
+      }
     }
 
     let content: ReactNode = null;
