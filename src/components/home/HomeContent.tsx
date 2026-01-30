@@ -208,8 +208,8 @@ export function HomeContent() {
           </div>
         </div>
 
-        {/* Workspaces Section - Exactly viewport height, no overscroll */}
-        <div ref={workspacesRef} className="relative z-10 px-6 pb-8 pt-8 h-screen snap-start snap-always scroll-mt-0 bg-gradient-to-b from-transparent via-background to-black overflow-hidden">
+        {/* Workspaces Section - Allow scrolling within */}
+        <div ref={workspacesRef} className="relative z-10 px-6 pb-8 pt-8 min-h-screen snap-start snap-always scroll-mt-0 bg-gradient-to-b from-transparent via-background to-black">
           <div className="w-full max-w-6xl mx-auto h-full">
             {/* Your Workspaces */}
             <div className="bg-sidebar rounded-md p-6">
