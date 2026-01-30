@@ -198,10 +198,10 @@ export function FloatingWorkspaceCards({
         };
     }, [isMobile, externalMousePosition]);
 
-    // Parallax offset calculation
+    // Parallax offset calculation - cards move away from cursor
     const parallaxIntensity = 25;
-    const offsetX = isMobile ? 0 : (mousePosition.x - 0.5) * parallaxIntensity;
-    const offsetY = isMobile ? 0 : (mousePosition.y - 0.5) * parallaxIntensity;
+    const offsetX = isMobile ? 0 : (0.5 - mousePosition.x) * parallaxIntensity;
+    const offsetY = isMobile ? 0 : (0.5 - mousePosition.y) * parallaxIntensity;
 
     // Spotlight mask - mouse position reveals cards, hero center always slightly visible
     // Adjust Y position to account for scroll in the 250vh container
