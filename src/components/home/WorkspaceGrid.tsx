@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { FolderPlus, MoreVertical } from "lucide-react";
 import { useUIStore } from "@/lib/stores/ui-store";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
@@ -11,11 +11,24 @@ import WorkspaceSettingsModal from "@/components/workspace/WorkspaceSettingsModa
 import type { WorkspaceWithState } from "@/lib/workspace-state/types";
 import { getCardColorCSS, getCardAccentColor, type CardColor } from "@/lib/workspace-state/colors";
 
-export function WorkspaceGrid() {
+interface WorkspaceGridProps {
+  searchQuery?: string;
+}
+
+export function WorkspaceGrid({ searchQuery = "" }: WorkspaceGridProps) {
   const { setShowCreateWorkspaceModal } = useUIStore();
   const { workspaces, switchWorkspace, loadWorkspaces } = useWorkspaceContext();
   const { data: session } = useSession();
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  // Filter workspaces based on search query
+  const filteredWorkspaces = useMemo(() => {
+    if (!searchQuery.trim()) return workspaces;
+    const query = searchQuery.toLowerCase();
+    return workspaces.filter((w) =>
+      w.name.toLowerCase().includes(query)
+    );
+  }, [workspaces, searchQuery]);
   const [settingsWorkspace, setSettingsWorkspace] = useState<WorkspaceWithState | null>(null);
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
   const hasAttemptedWelcomeWorkspace = useRef(false);
@@ -130,7 +143,7 @@ export function WorkspaceGrid() {
           )}
 
           {/* Existing Workspaces */}
-          {workspaces.map((workspace) => {
+          {filteredWorkspaces.map((workspace) => {
               const color = workspace.color as CardColor | undefined;
               const borderColor = color ? getCardAccentColor(color, 0.5) : 'var(--sidebar-border)';
               const previewText = getPreviewText(workspace);
