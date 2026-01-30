@@ -5,13 +5,14 @@ import { useEffect, useMemo } from "react";
 import { useWorkspaceState } from "@/hooks/workspace/use-workspace-state";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
-import { Loader2, X, Eye, Plus } from "lucide-react";
+import { X, Eye, Plus } from "lucide-react";
 import { logger } from "@/lib/utils/logger";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ToolUIErrorBoundary } from "@/components/tool-ui/shared";
 import { ToolUILoadingShell } from "@/components/assistant-ui/tool-ui-loading-shell";
+import { ToolUIErrorShell } from "@/components/assistant-ui/tool-ui-error-shell";
 import type { FlashcardResult } from "@/lib/ai/tool-result-schemas";
 import { parseFlashcardResult } from "@/lib/ai/tool-result-schemas";
 
@@ -28,7 +29,7 @@ function isUpdateFlashcardArgsObject(
     return typeof args === "object" && args !== null;
 }
 
-import { useUIStore } from "@/lib/stores/ui-store";
+import { useNavigateToItem } from "@/hooks/ui/use-navigate-to-item";
 
 interface UpdateFlashcardReceiptProps {
     args: UpdateFlashcardArgs;
@@ -37,9 +38,9 @@ interface UpdateFlashcardReceiptProps {
 }
 
 const UpdateFlashcardReceipt = ({ args, result, status }: UpdateFlashcardReceiptProps) => {
-    const setOpenModalItemId = useUIStore((state) => state.setOpenModalItemId);
     const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
     const { state: workspaceState } = useWorkspaceState(workspaceId);
+    const navigateToItem = useNavigateToItem();
 
     // Debug logging for receipt component
     useEffect(() => {
@@ -51,12 +52,6 @@ const UpdateFlashcardReceipt = ({ args, result, status }: UpdateFlashcardReceipt
         logger.debug("Workspace ID:", workspaceId);
         logger.groupEnd();
     }, [args, result, status, workspaceId]);
-
-    // Check if the card has appeared in the workspace
-    const isCardInWorkspace = useMemo(() => {
-        if (!result.itemId || !workspaceState?.items) return false;
-        return workspaceState.items.some((item: any) => item.id === result.itemId);
-    }, [result.itemId, workspaceState?.items]);
 
     const deckName = useMemo(() => {
         // First try to use the deckName from result (from fuzzy match)
@@ -72,60 +67,23 @@ const UpdateFlashcardReceipt = ({ args, result, status }: UpdateFlashcardReceipt
 
     const handleViewCard = () => {
         if (!result.itemId) return;
-        const element = document.getElementById(`item-${result.itemId}`);
-        if (element) {
-            // Find the scrollable container (the one with overflow-auto in WorkspaceSection)
-            // We traverse up until we find the container with overflow-auto
-            let container = element.parentElement;
-            while (container && container !== document.body) {
-                const style = window.getComputedStyle(container);
-                // Check for overflow-auto or overflow-scroll
-                if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-                    break;
-                }
-                container = container.parentElement;
-            }
-
-            if (container && container !== document.body) {
-                // Calculate position to scroll to (center the element)
-                const elementRect = element.getBoundingClientRect();
-                const containerRect = container.getBoundingClientRect();
-                const relativeTop = elementRect.top - containerRect.top;
-
-                container.scrollTo({
-                    top: container.scrollTop + relativeTop - (container.clientHeight / 2) + (element.clientHeight / 2),
-                    behavior: 'smooth'
-                });
-            } else {
-                // Fallback if no specific container found
-                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-
-        // Open the modal
-        if (result.itemId) {
-            setOpenModalItemId(result.itemId);
-        }
+        navigateToItem(result.itemId);
     };
 
     return (
         <div 
             className={cn(
                 "my-1 flex w-full items-center justify-between overflow-hidden rounded-md border border-border/50 bg-card/50 text-card-foreground shadow-sm px-2 py-2",
-                status?.type === "complete" && isCardInWorkspace && "cursor-pointer hover:bg-accent transition-colors"
+                status?.type === "complete" && result.itemId && "cursor-pointer hover:bg-accent transition-colors"
             )}
-            onClick={status?.type === "complete" && isCardInWorkspace ? handleViewCard : undefined}
+            onClick={status?.type === "complete" && result.itemId ? handleViewCard : undefined}
         >
             <div className="flex items-center gap-2 flex-1 min-w-0">
                 <div className={cn(
                     status?.type === "complete" ? "text-purple-400" : "text-red-400"
                 )}>
                     {status?.type === "complete" ? (
-                        isCardInWorkspace ? (
-                            <Plus className="size-4" />
-                        ) : (
-                            <Loader2 className="size-4 animate-spin" />
-                        )
+                        <Plus className="size-4" />
                     ) : (
                         <X className="size-4" />
                     )}
@@ -136,9 +94,7 @@ const UpdateFlashcardReceipt = ({ args, result, status }: UpdateFlashcardReceipt
                     </span>
                     {status?.type === "complete" && (
                         <span className="text-[10px] text-muted-foreground">
-                            {isCardInWorkspace
-                                ? `${cardsAdded} flashcard${cardsAdded !== 1 ? 's' : ''} added to deck`
-                                : "Updating deck..."}
+                            {cardsAdded} flashcard{cardsAdded !== 1 ? 's' : ''} added to deck
                         </span>
                     )}
                 </div>
@@ -201,19 +157,19 @@ export const UpdateFlashcardToolUI = makeAssistantToolUI<UpdateFlashcardArgs, Fl
         } else if (status.type === "running") {
             logger.debug("⏳ [UpdateFlashcardTool] Rendering loading state - status is running");
             content = <ToolUILoadingShell label="Adding flashcards to deck..." />;
+        } else if (status.type === "complete" && parsed && !parsed.success) {
+            content = (
+                <ToolUIErrorShell
+                    label="Failed to update flashcard deck"
+                    message={parsed.message}
+                />
+            );
         } else if (status.type === "incomplete" && status.reason === "error") {
             content = (
-                <div className="my-2 flex w-full flex-col overflow-hidden rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
-                    <div className="flex items-center gap-2">
-                        <X className="size-4 text-red-600 dark:text-red-400" />
-                        <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                            Failed to update flashcard deck
-                        </p>
-                    </div>
-                    {parsed && !parsed.success && parsed.message && (
-                        <p className="mt-2 text-xs text-red-700 dark:text-red-300">{parsed.message}</p>
-                    )}
-                </div>
+                <ToolUIErrorShell
+                    label="Failed to update flashcard deck"
+                    message={parsed?.message}
+                />
             );
         } else {
             logger.debug("❓ [UpdateFlashcardTool] Rendering null - no result and status is not running");

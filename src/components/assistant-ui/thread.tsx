@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Sparkles,
   Globe,
+  Bug,
 } from "lucide-react";
 import { FaQuoteLeft, FaWandMagicSparkles, FaCheck } from "react-icons/fa6";
 import { LuSparkle } from "react-icons/lu";
@@ -68,7 +69,7 @@ import { ExecuteCodeToolUI } from "@/components/assistant-ui/ExecuteCodeToolUI";
 import { FileProcessingToolUI } from "@/components/assistant-ui/FileProcessingToolUI";
 import { URLContextToolUI } from "@/components/assistant-ui/URLContextToolUI";
 import { DeepResearchToolUI } from "@/components/assistant-ui/DeepResearchToolUI";
-import { UpdateCardToolUI } from "@/components/assistant-ui/UpdateCardToolUI";
+import { UpdateNoteToolUI } from "@/components/assistant-ui/UpdateNoteToolUI";
 import { WebSearchToolUI } from "@/components/assistant-ui/WebSearchToolUI";
 
 import { DeleteCardToolUI } from "@/components/assistant-ui/DeleteCardToolUI";
@@ -131,7 +132,7 @@ export const Thread: FC<ThreadProps> = ({ items = [] }) => {
         <CreateNoteToolUI />
         <CreateFlashcardToolUI />
         <UpdateFlashcardToolUI />
-        <UpdateCardToolUI />
+        <UpdateNoteToolUI />
 
         <DeleteCardToolUI />
         <SelectCardsToolUI />
@@ -914,6 +915,19 @@ const ComposerAction: FC<ComposerActionProps> = ({ items }) => {
             })}
           </DropdownMenuContent>
         </DropdownMenu>
+        {/* AI Debug Button - only in development */}
+        {process.env.NODE_ENV === "development" && (
+          <button
+            type="button"
+            className="flex items-center gap-1.5 px-1.5 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 transition-colors flex-shrink-0 text-xs font-normal text-red-500 hover:text-red-400 cursor-pointer border border-red-500/20"
+            onClick={() => {
+              window.open("http://localhost:4983", "_blank");
+            }}
+          >
+            <Bug className="w-3.5 h-3.5" />
+            <span>AI Debug</span>
+          </button>
+        )}
         {/* Warning icon for anonymous users */}
         {isAnonymous && (
 

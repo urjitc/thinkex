@@ -10,6 +10,7 @@ import { CheckIcon, X, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ToolUIErrorBoundary } from "@/components/tool-ui/shared";
 import { ToolUILoadingShell } from "@/components/assistant-ui/tool-ui-loading-shell";
+import { ToolUIErrorShell } from "@/components/assistant-ui/tool-ui-error-shell";
 import { parseSelectCardsResult } from "@/lib/ai/tool-result-schemas";
 
 // Note: UI accepts cardIds for client-side selection, but tool only accepts cardTitles
@@ -212,34 +213,10 @@ export const SelectCardsToolUI = makeAssistantToolUI<SelectCardsArgs, SelectCard
       );
     } else if (status.type === "incomplete" && status.reason === "error") {
       content = (
-        <div className="my-2 flex w-full flex-col overflow-hidden rounded-xl border border-red-200 bg-red-50/50 text-card-foreground shadow-sm dark:border-red-800 dark:bg-red-950/30">
-          <div className="flex items-center justify-between gap-2 bg-red-100/50 px-4 py-3 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800">
-            <div className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
-                <X className="size-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-red-800 dark:text-red-200">Failed to Select Cards</span>
-                <span className="text-xs text-red-700 dark:text-red-300">An error occurred</span>
-              </div>
-            </div>
-          </div>
-          {args?.cardIds && args.cardIds.length > 0 && (
-            <div className="p-4">
-              <p className="text-xs text-red-700 dark:text-red-300 mb-2">Requested IDs:</p>
-              <div className="flex flex-wrap gap-1">
-                {args.cardIds.map((id) => (
-                  <span
-                    key={id}
-                    className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-mono dark:border-red-800 dark:bg-red-900/30"
-                  >
-                    {id.substring(0, 8)}...
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <ToolUIErrorShell
+          label="Failed to select cards"
+          message="An error occurred"
+        />
       );
     }
 

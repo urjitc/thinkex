@@ -5,6 +5,7 @@ import { workspaceWorker } from "@/lib/ai/workers";
 import { loadWorkspaceState } from "@/lib/workspace/state-loader";
 import { formatSelectedCardsContext } from "@/lib/utils/format-workspace-context";
 import type { Item } from "@/lib/workspace-state/types";
+import { loadStateForTool, fuzzyMatchItem, getAvailableItemsList } from "./tool-utils";
 
 export interface WorkspaceToolContext {
     workspaceId: string | null;
@@ -17,7 +18,7 @@ export interface WorkspaceToolContext {
  */
 export function createNoteTool(ctx: WorkspaceToolContext) {
     return tool({
-        description: "Create a note card. returns success message.\n\nCRITICAL CONSTRAINTS:\n1. 'content' MUST NOT start with the title.\n2. Start directly with body text.\n3. NO Mermaid diagrams.\n\nCRITICAL - MATHEMATICAL EXPRESSIONS: Use LaTeX with DOUBLE DOLLAR SIGNS ($$) for ALL math:\n- Use $$...$$ for ALL math expressions (both inline and block)\n- Single $ is for CURRENCY only (e.g., $19.99). NEVER use single $ for math\n- For inline math: $$E = mc^2$$ (same line as text)\n- For block math (separate lines): Put $$ delimiters on separate lines\n- Always ensure math blocks are properly closed with matching $$",
+        description: "Create a note card. Use $$...$$ for ALL math expressions (both inline and block). Single $ is for currency only.",
         inputSchema: zodSchema(
             z.object({
                 title: z.string().describe("The title of the note card"),
@@ -59,85 +60,90 @@ export function createNoteTool(ctx: WorkspaceToolContext) {
 }
 
 /**
- * Create the updateCard tool
+ * Create the updateNote tool
  */
-export function createUpdateCardTool(ctx: WorkspaceToolContext) {
+export function createUpdateNoteTool(ctx: WorkspaceToolContext) {
     return tool({
-        description: "Update the content of an existing card. This tool COMPLETELY REPLACES the existing content. You must synthesize the FULL new content by combining the existing card content (from your context) with the user's requested changes. Do not just provide the diff; provide the complete new markdown content.\n\nTO CLEAR A CARD: Pass an empty string ('') as the content to clear/delete all content from the card while preserving the title.\n\nCRITICAL - MATHEMATICAL EXPRESSIONS: Use LaTeX with DOUBLE DOLLAR SIGNS ($$) for ALL math:\n- Use $$...$$ for ALL math expressions (both inline and block)\n- Single $ is for CURRENCY only (e.g., $19.99). NEVER use single $ for math\n- For inline math: $$E = mc^2$$ (same line as text)\n- For block math (separate lines): Put $$ delimiters on separate lines\n- Always ensure math blocks are properly closed with matching $$\n- Add spaces around $$ symbols when math appears in lists or tables\n- Do not place punctuation immediately after math expressions.",
+        description: "Update the content and/or title of an existing note. Use $$...$$ for ALL math expressions.",
         inputSchema: zodSchema(
             z.object({
-                id: z.string().describe("The ID of the card to update"),
-                markdown: z.string().nullable().describe("The full note body ONLY (do not include the title as a header). Use $$...$$ for ALL math (both inline and block). Single $ is for currency only."),
-                content: z.string().nullable().describe("Alternative to 'markdown' - the full note body ONLY (do not include the title as a header). Use $$...$$ for ALL math (both inline and block). Single $ is for currency only."),
-            }).refine((data) => data.markdown !== null || data.content !== null, {
-                message: "Either 'markdown' or 'content' must be provided",
-            })
+                noteName: z.string().describe("The name of the note to update (will be matched using fuzzy search)"),
+                content: z.string().describe("The full note body ONLY (do not include the title as a header). Use $$...$$ for ALL math."),
+                title: z.string().optional().describe("New title for the note. If not provided, the existing title will be preserved."),
+            }).passthrough()
         ),
-        execute: async (input) => {
-            logger.group("🎯 [UPDATE-CARD] Tool execution started", true);
-            logger.debug("Raw input received:", {
-                inputType: typeof input,
-                inputKeys: input ? Object.keys(input) : [],
-                hasId: !!input?.id,
-                hasMarkdown: !!input?.markdown,
-                hasContent: !!input?.content,
-            });
-            logger.groupEnd();
+        execute: async (input: { noteName: string; content: string; title?: string }) => {
+            const noteName = input.noteName;
+            const content = input.content;
+            const title = input.title;
 
-            try {
-                const id = input?.id;
-                const markdown = input?.markdown ?? input?.content;
-
-                if (!id || typeof id !== 'string') {
-                    logger.error("❌ [UPDATE-CARD] Invalid or missing id parameter:", { id, idType: typeof id });
-                    return {
-                        success: false,
-                        message: "Card ID is required and must be a string",
-                    };
-                }
-
-                if (markdown === undefined || markdown === null) {
-                    logger.error("❌ [UPDATE-CARD] Missing markdown/content parameter");
-                    return {
-                        success: false,
-                        message: "Markdown content is required (use 'markdown' or 'content' field)",
-                    };
-                }
-
-                if (typeof markdown !== 'string') {
-                    logger.error("❌ [UPDATE-CARD] Invalid markdown/content type:", { markdownType: typeof markdown });
-                    return {
-                        success: false,
-                        message: "Markdown content must be a string",
-                    };
-                }
-
-                logger.debug("🎯 [UPDATE-CARD] Delegating to Workspace Worker (update):", {
-                    id,
-                    contentLength: markdown.length,
-                });
-
-                if (!ctx.workspaceId) {
-                    logger.error("❌ [UPDATE-CARD] No workspace context available");
-                    return {
-                        success: false,
-                        message: "No workspace context available",
-                    };
-                }
-
-                const result = await workspaceWorker("update", {
-                    workspaceId: ctx.workspaceId,
-                    itemId: id,
-                    content: markdown,
-                });
-
-                logger.debug("✅ [UPDATE-CARD] Workspace worker returned:", { success: result?.success });
-                return result;
-            } catch (error: any) {
-                logger.error("❌ [UPDATE-CARD] Error during execution:", error?.message || String(error));
+            if (!noteName) {
                 return {
                     success: false,
-                    message: `Failed to update card: ${error?.message || String(error)}`,
+                    message: "Note name is required to identify which note to update.",
+                };
+            }
+
+            if (content === undefined || content === null) {
+                return {
+                    success: false,
+                    message: "Content is required.",
+                };
+            }
+
+            if (!ctx.workspaceId) {
+                return {
+                    success: false,
+                    message: "No workspace context available",
+                };
+            }
+
+            try {
+                // Load workspace state (security is enforced by workspace-worker)
+                const accessResult = await loadStateForTool(ctx);
+                if (!accessResult.success) {
+                    return accessResult;
+                }
+
+                const { state } = accessResult;
+
+                // Fuzzy match the note by name
+                const matchedNote = fuzzyMatchItem(state.items, noteName, "note");
+
+                if (!matchedNote) {
+                    const availableNotes = getAvailableItemsList(state.items, "note");
+                    return {
+                        success: false,
+                        message: `Could not find note "${noteName}". ${availableNotes ? `Available notes: ${availableNotes}` : 'No notes found in workspace.'}`,
+                    };
+                }
+
+                logger.debug("🎯 [UPDATE-NOTE] Found note via fuzzy match:", {
+                    searchedName: noteName,
+                    matchedName: matchedNote.name,
+                    matchedId: matchedNote.id,
+                });
+
+                const workerResult = await workspaceWorker("update", {
+                    workspaceId: ctx.workspaceId,
+                    itemId: matchedNote.id,
+                    content: content,
+                    title: title,
+                });
+
+                if (workerResult.success) {
+                    return {
+                        ...workerResult,
+                        noteName: matchedNote.name,
+                    };
+                }
+
+                return workerResult;
+            } catch (error) {
+                logger.error("Error updating note:", error);
+                return {
+                    success: false,
+                    message: `Error updating note: ${error instanceof Error ? error.message : String(error)}`,
                 };
             }
         },
@@ -151,7 +157,7 @@ export function createUpdateCardTool(ctx: WorkspaceToolContext) {
  */
 export function createDeleteCardTool(ctx: WorkspaceToolContext) {
     return tool({
-        description: "Permanently delete a card/note from the workspace. Use this when the user explicitly asks to delete or remove a card.",
+        description: "Permanently delete a card/note from the workspace.",
         inputSchema: zodSchema(
             z.object({
                 id: z.string().describe("The ID of the card to delete"),
@@ -180,8 +186,7 @@ export function createDeleteCardTool(ctx: WorkspaceToolContext) {
  */
 export function createSelectCardsTool(ctx: WorkspaceToolContext) {
     return tool({
-        description:
-            "Select one or more cards by their TITLES and add them to the conversation context. This tool helps you surface specific cards when the user refers to them. The tool will perform fuzzy matching to find the best matching cards and return their full content immediately.",
+        description: "Select cards by their titles and add them to conversation context.",
         inputSchema: zodSchema(
             z.object({
                 cardTitles: z.array(z.string()).describe("Array of card titles to search for and select"),

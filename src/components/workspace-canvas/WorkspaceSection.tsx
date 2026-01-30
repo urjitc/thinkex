@@ -190,9 +190,9 @@ export function WorkspaceSection({
     return workspaces.find(w => w.id === currentWorkspaceId) || null;
   }, [currentWorkspaceId, workspaces]);
 
-  const handleYouTubeCreate = useCallback((url: string, name: string) => {
+  const handleYouTubeCreate = useCallback((url: string, name: string, thumbnail?: string) => {
     if (addItem) {
-      addItem("youtube", name, { url });
+      addItem("youtube", name, { url, thumbnail });
     }
   }, [addItem]);
 
@@ -421,8 +421,8 @@ export function WorkspaceSection({
               "relative min-h-full flex flex-col",
               showJsonView ? "h-full" : "",
             )}>
-              {/* Show skeleton when loading workspaces, resolving workspace ID, or loading workspace events */}
-              {loadingWorkspaces || (!currentWorkspaceId && currentSlug) || isLoadingWorkspace ? (
+              {/* Show skeleton until workspace content is loaded */}
+              {(!currentWorkspaceId && currentSlug) || (currentWorkspaceId && isLoadingWorkspace) ? (
                 <WorkspaceSkeleton />
               ) : (
                 /* Workspace content - assumes workspace exists (home route handles no-workspace state) */

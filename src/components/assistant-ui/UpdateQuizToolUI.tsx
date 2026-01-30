@@ -1,13 +1,18 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useMemo } from "react";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
-import { X, Plus, Brain } from "lucide-react";
+import { X, Plus, Eye } from "lucide-react";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
+import { useWorkspaceState } from "@/hooks/workspace/use-workspace-state";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { ToolUIErrorBoundary } from "@/components/tool-ui/shared";
 import { ToolUILoadingShell } from "@/components/assistant-ui/tool-ui-loading-shell";
+import { ToolUIErrorShell } from "@/components/assistant-ui/tool-ui-error-shell";
+import { useNavigateToItem } from "@/hooks/ui/use-navigate-to-item";
 import type { QuizResult } from "@/lib/ai/tool-result-schemas";
 import { parseQuizResult } from "@/lib/ai/tool-result-schemas";
 
@@ -20,8 +25,31 @@ type UpdateQuizArgs = {
 };
 
 const UpdateQuizReceipt = ({ result, status }: { result: QuizResult; status: any }) => {
-    return (
-    <div className="my-1 flex w-full items-center justify-between overflow-hidden rounded-md border border-border/50 bg-card/50 text-card-foreground shadow-sm px-2 py-2">
+  const workspaceId = useWorkspaceStore((s) => s.currentWorkspaceId);
+  const { state: workspaceState } = useWorkspaceState(workspaceId);
+  const navigateToItem = useNavigateToItem();
+
+  const targetId = result.itemId || result.quizId;
+
+  // Get the quiz from workspace to show its title
+  const quiz = useMemo(() => {
+    if (!targetId || !workspaceState?.items) return null;
+    return workspaceState.items.find((item: any) => item.id === targetId);
+  }, [targetId, workspaceState?.items]);
+
+  const handleViewCard = () => {
+    if (!targetId) return;
+    navigateToItem(targetId);
+  };
+
+  return (
+    <div 
+      className={cn(
+        "my-1 flex w-full items-center justify-between overflow-hidden rounded-md border border-border/50 bg-card/50 text-card-foreground shadow-sm px-2 py-2",
+        status?.type === "complete" && targetId && "cursor-pointer hover:bg-accent transition-colors"
+      )}
+      onClick={status?.type === "complete" && targetId ? handleViewCard : undefined}
+    >
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <div className={cn(
           status?.type === "complete" ? "text-green-400" : "text-red-400"
@@ -34,26 +62,34 @@ const UpdateQuizReceipt = ({ result, status }: { result: QuizResult; status: any
         </div>
         <div className="flex flex-col min-w-0 flex-1">
           <span className="text-xs font-medium truncate">
-            {status?.type === "complete" ? "Quiz Expanded" : "Update Cancelled"}
+            {status?.type === "complete" ? (quiz?.name || "Quiz Expanded") : "Update Cancelled"}
           </span>
           {status?.type === "complete" && (
             <span className="text-[10px] text-muted-foreground">
-              Added {result.questionsAdded} question{result.questionsAdded !== 1 ? 's' : ''}
+              Added {result.questionsAdded} question{result.questionsAdded !== 1 ? 's' : ''} ({result.totalQuestions} total)
             </span>
           )}
         </div>
       </div>
       
       <div className="flex items-center gap-1">
-        {status?.type === "complete" && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Brain className="size-3" />
-            <span>{result.totalQuestions} total</span>
-          </div>
+        {status?.type === "complete" && targetId && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 gap-1 text-[10px] px-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewCard();
+            }}
+          >
+            <Eye className="size-3" />
+            View
+          </Button>
         )}
       </div>
     </div>
-    );
+  );
 };
 
 export const UpdateQuizToolUI = makeAssistantToolUI<UpdateQuizArgs, QuizResult>({
@@ -83,17 +119,19 @@ export const UpdateQuizToolUI = makeAssistantToolUI<UpdateQuizArgs, QuizResult>(
       content = <UpdateQuizReceipt result={parsed} status={status} />;
     } else if (status.type === "running") {
       content = <ToolUILoadingShell label="Adding more questions..." />;
+    } else if (status.type === "complete" && parsed && !parsed.success) {
+      content = (
+        <ToolUIErrorShell
+          label="Failed to add questions"
+          message={parsed.message}
+        />
+      );
     } else if (status.type === "incomplete" && status.reason === "error") {
       content = (
-        <div className="my-2 flex w-full flex-col overflow-hidden rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
-          <div className="flex items-center gap-2">
-            <X className="size-4 text-red-600 dark:text-red-400" />
-            <p className="text-sm font-medium text-red-800 dark:text-red-200">Failed to add questions</p>
-          </div>
-          {parsed && !parsed.success && parsed.message && (
-            <p className="mt-2 text-xs text-red-700 dark:text-red-300">{parsed.message}</p>
-          )}
-        </div>
+        <ToolUIErrorShell
+          label="Failed to add questions"
+          message={parsed?.message}
+        />
       );
     }
 

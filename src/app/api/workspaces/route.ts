@@ -148,9 +148,12 @@ async function handlePOST(request: NextRequest) {
 
   // Note: No need to create workspace_states record - state is now managed via events
 
-  // For custom initial state (imported workspaces), create WORKSPACE_SNAPSHOT first
-  // This sets the entire state in one event, including title and description
-  if (customInitialState) {
+  // Determine if we need a WORKSPACE_SNAPSHOT (has items) or just WORKSPACE_CREATED (empty)
+  const hasItems = initialState.items && initialState.items.length > 0;
+
+  // For workspaces with items (custom or template-based), create WORKSPACE_SNAPSHOT
+  // This sets the entire state in one event, including title, description, and items
+  if (customInitialState || hasItems) {
     const eventId = randomUUID();
     const timestamp = Date.now();
 
@@ -197,7 +200,7 @@ async function handlePOST(request: NextRequest) {
       }
     }
   } else {
-    // For template-based workspaces, just create WORKSPACE_CREATED event
+    // For empty workspaces, just create WORKSPACE_CREATED event
     try {
       const eventId = randomUUID();
       const timestamp = Date.now();

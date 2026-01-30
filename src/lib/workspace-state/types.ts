@@ -45,6 +45,7 @@ export interface FolderData {
 
 export interface YouTubeData {
   url: string; // YouTube video URL
+  thumbnail?: string; // Optional thumbnail URL from oEmbed API
 }
 
 // Quiz Types
@@ -74,7 +75,7 @@ export interface QuizSessionData {
 
 export interface QuizData {
   title?: string;
-  difficulty: "easy" | "medium" | "hard";
+  difficulty?: "easy" | "medium" | "hard";
   sourceCardIds?: string[];     // IDs of cards used to generate (if context-based)
   sourceCardNames?: string[];   // Names for display
   questions: QuizQuestion[];

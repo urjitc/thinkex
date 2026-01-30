@@ -8,7 +8,7 @@ import { google } from "@ai-sdk/google";
  */
 export function createWebSearchTool() {
     return tool({
-        description: 'Search the web for current, up-to-date information on any topic. Use this when you need recent news, research, or information not in your training data.',
+        description: "Search the web for current information.",
         inputSchema: zodSchema(
             z.object({
                 query: z.string().min(1).max(500).describe('The search query to look up on the web')

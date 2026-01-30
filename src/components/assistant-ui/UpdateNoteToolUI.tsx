@@ -1,37 +1,48 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useEffect, useMemo } from "react";
+import { useWorkspaceState } from "@/hooks/workspace/use-workspace-state";
 import { makeAssistantToolUI } from "@assistant-ui/react";
-import { X, Eye, Play } from "lucide-react";
+import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
+import { X, Eye, FileText } from "lucide-react";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ToolUILoadingShell } from "@/components/assistant-ui/tool-ui-loading-shell";
-import { ToolUIErrorShell } from "@/components/assistant-ui/tool-ui-error-shell";
-import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
+import { useUIStore } from "@/lib/stores/ui-store";
 import { useNavigateToItem } from "@/hooks/ui/use-navigate-to-item";
 import { ToolUIErrorBoundary } from "@/components/tool-ui/shared";
+import { ToolUILoadingShell } from "@/components/assistant-ui/tool-ui-loading-shell";
+import { ToolUIErrorShell } from "@/components/assistant-ui/tool-ui-error-shell";
 import type { WorkspaceResult } from "@/lib/ai/tool-result-schemas";
 import { parseWorkspaceResult } from "@/lib/ai/tool-result-schemas";
 
-type AddYoutubeVideoArgs = { videoId: string; title: string };
+type UpdateNoteArgs = { noteName: string; content: string };
 
-interface AddYoutubeVideoReceiptProps {
-  args: AddYoutubeVideoArgs;
+interface UpdateNoteReceiptProps {
+  args: UpdateNoteArgs;
   result: WorkspaceResult;
   status: any;
 }
 
-const AddYoutubeVideoReceipt = ({
-  args,
-  result,
-  status,
-}: AddYoutubeVideoReceiptProps) => {
+const UpdateNoteReceipt = ({ args, result, status }: UpdateNoteReceiptProps) => {
+  const setOpenModalItemId = useUIStore((s) => s.setOpenModalItemId);
+  const workspaceId = useWorkspaceStore((s) => s.currentWorkspaceId);
+  const { state: workspaceState } = useWorkspaceState(workspaceId);
   const navigateToItem = useNavigateToItem();
+
+  // Get the card from workspace to show its title
+  const card = useMemo(() => {
+    if (!result.itemId || !workspaceState?.items) return null;
+    return workspaceState.items.find((item: any) => item.id === result.itemId);
+  }, [result.itemId, workspaceState?.items]);
 
   const handleViewCard = () => {
     if (!result.itemId) return;
-    navigateToItem(result.itemId);
+    // Only open modal if item exists and navigation succeeds
+    if (navigateToItem(result.itemId)) {
+      setOpenModalItemId(result.itemId);
+    }
   };
 
   return (
@@ -44,21 +55,21 @@ const AddYoutubeVideoReceipt = ({
     >
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <div className={cn(
-          status?.type === "complete" ? "text-red-500" : "text-red-400"
+          status?.type === "complete" ? "text-blue-400" : "text-red-400"
         )}>
           {status?.type === "complete" ? (
-            <Play className="size-4" />
+            <FileText className="size-4" />
           ) : (
             <X className="size-4" />
           )}
         </div>
         <div className="flex flex-col min-w-0 flex-1">
           <span className="text-xs font-medium truncate">
-            {status?.type === "complete" ? args.title : "Video Addition Cancelled"}
+            {status?.type === "complete" ? (card?.name || "Card Updated") : "Update Cancelled"}
           </span>
           {status?.type === "complete" && (
             <span className="text-[10px] text-muted-foreground">
-              YouTube video added
+              Note updated
             </span>
           )}
         </div>
@@ -84,12 +95,12 @@ const AddYoutubeVideoReceipt = ({
   );
 };
 
-export const AddYoutubeVideoToolUI = makeAssistantToolUI<AddYoutubeVideoArgs, WorkspaceResult>({
-  toolName: "addYoutubeVideo",
-  render: function AddYoutubeVideoToolUI({ args, result, status }) {
+export const UpdateNoteToolUI = makeAssistantToolUI<UpdateNoteArgs, WorkspaceResult>({
+  toolName: "updateNote",
+  render: function UpdateNoteUI({ args, result, status }) {
     const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
 
-    useOptimisticToolUpdate(status, result, workspaceId);
+    useOptimisticToolUpdate(status, result as any, workspaceId);
 
     // Don't try to parse while still running - wait for completion
     let parsed: WorkspaceResult | null = null;
@@ -98,7 +109,7 @@ export const AddYoutubeVideoToolUI = makeAssistantToolUI<AddYoutubeVideoArgs, Wo
             parsed = parseWorkspaceResult(result);
         } catch (err) {
             // Log the error but don't throw - we'll show error state below
-            console.error("🎥 [AddYoutubeVideoTool] Failed to parse result:", err);
+            console.error("📝 [UpdateNoteTool] Failed to parse result:", err);
             parsed = null;
         }
     }
@@ -106,33 +117,27 @@ export const AddYoutubeVideoToolUI = makeAssistantToolUI<AddYoutubeVideoArgs, Wo
     let content: ReactNode = null;
 
     if (parsed?.success) {
-      content = (
-        <AddYoutubeVideoReceipt
-          args={args}
-          result={parsed}
-          status={status}
-        />
-      );
+      content = <UpdateNoteReceipt args={args} result={parsed} status={status} />;
     } else if (status.type === "running") {
-      content = <ToolUILoadingShell label="Adding YouTube video..." />;
+      content = <ToolUILoadingShell label="Updating note..." />;
     } else if (status.type === "complete" && parsed && !parsed.success) {
       content = (
         <ToolUIErrorShell
-          label="Failed to add YouTube video"
+          label="Failed to update note"
           message={parsed.message}
         />
       );
     } else if (status.type === "incomplete" && status.reason === "error") {
       content = (
         <ToolUIErrorShell
-          label="Failed to add YouTube video"
+          label="Failed to update note"
           message={parsed?.message}
         />
       );
     }
 
     return (
-      <ToolUIErrorBoundary componentName="AddYoutubeVideo">
+      <ToolUIErrorBoundary componentName="UpdateNote">
         {content}
       </ToolUIErrorBoundary>
     );

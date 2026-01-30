@@ -17,17 +17,72 @@ function generateDistinctColors(count: number): CardColor[] {
  * Workspace templates with pre-filled content
  */
 export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
-  {
-    name: "Blank",
-    description: "Start with a clean slate",
-    template: "blank",
-    initialState: {
-      items: [],
-      globalTitle: "",
-      globalDescription: "",
-      itemsCreated: 0,
-    },
-  },
+  (() => {
+    const sampleColors = generateDistinctColors(4);
+    return {
+      name: "Blank",
+      description: "Start with sample content",
+      template: "blank",
+      initialState: {
+        items: [
+          {
+            id: "sample-quiz-1",
+            type: "quiz",
+            name: "Quiz",
+            subtitle: "",
+            data: {
+              questions: []
+            },
+            color: sampleColors[0],
+            layout: { x: 0, y: 0, w: 2, h: 13 },
+          },
+          {
+            id: "sample-flashcard-1",
+            type: "flashcard",
+            name: "Flashcards",
+            subtitle: "",
+            data: {
+              cards: []
+            },
+            color: sampleColors[1],
+            layout: { x: 2, y: 0, w: 2, h: 7 },
+          },
+          {
+            id: "sample-note-1",
+            type: "note",
+            name: "Note",
+            subtitle: "",
+            data: {
+              blockContent: [
+                {
+                  id: "nb1",
+                  type: "paragraph",
+                  props: { backgroundColor: "default", textColor: "default", textAlignment: "left" },
+                  content: [],
+                  children: []
+                }
+              ],
+              field1: ""
+            },
+            color: sampleColors[2],
+            layout: { x: 2, y: 7, w: 1, h: 4 },
+          },
+          {
+            id: "sample-note-2",
+            type: "note",
+            name: "Note",
+            subtitle: "",
+            data: { field1: "" },
+            color: sampleColors[3],
+            layout: { x: 3, y: 7, w: 1, h: 4 },
+          }
+        ],
+        globalTitle: "",
+        globalDescription: "",
+        itemsCreated: 6,
+      },
+    };
+  })(),
   (() => {
     const pmColors = generateDistinctColors(3);
     return {
