@@ -132,7 +132,7 @@ export function HomePromptInput() {
             "border border-white/10 rounded-xl",
             "shadow-[0_0_60px_-15px_rgba(255,255,255,0.1)]",
             "focus-within:shadow-[0_0_80px_-10px_rgba(255,255,255,0.15)]",
-            "focus-within:border-white/20",
+            "focus-within:border-white/60",
             "transition-all duration-300",
             "cursor-text"
           )}
