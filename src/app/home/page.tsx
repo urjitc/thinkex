@@ -2,24 +2,15 @@
 
 import { SEO } from "@/components/seo/SEO";
 import { MobileWarning } from "@/components/ui/MobileWarning";
-import { WorkspaceProvider, useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { HomeLayout } from "@/components/layout/HomeLayout";
 import { HomeContent } from "@/components/home/HomeContent";
-import { AnonymousSessionHandler, SidebarCoordinator } from "@/components/layout/SessionHandler";
-import { useUIStore } from "@/lib/stores/ui-store";
+import { AnonymousSessionHandler } from "@/components/layout/SessionHandler";
 
 // Home page content component
 function HomePageContent() {
-  const { switchWorkspace } = useWorkspaceContext();
-  const showCreateModal = useUIStore((state) => state.showCreateWorkspaceModal);
-  const setShowCreateModal = useUIStore((state) => state.setShowCreateWorkspaceModal);
-
   return (
-    <HomeLayout
-      onWorkspaceSwitch={switchWorkspace}
-      showCreateModal={showCreateModal}
-      setShowCreateModal={setShowCreateModal}
-    >
+    <HomeLayout>
       <HomeContent />
     </HomeLayout>
   );
@@ -32,9 +23,7 @@ export function HomeShell() {
       <MobileWarning />
       <AnonymousSessionHandler>
         <WorkspaceProvider>
-          <SidebarCoordinator defaultOpen={true}>
-            <HomePageContent />
-          </SidebarCoordinator>
+          <HomePageContent />
         </WorkspaceProvider>
       </AnonymousSessionHandler>
     </>
