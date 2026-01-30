@@ -30,7 +30,6 @@ interface WorkspaceContextType {
   // Actions
   switchWorkspace: (slug: string) => void;
   deleteWorkspace: (workspaceId: string) => Promise<void>;
-  reorderWorkspaces: (workspaceIds: string[]) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
@@ -171,64 +170,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     });
   }, [queryClient]);
 
-  // Reorder workspaces mutation
-  const reorderWorkspacesMutation = useMutation({
-    mutationFn: async (workspaceIds: string[]) => {
-      const response = await fetch("/api/workspaces/reorder", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ workspaceIds }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to reorder workspaces');
-      }
-      return workspaceIds;
-    },
-    onMutate: async (workspaceIds) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['workspaces'] });
-      
-      // Snapshot the previous value
-      const previousWorkspaces = queryClient.getQueryData(['workspaces']) as WorkspaceWithState[] | undefined;
-      
-      // Optimistically update
-      queryClient.setQueryData(['workspaces'], (old: WorkspaceWithState[] | undefined) => {
-        if (!old) return [];
-        // Reorder workspaces based on new order
-        const reordered = workspaceIds
-          .map((id) => old.find((w) => w.id === id))
-          .filter((w): w is WorkspaceWithState => w !== undefined);
-
-        // Add any workspaces not in the reorder list (shouldn't happen, but safety)
-        const missing = old.filter((w) => !workspaceIds.includes(w.id));
-
-        return [...reordered, ...missing];
-      });
-      
-      return { previousWorkspaces };
-    },
-    onError: (err, workspaceIds, context) => {
-      // Revert on error
-      if (context?.previousWorkspaces) {
-        queryClient.setQueryData(['workspaces'], context.previousWorkspaces);
-      }
-    },
-    onSettled: () => {
-      // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
-    },
-  });
-
-  // Reorder workspaces
-  const reorderWorkspaces = useCallback(
-    async (workspaceIds: string[]) => {
-      reorderWorkspacesMutation.mutate(workspaceIds);
-    },
-    [reorderWorkspacesMutation]
-  );
-
   const value: WorkspaceContextType = {
     workspaces,
     loadingWorkspaces,
@@ -237,7 +178,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     currentSlug,
     switchWorkspace,
     deleteWorkspace,
-    reorderWorkspaces,
   };
 
   return (

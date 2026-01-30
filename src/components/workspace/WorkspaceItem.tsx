@@ -3,7 +3,6 @@
 import { useState, useCallback, memo } from "react";
 import { Globe, Settings, MoreVertical } from "lucide-react";
 import { FiShare } from "react-icons/fi";
-import { useSortable } from "@dnd-kit/react/sortable";
 import {
   SidebarMenuSubItem,
   SidebarMenuButton,
@@ -34,7 +33,6 @@ import { cn } from "@/lib/utils";
 
 interface WorkspaceItemProps {
   workspace: WorkspaceWithState;
-  index?: number; // Required for sortable workspaces
   isActive: boolean;
   onWorkspaceClick: (workspaceSlug: string) => void;
   onSettingsClick: (workspace: WorkspaceWithState) => void;
@@ -43,7 +41,6 @@ interface WorkspaceItemProps {
 
 function WorkspaceItem({
   workspace,
-  index,
   isActive,
   onWorkspaceClick,
   onSettingsClick,
@@ -54,18 +51,6 @@ function WorkspaceItem({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { updateWorkspaceLocal } = useWorkspaceContext();
   const { search, setSearch, icons } = useIconPicker();
-
-  // Use sortable hook - always call it (React hook rules)
-  const isSortable = index !== undefined;
-  const {
-    ref,
-    isDragging,
-    isDropTarget,
-  } = useSortable({
-    id: workspace.id,
-    index: index ?? 0,
-    disabled: !isSortable,
-  });
 
   const handleMouseEnter = useCallback(() => setIsHovered(true), []);
   const handleMouseLeave = useCallback(() => setIsHovered(false), []);
@@ -154,24 +139,9 @@ function WorkspaceItem({
 
   return (
     <SidebarMenuSubItem
-      ref={ref}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      style={
-        isDragging
-          ? {
-            opacity: 0.5,
-            cursor: "pointer",
-          }
-          : {
-            cursor: "pointer",
-          }
-      }
-      className={
-        isDropTarget
-          ? "bg-sidebar-accent/50 rounded"
-          : undefined
-      }
+      style={{ cursor: "pointer" }}
     >
       <div className="relative w-full">
         <SidebarMenuButton
@@ -180,8 +150,7 @@ function WorkspaceItem({
           size="sm"
           className={cn(
             "group/workspace w-full cursor-pointer p-0",
-            isActive ? "bg-accent text-accent-foreground" : "",
-            isDragging ? "pointer-events-none" : ""
+            isActive ? "bg-accent text-accent-foreground" : ""
           )}
           style={{ cursor: "inherit" }}
         >

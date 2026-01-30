@@ -227,7 +227,6 @@ function WorkspaceSidebar({
                                 <WorkspaceItem
                                   workspace={currentWorkspace}
                                   isActive={false} // Don't highlight as "selected" context
-                                  index={undefined} // Disable drag-and-drop
                                   onWorkspaceClick={() => {
                                     // Navigate to root level of workspace (similar to breadcrumb)
                                     clearActiveFolder();
