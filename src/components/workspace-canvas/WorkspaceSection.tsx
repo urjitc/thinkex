@@ -421,8 +421,8 @@ export function WorkspaceSection({
               "relative min-h-full flex flex-col",
               showJsonView ? "h-full" : "",
             )}>
-              {/* Show skeleton when loading workspaces, resolving workspace ID, or loading workspace events */}
-              {loadingWorkspaces || (!currentWorkspaceId && currentSlug) || isLoadingWorkspace ? (
+              {/* Show skeleton until workspace content is loaded */}
+              {(!currentWorkspaceId && currentSlug) || (currentWorkspaceId && isLoadingWorkspace) ? (
                 <WorkspaceSkeleton />
               ) : (
                 /* Workspace content - assumes workspace exists (home route handles no-workspace state) */
