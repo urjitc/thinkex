@@ -5,13 +5,15 @@ import { useEffect, useMemo } from "react";
 import { useWorkspaceState } from "@/hooks/workspace/use-workspace-state";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
-import { CheckIcon, Loader2, X, Eye, FileText } from "lucide-react";
+import { X, Eye, FileText } from "lucide-react";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/lib/stores/ui-store";
+import { useNavigateToItem } from "@/hooks/ui/use-navigate-to-item";
 import { ToolUIErrorBoundary } from "@/components/tool-ui/shared";
 import { ToolUILoadingShell } from "@/components/assistant-ui/tool-ui-loading-shell";
+import { ToolUIErrorShell } from "@/components/assistant-ui/tool-ui-error-shell";
 import type { WorkspaceResult } from "@/lib/ai/tool-result-schemas";
 import { parseWorkspaceResult } from "@/lib/ai/tool-result-schemas";
 
@@ -27,12 +29,7 @@ const UpdateNoteReceipt = ({ args, result, status }: UpdateNoteReceiptProps) => 
   const setOpenModalItemId = useUIStore((s) => s.setOpenModalItemId);
   const workspaceId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const { state: workspaceState } = useWorkspaceState(workspaceId);
-
-  // Check if the card has appeared in the workspace with updated content
-  const isCardInWorkspace = useMemo(() => {
-    if (!result.itemId || !workspaceState?.items) return false;
-    return workspaceState.items.some((item: any) => item.id === result.itemId);
-  }, [result.itemId, workspaceState?.items]);
+  const navigateToItem = useNavigateToItem();
 
   // Get the card from workspace to show its title
   const card = useMemo(() => {
@@ -42,38 +39,8 @@ const UpdateNoteReceipt = ({ args, result, status }: UpdateNoteReceiptProps) => 
 
   const handleViewCard = () => {
     if (!result.itemId) return;
-    const element = document.getElementById(`item-${result.itemId}`);
-    if (element) {
-      // Find the scrollable container (the one with overflow-auto in WorkspaceSection)
-      // We traverse up until we find the container with overflow-auto
-      let container = element.parentElement;
-      while (container && container !== document.body) {
-        const style = window.getComputedStyle(container);
-        // Check for overflow-auto or overflow-scroll
-        if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-          break;
-        }
-        container = container.parentElement;
-      }
-
-      if (container && container !== document.body) {
-        // Calculate position to scroll to (center the element)
-        const elementRect = element.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        const relativeTop = elementRect.top - containerRect.top;
-
-        container.scrollTo({
-          top: container.scrollTop + relativeTop - (container.clientHeight / 2) + (element.clientHeight / 2),
-          behavior: 'smooth'
-        });
-      } else {
-        // Fallback if no specific container found
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-
-    // Open the modal
-    if (result.itemId) {
+    // Only open modal if item exists and navigation succeeds
+    if (navigateToItem(result.itemId)) {
       setOpenModalItemId(result.itemId);
     }
   };
@@ -82,20 +49,16 @@ const UpdateNoteReceipt = ({ args, result, status }: UpdateNoteReceiptProps) => 
     <div 
       className={cn(
         "my-1 flex w-full items-center justify-between overflow-hidden rounded-md border border-border/50 bg-card/50 text-card-foreground shadow-sm px-2 py-2",
-        status?.type === "complete" && isCardInWorkspace && "cursor-pointer hover:bg-accent transition-colors"
+        status?.type === "complete" && result.itemId && "cursor-pointer hover:bg-accent transition-colors"
       )}
-      onClick={status?.type === "complete" && isCardInWorkspace ? handleViewCard : undefined}
+      onClick={status?.type === "complete" && result.itemId ? handleViewCard : undefined}
     >
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <div className={cn(
           status?.type === "complete" ? "text-blue-400" : "text-red-400"
         )}>
           {status?.type === "complete" ? (
-            isCardInWorkspace ? (
-              <FileText className="size-4" />
-            ) : (
-              <Loader2 className="size-4 animate-spin" />
-            )
+            <FileText className="size-4" />
           ) : (
             <X className="size-4" />
           )}
@@ -106,7 +69,7 @@ const UpdateNoteReceipt = ({ args, result, status }: UpdateNoteReceiptProps) => 
           </span>
           {status?.type === "complete" && (
             <span className="text-[10px] text-muted-foreground">
-              {isCardInWorkspace ? "Card updated" : "Saving changes..."}
+              Note updated
             </span>
           )}
         </div>
@@ -159,23 +122,17 @@ export const UpdateNoteToolUI = makeAssistantToolUI<UpdateNoteArgs, WorkspaceRes
       content = <ToolUILoadingShell label="Updating note..." />;
     } else if (status.type === "complete" && parsed && !parsed.success) {
       content = (
-        <div className="my-2 flex w-full flex-col overflow-hidden rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
-          <div className="flex items-center gap-2">
-            <X className="size-4 text-red-600 dark:text-red-400" />
-            <p className="text-sm font-medium text-red-800 dark:text-red-200">Failed to update note</p>
-          </div>
-          {parsed.message && <p className="mt-2 text-xs text-red-700 dark:text-red-300">{parsed.message}</p>}
-        </div>
+        <ToolUIErrorShell
+          label="Failed to update note"
+          message={parsed.message}
+        />
       );
     } else if (status.type === "incomplete" && status.reason === "error") {
       content = (
-        <div className="my-2 flex w-full flex-col overflow-hidden rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
-          <div className="flex items-center gap-2">
-            <X className="size-4 text-red-600 dark:text-red-400" />
-            <p className="text-sm font-medium text-red-800 dark:text-red-200">Failed to update note</p>
-          </div>
-          {parsed?.message && <p className="mt-2 text-xs text-red-700 dark:text-red-300">{parsed.message}</p>}
-        </div>
+        <ToolUIErrorShell
+          label="Failed to update note"
+          message={parsed?.message}
+        />
       );
     }
 

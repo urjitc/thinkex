@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import MoveToDialog from "@/components/modals/MoveToDialog";
 import { ToolUILoadingShell } from "@/components/assistant-ui/tool-ui-loading-shell";
+import { ToolUIErrorShell } from "@/components/assistant-ui/tool-ui-error-shell";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
 
@@ -245,17 +246,10 @@ export const CreateFlashcardToolUI = makeAssistantToolUI<CreateFlashcardArgs, Fl
             content = <ToolUILoadingShell label="Generating flashcards..." />;
         } else if (status.type === "incomplete" && status.reason === "error") {
             content = (
-                <div className="my-2 flex w-full flex-col overflow-hidden rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
-                    <div className="flex items-center gap-2">
-                        <X className="size-4 text-red-600 dark:text-red-400" />
-                        <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                            Failed to create flashcards
-                        </p>
-                    </div>
-                    {parsed && !parsed.success && parsed.message && (
-                        <p className="mt-2 text-xs text-red-700 dark:text-red-300">{parsed.message}</p>
-                    )}
-                </div>
+                <ToolUIErrorShell
+                    label="Failed to create flashcards"
+                    message={parsed && !parsed.success ? parsed.message : undefined}
+                />
             );
         } else {
             logger.debug("❓ [CreateFlashcardTool] Rendering null - no result and status is not running");

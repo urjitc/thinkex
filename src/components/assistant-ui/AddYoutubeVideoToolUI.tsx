@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { makeAssistantToolUI } from "@assistant-ui/react";
-import { CheckIcon, X, Eye, Play } from "lucide-react";
+import { X, Eye, Play } from "lucide-react";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
-import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ToolUILoadingShell } from "@/components/assistant-ui/tool-ui-loading-shell";
+import { ToolUIErrorShell } from "@/components/assistant-ui/tool-ui-error-shell";
 import { useOptimisticToolUpdate } from "@/hooks/ai/use-optimistic-tool-update";
 import { useNavigateToItem } from "@/hooks/ui/use-navigate-to-item";
 import { ToolUIErrorBoundary } from "@/components/tool-ui/shared";
@@ -20,18 +20,12 @@ interface AddYoutubeVideoReceiptProps {
   args: AddYoutubeVideoArgs;
   result: WorkspaceResult;
   status: any;
-  workspaceName?: string;
-  workspaceIcon?: string | null;
-  workspaceColor?: string | null;
 }
 
 const AddYoutubeVideoReceipt = ({
   args,
   result,
   status,
-  workspaceName = "Workspace",
-  workspaceIcon,
-  workspaceColor,
 }: AddYoutubeVideoReceiptProps) => {
   const navigateToItem = useNavigateToItem();
 
@@ -50,7 +44,7 @@ const AddYoutubeVideoReceipt = ({
     >
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <div className={cn(
-          status?.type === "complete" ? "text-red-400" : "text-red-400"
+          status?.type === "complete" ? "text-red-500" : "text-red-400"
         )}>
           {status?.type === "complete" ? (
             <Play className="size-4" />
@@ -94,8 +88,6 @@ export const AddYoutubeVideoToolUI = makeAssistantToolUI<AddYoutubeVideoArgs, Wo
   toolName: "addYoutubeVideo",
   render: function AddYoutubeVideoToolUI({ args, result, status }) {
     const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
-    const workspaceContext = useWorkspaceContext();
-    const currentWorkspace = workspaceContext.workspaces.find((w) => w.id === workspaceId);
 
     useOptimisticToolUpdate(status, result, workspaceId);
 
@@ -119,24 +111,23 @@ export const AddYoutubeVideoToolUI = makeAssistantToolUI<AddYoutubeVideoArgs, Wo
           args={args}
           result={parsed}
           status={status}
-          workspaceName={currentWorkspace?.name || "Workspace"}
-          workspaceIcon={currentWorkspace?.icon}
-          workspaceColor={currentWorkspace?.color}
         />
       );
     } else if (status.type === "running") {
       content = <ToolUILoadingShell label="Adding YouTube video..." />;
+    } else if (status.type === "complete" && parsed && !parsed.success) {
+      content = (
+        <ToolUIErrorShell
+          label="Failed to add YouTube video"
+          message={parsed.message}
+        />
+      );
     } else if (status.type === "incomplete" && status.reason === "error") {
       content = (
-        <div className="my-2 flex w-full flex-col overflow-hidden rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
-          <div className="flex items-center gap-2">
-            <X className="size-4 text-red-600 dark:text-red-400" />
-            <p className="text-sm font-medium text-red-800 dark:text-red-200">Failed to add YouTube video</p>
-          </div>
-          {parsed && !parsed.success && parsed.message && (
-            <p className="mt-2 text-xs text-red-700 dark:text-red-300">{parsed.message}</p>
-          )}
-        </div>
+        <ToolUIErrorShell
+          label="Failed to add YouTube video"
+          message={parsed?.message}
+        />
       );
     }
 
