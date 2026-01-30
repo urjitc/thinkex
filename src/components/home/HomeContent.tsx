@@ -22,6 +22,7 @@ export function HomeContent() {
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const rippleIdRef = useRef(0);
+  const rippleTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   // Scroll tracking
   useEffect(() => {
@@ -50,6 +51,10 @@ export function HomeContent() {
 
   // Click ripple effect
   const handleClick = useCallback((e: React.MouseEvent) => {
+    // Skip ripple if clicking on interactive elements
+    const target = e.target as HTMLElement;
+    if (target.closest('button, a, input, textarea, [role="button"]')) return;
+
     const x = e.clientX / window.innerWidth;
     const y = e.clientY / window.innerHeight;
     const id = rippleIdRef.current++;
@@ -57,9 +62,19 @@ export function HomeContent() {
     setRipples(prev => [...prev, { id, x, y }]);
 
     // Remove ripple after animation completes (1.2s)
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setRipples(prev => prev.filter(r => r.id !== id));
+      rippleTimeoutsRef.current.delete(timeoutId);
     }, 1200);
+    rippleTimeoutsRef.current.add(timeoutId);
+  }, []);
+
+  // Cleanup ripple timeouts on unmount
+  useEffect(() => {
+    const timeouts = rippleTimeoutsRef.current;
+    return () => {
+      timeouts.forEach(clearTimeout);
+    };
   }, []);
 
   // Calculate glow intensity based on distance from hero center
@@ -125,6 +140,7 @@ export function HomeContent() {
             ripples={ripples}
             scrollY={scrollY}
             heroGlowIntensity={glowIntensity}
+            heroYPosition={centerY}
           />
         </div>
 

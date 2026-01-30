@@ -86,6 +86,7 @@ interface FloatingWorkspaceCardsProps {
     ripples?: Ripple[];
     scrollY?: number;
     heroGlowIntensity?: number;
+    heroYPosition?: number; // Hero Y position as fraction of viewport (0-1), default 0.45
 }
 
 export function FloatingWorkspaceCards({
@@ -97,6 +98,7 @@ export function FloatingWorkspaceCards({
     ripples = [],
     scrollY = 0,
     heroGlowIntensity = 0.5,
+    heroYPosition = 0.45,
 }: FloatingWorkspaceCardsProps) {
     const cards = includeExtraCards ? [...BASE_CARDS, ...EXTRA_CARDS] : BASE_CARDS;
 
@@ -212,7 +214,7 @@ export function FloatingWorkspaceCards({
     const mouseY = (mouseYAbsolute / containerHeight) * 100;
     const heroX = 50; // Hero center X
     // Hero Y also needs adjustment based on scroll
-    const heroYAbsolute = scrollY + (0.45 * viewportHeight); // 45% of viewport
+    const heroYAbsolute = scrollY + (heroYPosition * viewportHeight);
     const heroY = (heroYAbsolute / containerHeight) * 100;
 
     // Calculate scroll progress (0 at top, 1 at bottom) for fading effect
