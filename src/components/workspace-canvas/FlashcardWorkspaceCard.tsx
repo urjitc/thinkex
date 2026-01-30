@@ -83,7 +83,7 @@ const FlashcardSideContent = memo(function FlashcardSideContent({
         if (blocks && Array.isArray(blocks) && blocks.length > 0) {
             return blocks as Block[];
         }
-        return plainTextToBlocks(textFallback || "Click pencil icon to add content");
+        return plainTextToBlocks(textFallback || "Ask the AI or click the pencil icon to add flashcards");
     }, [blocks, textFallback]);
 
     // Freeze content while editing to prevent flicker

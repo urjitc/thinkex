@@ -7,9 +7,9 @@ import { z } from "zod";
 import { zodSchema } from "ai";
 import { logger } from "@/lib/utils/logger";
 import { quizWorker, workspaceWorker } from "@/lib/ai/workers";
-import { loadWorkspaceState } from "@/lib/workspace/state-loader";
 import type { WorkspaceToolContext } from "./workspace-tools";
 import type { QuizData } from "@/lib/workspace-state/types";
+import { loadStateForTool, fuzzyMatchItem, getAvailableItemsList } from "./tool-utils";
 
 /**
  * Create the createQuiz tool
@@ -130,7 +130,7 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
         // Avoid complex nullable types that can cause parsing issues during streaming
         inputSchema: zodSchema(
             z.object({
-                quizId: z.string().describe("The ID of the quiz to update"),
+                quizName: z.string().describe("The name of the quiz to update (will be matched using fuzzy search)"),
                 title: z.string().optional().describe("New title for the quiz. If not provided, the existing title will be preserved."),
                 topic: z.string().optional().describe("New topic for questions"),
                 contextContent: z.string().optional().describe("Content from newly selected cards in system context"),
@@ -141,7 +141,7 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
         execute: async (args: unknown) => {
             // Validate args using simplified schema to be more robust during streaming
             const updateQuizSchema = z.object({
-                quizId: z.string(),
+                quizName: z.string(),
                 title: z.string().optional(),
                 topic: z.string().optional(),
                 contextContent: z.string().optional(),
@@ -150,11 +150,11 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
             });
 
             const parsedArgs = updateQuizSchema.parse(args);
-            const quizId = parsedArgs.quizId;
+            const quizName = parsedArgs.quizName;
             const title = parsedArgs.title;
             const explicitTopic = parsedArgs.topic;
 
-            logger.debug("🎯 [UPDATE-QUIZ] Tool execution started:", { quizId, explicitTopic, title });
+            logger.debug("🎯 [UPDATE-QUIZ] Tool execution started:", { quizName, explicitTopic, title });
 
             if (!ctx.workspaceId) {
                 return {
@@ -163,17 +163,48 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
                 };
             }
 
-            // Validate required quizId
-            if (!quizId) {
+            // Validate required quizName
+            if (!quizName) {
                 return {
                     success: false,
-                    message: "Quiz ID is required. Please select a quiz card to update.",
+                    message: "Quiz name is required to identify which quiz to update.",
                 };
             }
 
-            // Handle title update separately if provided
-            if (title) {
-                try {
+            try {
+                // Load workspace state and fuzzy match the quiz by name
+                const accessResult = await loadStateForTool(ctx);
+                if (!accessResult.success) {
+                    return accessResult;
+                }
+
+                const { state } = accessResult;
+
+                // Fuzzy match the quiz by name
+                const quizItem = fuzzyMatchItem(state.items, quizName, "quiz");
+
+                if (!quizItem) {
+                    const availableQuizzes = getAvailableItemsList(state.items, "quiz");
+                    logger.warn("❌ [UPDATE-QUIZ] Quiz not found:", {
+                        searchedName: quizName,
+                        availableQuizzes,
+                    });
+                    return {
+                        success: false,
+                        message: `Could not find quiz "${quizName}". ${availableQuizzes ? `Available quizzes: ${availableQuizzes}` : 'No quizzes found in workspace.'}`,
+                    };
+                }
+
+                const quizId = quizItem.id;
+
+                logger.debug("🎯 [UPDATE-QUIZ] Found quiz via fuzzy match:", {
+                    searchedName: quizName,
+                    matchedName: quizItem.name,
+                    matchedId: quizId,
+                });
+
+                // Handle title update if provided
+                if (title) {
                     const titleUpdateResult = await workspaceWorker("update", {
                         workspaceId: ctx.workspaceId,
                         itemId: quizId,
@@ -185,29 +216,6 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
                     }
 
                     logger.debug("🎯 [UPDATE-QUIZ] Title updated successfully:", { newTitle: title });
-                } catch (error) {
-                    logger.error("❌ [UPDATE-QUIZ] Error updating title:", error);
-                    return {
-                        success: false,
-                        message: `Error updating quiz title: ${error instanceof Error ? error.message : String(error)}`,
-                    };
-                }
-            }
-
-            try {
-                // Load current workspace state to find the quiz
-                const state = await loadWorkspaceState(ctx.workspaceId);
-                const quizItem = state.items.find(item => item.id === quizId);
-
-                if (!quizItem || quizItem.type !== 'quiz') {
-                    logger.warn("❌ [UPDATE-QUIZ] Quiz not found:", {
-                        searchedId: quizId,
-                        availableIds: state.items.filter(i => i.type === 'quiz').map(i => i.id)
-                    });
-                    return {
-                        success: false,
-                        message: "Quiz not found. Please select a quiz card in the context drawer.",
-                    };
                 }
 
                 const currentQuizData = quizItem.data as QuizData;
@@ -252,19 +260,30 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
                 const sourceCardIds = parsedArgs?.sourceCardIds;
                 const sourceCardNames = parsedArgs?.sourceCardNames;
                 const topic = explicitTopic || quizItem.name;
+                const isBlankQuiz = existingQuestions.length === 0;
 
                 logger.debug("🎯 [UPDATE-QUIZ] Configuration:", {
                     topic,
                     hasContext: !!contextContent,
-                    sourceCards: sourceCardNames
+                    sourceCards: sourceCardNames,
+                    isBlankQuiz,
                 });
 
-                // If only title was provided (no topic/context), return success
-                if (!explicitTopic && !contextContent && !sourceCardIds) {
+                // For quizzes WITH existing questions: require explicit topic/context to add more
+                // For BLANK quizzes: always generate questions using the topic (even if just quiz name)
+                if (!isBlankQuiz && !explicitTopic && !contextContent && !sourceCardIds) {
                     return {
                         success: true,
                         quizId,
                         message: title ? `Updated quiz title to "${title}".` : "Quiz updated successfully.",
+                    };
+                }
+
+                // For blank quizzes with generic name and no topic, provide helpful error
+                if (isBlankQuiz && !explicitTopic && !contextContent && !sourceCardIds && quizItem.name === "Quiz") {
+                    return {
+                        success: false,
+                        message: "Please specify a topic for the quiz (e.g., 'make this quiz about linear algebra').",
                     };
                 }
 
@@ -291,12 +310,17 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
                     return workerResult;
                 }
 
+                const totalQuestions = existingQuestions.length + quizResult.questions.length;
+                const message = isBlankQuiz
+                    ? `Populated quiz with ${quizResult.questions.length} questions about "${topic}".`
+                    : `Added ${quizResult.questions.length} new questions to the quiz.`;
+
                 return {
                     ...workerResult,
                     quizId,
                     questionsAdded: quizResult.questions.length,
-                    totalQuestions: existingQuestions.length + quizResult.questions.length,
-                    message: `Added ${quizResult.questions.length} new questions to the quiz.`,
+                    totalQuestions,
+                    message,
                 };
             } catch (error) {
                 logger.error("❌ [UPDATE-QUIZ] Error:", error);
