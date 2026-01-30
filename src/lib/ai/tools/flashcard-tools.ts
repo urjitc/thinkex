@@ -2,38 +2,15 @@ import { z } from "zod";
 import { zodSchema } from "ai";
 import { logger } from "@/lib/utils/logger";
 import { workspaceWorker } from "@/lib/ai/workers";
-import { loadWorkspaceState } from "@/lib/workspace/state-loader";
 import type { WorkspaceToolContext } from "./workspace-tools";
+import { loadStateForTool, fuzzyMatchItem, getAvailableItemsList } from "./tool-utils";
 
 /**
  * Create the createFlashcards tool
  */
 export function createFlashcardsTool(ctx: WorkspaceToolContext) {
     return {
-        description: `Create a new flashcard deck in the workspace. Use this when the user asks to generate flashcards or study materials.
-
-Provide a structured object with:
-- title (optional): The title of the flashcard deck (defaults to "Flashcard Deck")
-- cards (required): An array of flashcard objects, each with:
-  - front: The question or term on the front of the card
-  - back: The answer or definition on the back of the card
-
-EXAMPLE:
-{
-  "title": "Biology Cell Structure",
-  "cards": [
-    {
-      "front": "What is the function of mitochondria?",
-      "back": "Mitochondria are the powerhouses of the cell. They produce ATP through cellular respiration."
-    },
-    {
-      "front": "Define photosynthesis",
-      "back": "Photosynthesis is the process by which plants convert light energy into chemical energy."
-    }
-  ]
-}
-
-Math is supported within the front/back content. Use $$...$$ for ALL math expressions (both inline and block). Single $ is for currency only.`,
+        description: "Create a new flashcard deck. Use $$...$$ for ALL math expressions.",
         inputSchema: zodSchema(
             z.object({
                 title: z.string().nullable().describe("The title of the flashcard deck (defaults to 'Flashcard Deck' if not provided)"),
@@ -96,30 +73,7 @@ Math is supported within the front/back content. Use $$...$$ for ALL math expres
  */
 export function createUpdateFlashcardsTool(ctx: WorkspaceToolContext) {
     return {
-        description: `Add more flashcards to an existing flashcard deck. Use this when the user wants to expand an existing deck with additional cards.
-
-Provide a structured object with:
-- deckName (required): The name or ID of the flashcard deck to update (will be matched using fuzzy search)
-- cards (required): An array of flashcard objects to add, each with:
-  - front: The question or term on the front of the card
-  - back: The answer or definition on the back of the card
-
-EXAMPLE:
-{
-  "deckName": "Biology Cell Structure",
-  "cards": [
-    {
-      "front": "What is the nucleus?",
-      "back": "The nucleus is the control center of the cell containing DNA."
-    },
-    {
-      "front": "What is the cytoplasm?",
-      "back": "The cytoplasm is the gel-like substance inside the cell membrane."
-    }
-  ]
-}
-
-Math is supported within the front/back content. Use $$...$$ for ALL math expressions (both inline and block). Single $ is for currency only.`,
+        description: "Add more flashcards to an existing flashcard deck. Use $$...$$ for ALL math expressions.",
         inputSchema: zodSchema(
             z.object({
                 deckName: z.string().describe("The name or ID of the flashcard deck to update"),
@@ -157,48 +111,19 @@ Math is supported within the front/back content. Use $$...$$ for ALL math expres
             }
 
             try {
-                // Security: Verify workspace ownership before loading state
-                if (!ctx.userId) {
-                    return { success: false, message: "User not authenticated" };
+                // Load workspace state (security is enforced by workspace-worker)
+                const accessResult = await loadStateForTool(ctx);
+                if (!accessResult.success) {
+                    return accessResult;
                 }
 
-                const { db, workspaces } = await import("@/lib/db/client");
-                const { eq } = await import("drizzle-orm");
+                const { state } = accessResult;
 
-                const workspace = await db
-                    .select({ userId: workspaces.userId })
-                    .from(workspaces)
-                    .where(eq(workspaces.id, ctx.workspaceId))
-                    .limit(1);
-
-                if (!workspace[0]) {
-                    return { success: false, message: "Workspace not found" };
-                }
-
-                if (workspace[0].userId !== ctx.userId) {
-                    logger.warn(`🔒 [UPDATE-FLASHCARDS] Access denied for user ${ctx.userId} to workspace ${ctx.workspaceId}`);
-                    return {
-                        success: false,
-                        message: "Access denied. You do not have permission to update flashcards in this workspace.",
-                    };
-                }
-
-                const state = await loadWorkspaceState(ctx.workspaceId);
-                const searchName = deckName.toLowerCase().trim();
-
-                const flashcardDecks = state.items.filter(item => item.type === 'flashcard');
-
-                // Fuzzy matching
-                let matchedDeck = flashcardDecks.find(item => item.name.toLowerCase().trim() === searchName);
-                if (!matchedDeck) {
-                    matchedDeck = flashcardDecks.find(item => item.name.toLowerCase().includes(searchName));
-                }
-                if (!matchedDeck) {
-                    matchedDeck = flashcardDecks.find(item => searchName.includes(item.name.toLowerCase().trim()));
-                }
+                // Fuzzy match the deck by name
+                const matchedDeck = fuzzyMatchItem(state.items, deckName, "flashcard");
 
                 if (!matchedDeck) {
-                    const availableDecks = flashcardDecks.map(d => `"${d.name}"`).join(", ");
+                    const availableDecks = getAvailableItemsList(state.items, "flashcard");
                     return {
                         success: false,
                         message: `Could not find flashcard deck "${deckName}". ${availableDecks ? `Available decks: ${availableDecks}` : 'No flashcard decks found in workspace.'}`,

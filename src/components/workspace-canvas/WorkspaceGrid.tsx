@@ -755,9 +755,6 @@ export function WorkspaceGrid({
   return (
     <div className={`${selectedCardIds.size > 0 ? 'pb-20' : ''} w-full workspace-grid-container`} ref={containerRef}>
       <style>{`
-        .react-grid-item {
-          transition: transform 100ms ease-out !important;
-        }
         .react-grid-item.react-grid-placeholder {
           transition: transform 100ms ease-out !important;
         }

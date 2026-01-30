@@ -9,7 +9,7 @@ import { createProcessUrlsTool } from "./process-urls";
 import { createExecuteCodeTool } from "./search-code";
 import {
     createNoteTool,
-    createUpdateCardTool,
+    createUpdateNoteTool,
     createDeleteCardTool,
     createSelectCardsTool,
     type WorkspaceToolContext,
@@ -57,7 +57,7 @@ export function createChatTools(config: ChatToolsConfig): Record<string, any> {
 
         // Workspace operations
         createNote: createNoteTool(ctx),
-        updateCard: createUpdateCardTool(ctx),
+        updateNote: createUpdateNoteTool(ctx),
 
         deleteCard: createDeleteCardTool(ctx),
         selectCards: createSelectCardsTool(ctx),

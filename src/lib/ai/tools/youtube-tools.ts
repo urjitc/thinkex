@@ -10,7 +10,7 @@ import type { WorkspaceToolContext } from "./workspace-tools";
  */
 export function createSearchYoutubeTool() {
     return tool({
-        description: "Search for videos on YouTube. Returns a list of videos with titles, descriptions, and IDs.",
+        description: "Search for YouTube videos.",
         inputSchema: zodSchema(
             z.object({
                 query: z.string().describe("The search query for YouTube videos"),
@@ -40,7 +40,7 @@ export function createSearchYoutubeTool() {
  */
 export function createAddYoutubeVideoTool(ctx: WorkspaceToolContext) {
     return tool({
-        description: "Add a specific YouTube video to the workspace as a card. Use this when the user wants to save a video.",
+        description: "Add a YouTube video to the workspace.",
         inputSchema: zodSchema(
             z.object({
                 videoId: z.string().describe("The YouTube Video ID (not the full URL)"),

@@ -16,7 +16,7 @@ import type { QuizData } from "@/lib/workspace-state/types";
  */
 export function createQuizTool(ctx: WorkspaceToolContext) {
     return {
-        description: "Create an interactive quiz in the workspace. Generates multiple-choice and true/false questions. If cards are selected in the context drawer (visible in the 'CARDS IN CONTEXT DRAWER' section of your system context), extract their content and pass it as 'contextContent'. If no cards are selected, generate questions from general knowledge about the topic. Creates a quiz card with 5 questions. IMPORTANT: Extract the topic from the user's message and pass it as 'topic'. If cards are selected, extract their content from the system context and pass as 'contextContent' along with 'sourceCardIds' and 'sourceCardNames'.",
+        description: "Create an interactive quiz. Extract topic from user message. Use selected cards as context if available.",
         // Simplified schema to be more robust during streaming
         // Avoid complex nullable types that can cause parsing issues during streaming
         inputSchema: zodSchema(
@@ -25,7 +25,6 @@ export function createQuizTool(ctx: WorkspaceToolContext) {
                 contextContent: z.string().optional().describe("Content from selected cards in system context if available"),
                 sourceCardIds: z.array(z.string()).optional().describe("IDs of source cards"),
                 sourceCardNames: z.array(z.string()).optional().describe("Names of source cards"),
-                difficulty: z.enum(["easy", "medium", "hard"]).optional().describe("Difficulty level"),
             })
         ),
         execute: async (args: unknown) => {
@@ -35,7 +34,6 @@ export function createQuizTool(ctx: WorkspaceToolContext) {
                 contextContent: z.string().optional(),
                 sourceCardIds: z.array(z.string()).optional(),
                 sourceCardNames: z.array(z.string()).optional(),
-                difficulty: z.enum(["easy", "medium", "hard"]).optional().default("medium"),
             });
 
             const parsedArgs = createQuizSchema.parse(args);
@@ -43,8 +41,7 @@ export function createQuizTool(ctx: WorkspaceToolContext) {
             const contextContent = parsedArgs.contextContent;
             const sourceCardIds = parsedArgs.sourceCardIds;
             const sourceCardNames = parsedArgs.sourceCardNames;
-            const difficulty = parsedArgs.difficulty || "medium";
-            logger.debug("🎯 [CREATE-QUIZ] Tool execution started:", { topic, hasContext: !!contextContent, difficulty });
+            logger.debug("🎯 [CREATE-QUIZ] Tool execution started:", { topic, hasContext: !!contextContent });
 
             if (!ctx.workspaceId) {
                 return {
@@ -74,7 +71,6 @@ export function createQuizTool(ctx: WorkspaceToolContext) {
                 const quizResult = await quizWorker({
                     topic: topic || undefined,
                     contextContent,
-                    difficulty,
                     questionCount: 5,
                     sourceCardIds,
                     sourceCardNames,
@@ -92,7 +88,6 @@ export function createQuizTool(ctx: WorkspaceToolContext) {
                     itemType: "quiz",
                     quizData: {
                         questions: quizResult.questions,
-                        difficulty,
                         sourceCardIds,
                         sourceCardNames,
                     },
@@ -109,7 +104,6 @@ export function createQuizTool(ctx: WorkspaceToolContext) {
                     quizId: workerResult.itemId,
                     title: quizResult.title,
                     questionCount: quizResult.questions.length,
-                    difficulty,
                     isContextBased: !!contextContent,
                     message: `Created quiz "${quizResult.title}" with ${quizResult.questions.length} questions.`,
                     event: workerResult.event,
@@ -131,12 +125,13 @@ export function createQuizTool(ctx: WorkspaceToolContext) {
  */
 export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
     return {
-        description: "Add more questions to an existing quiz. This tool can generate questions based on: 1) The user's performance history (weak areas), 2) A new topic the user specifies, 3) New selected cards (extract from 'CARDS IN CONTEXT DRAWER' in system context), or 4) General knowledge continuation. IMPORTANT: If new cards are selected, extract their content from system context and pass as 'contextContent' with 'sourceCardIds' and 'sourceCardNames'. If user specifies a new topic, pass it as 'topic'.",
+        description: "Update quiz title and/or add more questions. Can use new topic, selected cards, or general knowledge.",
         // Simplified schema to be more robust during streaming
         // Avoid complex nullable types that can cause parsing issues during streaming
         inputSchema: zodSchema(
             z.object({
                 quizId: z.string().describe("The ID of the quiz to update"),
+                title: z.string().optional().describe("New title for the quiz. If not provided, the existing title will be preserved."),
                 topic: z.string().optional().describe("New topic for questions"),
                 contextContent: z.string().optional().describe("Content from newly selected cards in system context"),
                 sourceCardIds: z.array(z.string()).optional().describe("IDs of source cards"),
@@ -147,6 +142,7 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
             // Validate args using simplified schema to be more robust during streaming
             const updateQuizSchema = z.object({
                 quizId: z.string(),
+                title: z.string().optional(),
                 topic: z.string().optional(),
                 contextContent: z.string().optional(),
                 sourceCardIds: z.array(z.string()).optional(),
@@ -155,9 +151,10 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
 
             const parsedArgs = updateQuizSchema.parse(args);
             const quizId = parsedArgs.quizId;
+            const title = parsedArgs.title;
             const explicitTopic = parsedArgs.topic;
 
-            logger.debug("🎯 [UPDATE-QUIZ] Tool execution started:", { quizId, explicitTopic });
+            logger.debug("🎯 [UPDATE-QUIZ] Tool execution started:", { quizId, explicitTopic, title });
 
             if (!ctx.workspaceId) {
                 return {
@@ -172,6 +169,29 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
                     success: false,
                     message: "Quiz ID is required. Please select a quiz card to update.",
                 };
+            }
+
+            // Handle title update separately if provided
+            if (title) {
+                try {
+                    const titleUpdateResult = await workspaceWorker("update", {
+                        workspaceId: ctx.workspaceId,
+                        itemId: quizId,
+                        title: title,
+                    });
+
+                    if (!titleUpdateResult.success) {
+                        return titleUpdateResult;
+                    }
+
+                    logger.debug("🎯 [UPDATE-QUIZ] Title updated successfully:", { newTitle: title });
+                } catch (error) {
+                    logger.error("❌ [UPDATE-QUIZ] Error updating title:", error);
+                    return {
+                        success: false,
+                        message: `Error updating quiz title: ${error instanceof Error ? error.message : String(error)}`,
+                    };
+                }
             }
 
             try {
@@ -239,11 +259,19 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
                     sourceCards: sourceCardNames
                 });
 
+                // If only title was provided (no topic/context), return success
+                if (!explicitTopic && !contextContent && !sourceCardIds) {
+                    return {
+                        success: true,
+                        quizId,
+                        message: title ? `Updated quiz title to "${title}".` : "Quiz updated successfully.",
+                    };
+                }
+
                 // Generate new questions
                 const quizResult = await quizWorker({
                     topic,
                     contextContent,
-                    difficulty: currentQuizData.difficulty || "medium",
                     questionCount: 5,
                     existingQuestions,
                     performanceTelemetry,

@@ -15,15 +15,15 @@ import { ToolUILoadingShell } from "@/components/assistant-ui/tool-ui-loading-sh
 import type { WorkspaceResult } from "@/lib/ai/tool-result-schemas";
 import { parseWorkspaceResult } from "@/lib/ai/tool-result-schemas";
 
-type UpdateCardArgs = { id: string; markdown?: string; content?: string };
+type UpdateNoteArgs = { noteName: string; content: string };
 
-interface UpdateCardReceiptProps {
-  args: UpdateCardArgs;
+interface UpdateNoteReceiptProps {
+  args: UpdateNoteArgs;
   result: WorkspaceResult;
   status: any;
 }
 
-const UpdateCardReceipt = ({ args, result, status }: UpdateCardReceiptProps) => {
+const UpdateNoteReceipt = ({ args, result, status }: UpdateNoteReceiptProps) => {
   const setOpenModalItemId = useUIStore((s) => s.setOpenModalItemId);
   const workspaceId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const { state: workspaceState } = useWorkspaceState(workspaceId);
@@ -132,9 +132,9 @@ const UpdateCardReceipt = ({ args, result, status }: UpdateCardReceiptProps) => 
   );
 };
 
-export const UpdateCardToolUI = makeAssistantToolUI<UpdateCardArgs, WorkspaceResult>({
-  toolName: "updateCard",
-  render: function UpdateCardUI({ args, result, status }) {
+export const UpdateNoteToolUI = makeAssistantToolUI<UpdateNoteArgs, WorkspaceResult>({
+  toolName: "updateNote",
+  render: function UpdateNoteUI({ args, result, status }) {
     const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
 
     useOptimisticToolUpdate(status, result as any, workspaceId);
@@ -146,7 +146,7 @@ export const UpdateCardToolUI = makeAssistantToolUI<UpdateCardArgs, WorkspaceRes
             parsed = parseWorkspaceResult(result);
         } catch (err) {
             // Log the error but don't throw - we'll show error state below
-            console.error("📝 [UpdateCardTool] Failed to parse result:", err);
+            console.error("📝 [UpdateNoteTool] Failed to parse result:", err);
             parsed = null;
         }
     }
@@ -154,15 +154,15 @@ export const UpdateCardToolUI = makeAssistantToolUI<UpdateCardArgs, WorkspaceRes
     let content: ReactNode = null;
 
     if (parsed?.success) {
-      content = <UpdateCardReceipt args={args} result={parsed} status={status} />;
+      content = <UpdateNoteReceipt args={args} result={parsed} status={status} />;
     } else if (status.type === "running") {
-      content = <ToolUILoadingShell label="Updating card..." />;
+      content = <ToolUILoadingShell label="Updating note..." />;
     } else if (status.type === "complete" && parsed && !parsed.success) {
       content = (
         <div className="my-2 flex w-full flex-col overflow-hidden rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
           <div className="flex items-center gap-2">
             <X className="size-4 text-red-600 dark:text-red-400" />
-            <p className="text-sm font-medium text-red-800 dark:text-red-200">Failed to update card</p>
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">Failed to update note</p>
           </div>
           {parsed.message && <p className="mt-2 text-xs text-red-700 dark:text-red-300">{parsed.message}</p>}
         </div>
@@ -172,7 +172,7 @@ export const UpdateCardToolUI = makeAssistantToolUI<UpdateCardArgs, WorkspaceRes
         <div className="my-2 flex w-full flex-col overflow-hidden rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
           <div className="flex items-center gap-2">
             <X className="size-4 text-red-600 dark:text-red-400" />
-            <p className="text-sm font-medium text-red-800 dark:text-red-200">Failed to update card</p>
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">Failed to update note</p>
           </div>
           {parsed?.message && <p className="mt-2 text-xs text-red-700 dark:text-red-300">{parsed.message}</p>}
         </div>
@@ -180,7 +180,7 @@ export const UpdateCardToolUI = makeAssistantToolUI<UpdateCardArgs, WorkspaceRes
     }
 
     return (
-      <ToolUIErrorBoundary componentName="UpdateCard">
+      <ToolUIErrorBoundary componentName="UpdateNote">
         {content}
       </ToolUIErrorBoundary>
     );

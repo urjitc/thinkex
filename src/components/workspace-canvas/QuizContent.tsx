@@ -204,13 +204,6 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
         return answeredQuestions.filter(a => a.isCorrect).length;
     }, [answeredQuestions]);
 
-    // Difficulty badge colors
-    const difficultyColors = {
-        easy: "bg-green-500/20 text-green-400 border-green-500/30",
-        medium: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-        hard: "bg-red-500/20 text-red-400 border-red-500/30",
-    };
-
     // Prevent focus stealing from chat input
     const preventFocusSteal = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -218,8 +211,77 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
 
     if (!currentQuestion && !showResults) {
         return (
-            <div className="flex items-center justify-center h-full text-white/50">
-                No questions in this quiz
+            <div className="flex flex-col h-full">
+                {/* Question Area Skeleton */}
+                <div className={cn(
+                    "flex-1 p-2",
+                    "overflow-y-auto",
+                    "workspace-card-readonly-editor"
+                )}>
+                    <div className="mb-6">
+                        <div className="text-sm text-white/40 prose prose-invert prose-sm max-w-none">
+                            No questions yet. Ask the AI to add quiz questions to get started.
+                        </div>
+                    </div>
+
+                    {/* Options Skeleton */}
+                    <div className="space-y-2">
+                        {[0, 1, 2, 3].map((index) => (
+                            <div
+                                key={index}
+                                className="w-full p-3 text-left rounded-lg border bg-white/5 border-white/10 opacity-50"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium border bg-white/10 border-white/20 text-white/60">
+                                        {String.fromCharCode(65 + index)}
+                                    </span>
+                                    <div className="text-sm text-white/40 flex-1">
+                                        Option {String.fromCharCode(65 + index)}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Hint Area Skeleton */}
+                    <div className="mt-4 flex items-center justify-between">
+                        <div className="flex-1 mx-4">
+                            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                <div className="h-full bg-white/20 rounded-full" style={{ width: '0%' }} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer Skeleton */}
+                <div className="flex-shrink-0">
+                    <div className="flex items-center w-full px-2">
+                        {/* Left: Restart Button Skeleton */}
+                        <div className="flex-1 flex items-center justify-start">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg text-sm text-white/20 cursor-not-allowed">
+                                <RotateCcw className="w-4 h-4 rotate-180" />
+                            </div>
+                        </div>
+
+                        {/* Center: Navigation Skeleton */}
+                        <div className="flex items-center gap-1 justify-center">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg text-sm text-white/20 cursor-not-allowed">
+                                <ChevronLeft className="w-4 h-4" />
+                            </div>
+                            <span className="text-xs text-white/40 px-1">0 / 0</span>
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg text-sm text-white/20 cursor-not-allowed">
+                                <ChevronRight className="w-4 h-4" />
+                            </div>
+                        </div>
+
+                        {/* Right: Check Button Skeleton */}
+                        <div className="flex-1 flex items-center justify-end">
+                            <div className="px-4 py-2 rounded-lg text-sm font-medium bg-white/10 text-white/20 cursor-not-allowed">
+                                Check
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -342,15 +404,7 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
                             />
                         </div>
                     </div>
-
-                    {/* Right: Difficulty */}
-                    <span className={cn(
-                        "text-xs px-2 py-0.5 rounded-full border capitalize",
-                        difficultyColors[quizData.difficulty]
-                    )}>
-                        {quizData.difficulty}
-                    </span>
-                </div>
+            </div>
 
                 {/* Explanation */}
                 {isSubmitted && (

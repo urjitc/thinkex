@@ -12,7 +12,7 @@ export type QuizWorkerParams = {
     contextContent?: string;       // Aggregated content from selected cards
     sourceCardIds?: string[];
     sourceCardNames?: string[];
-    difficulty: "easy" | "medium" | "hard";
+    difficulty?: "easy" | "medium" | "hard";
     questionCount?: number;        // Defaults to 5
     questionTypes?: ("multiple_choice" | "true_false")[];
     existingQuestions?: Array<{
@@ -92,7 +92,7 @@ export async function quizWorker(params: QuizWorkerParams): Promise<{ questions:
 
         // Build the prompt based on whether we have context or topic
         let prompt: string;
-        const adaptiveInstructions = buildAdaptiveInstructions(params.difficulty, params.performanceTelemetry);
+        const adaptiveInstructions = buildAdaptiveInstructions(params.difficulty || "medium", params.performanceTelemetry);
 
         if (params.contextContent) {
             // Context-based quiz generation
