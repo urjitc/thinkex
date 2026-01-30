@@ -2,6 +2,7 @@
 
 import { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowUp, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,7 @@ const baseText = "Create a workspace for ";
 
 export function HomePromptInput() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [value, setValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -102,6 +104,9 @@ export function HomePromptInput() {
         throw new Error(err.error || "Failed to create workspace");
       }
       const { workspace } = (await createRes.json()) as { workspace: { slug: string } };
+
+      // Invalidate workspaces cache so the new workspace is available immediately
+      await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
 
       // Reset typing animation by changing key
       typingKeyRef.current += 1;

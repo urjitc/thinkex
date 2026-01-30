@@ -8,12 +8,14 @@ import { FloatingWorkspaceCards } from "@/components/landing/FloatingWorkspaceCa
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { FolderPlus } from "lucide-react";
 
 export function HomeContent() {
   const { data: session } = useSession();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleCreateBlankWorkspace = async () => {
     try {
@@ -31,6 +33,9 @@ export function HomeContent() {
         throw new Error(err.error || "Failed to create workspace");
       }
       const { workspace } = (await createRes.json()) as { workspace: { slug: string } };
+      
+      // Invalidate workspaces cache so the new workspace is available immediately
+      await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
       
       router.push(`/workspace/${workspace.slug}`);
     } catch (err) {
