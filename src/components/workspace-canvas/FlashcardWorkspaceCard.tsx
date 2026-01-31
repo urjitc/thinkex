@@ -128,7 +128,7 @@ const FlashcardSideContent = memo(function FlashcardSideContent({
                 WebkitFontSmoothing: 'antialiased',
                 MozOsxFontSmoothing: 'grayscale' as any,
             }}
-            >
+        >
             <div className={`flex flex-col items-center min-w-0 w-full ${isScrollLocked ? 'justify-center min-h-full' : ''}`}>
                 <div className="w-full max-w-full min-w-0">
                     {displayContent.map((block, index) => (
@@ -230,6 +230,29 @@ export function FlashcardWorkspaceCard({
     // Tracking for flip debounce
     const lastFlipTimeRef = useRef<number>(0);
 
+    // Track minimal local drag detection (same pattern as WorkspaceCard)
+    const mouseDownRef = useRef<{ x: number; y: number } | null>(null);
+    const hasMovedRef = useRef<boolean>(false);
+    const listenersActiveRef = useRef<boolean>(false);
+    const DRAG_THRESHOLD = 10; // pixels - movement beyond this prevents flip
+
+    // OPTIMIZED: Store handlers in refs so they can be added/removed dynamically
+    const handlersRef = useRef<{
+        handleGlobalMouseMove: ((e: MouseEvent) => void) | null;
+        handleGlobalMouseUp: (() => void) | null;
+    }>({ handleGlobalMouseMove: null, handleGlobalMouseUp: null });
+
+    // Cleanup listeners on unmount
+    useEffect(() => {
+        return () => {
+            if (listenersActiveRef.current && handlersRef.current.handleGlobalMouseMove && handlersRef.current.handleGlobalMouseUp) {
+                document.removeEventListener('mousemove', handlersRef.current.handleGlobalMouseMove);
+                document.removeEventListener('mouseup', handlersRef.current.handleGlobalMouseUp);
+                listenersActiveRef.current = false;
+            }
+        };
+    }, []);
+
     // Check if this card is currently being edited in the modal
     const isEditingInModal = useUIStore((state) => state.openPanelIds.includes(item.id));
 
@@ -268,6 +291,75 @@ export function FlashcardWorkspaceCard({
     }, [startFlipAnimation]);
 
 
+    // Handle mouse down - track initial position for drag detection
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        // Don't track if clicking on interactive elements
+        const target = e.target as HTMLElement;
+        if (
+            target.closest('button') ||
+            target.closest('.flashcard-control-button') ||
+            target.closest('[role="menuitem"]')
+        ) {
+            return;
+        }
+
+        // Check if clicking inside a text selection area
+        const selection = window.getSelection();
+        if (selection && selection.toString().length > 0) {
+            e.stopPropagation();
+            return;
+        }
+
+        mouseDownRef.current = { x: e.clientX, y: e.clientY };
+        hasMovedRef.current = false;
+
+        // Only add global listeners when mouseDown occurs
+        if (!listenersActiveRef.current) {
+            const handleGlobalMouseMove = (e: MouseEvent) => {
+                if (!mouseDownRef.current) return;
+
+                // Calculate movement delta
+                const deltaX = Math.abs(e.clientX - mouseDownRef.current.x);
+                const deltaY = Math.abs(e.clientY - mouseDownRef.current.y);
+
+                if (hasMovedRef.current) {
+                    return;
+                }
+
+                // Check if user is selecting text
+                const selection = window.getSelection();
+                if (selection && selection.toString().length > 0) {
+                    mouseDownRef.current = null;
+                    hasMovedRef.current = false;
+                    return;
+                }
+
+                // Check if movement exceeds threshold (drag detected)
+                if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
+                    hasMovedRef.current = true;
+                }
+            };
+
+            const handleGlobalMouseUp = () => {
+                mouseDownRef.current = null;
+                // Clean up listeners
+                if (listenersActiveRef.current && handlersRef.current.handleGlobalMouseMove && handlersRef.current.handleGlobalMouseUp) {
+                    document.removeEventListener('mousemove', handlersRef.current.handleGlobalMouseMove);
+                    document.removeEventListener('mouseup', handlersRef.current.handleGlobalMouseUp);
+                    listenersActiveRef.current = false;
+                    handlersRef.current.handleGlobalMouseMove = null;
+                    handlersRef.current.handleGlobalMouseUp = null;
+                }
+            };
+
+            handlersRef.current.handleGlobalMouseMove = handleGlobalMouseMove;
+            handlersRef.current.handleGlobalMouseUp = handleGlobalMouseUp;
+            document.addEventListener('mousemove', handleGlobalMouseMove);
+            document.addEventListener('mouseup', handleGlobalMouseUp);
+            listenersActiveRef.current = true;
+        }
+    }, [DRAG_THRESHOLD]);
+
     const handleClick = useCallback((e: React.MouseEvent) => {
         // If unlocked, we are in "content mode" - allow text selection/scrolling, disable flip
         if (!isScrollLocked) return;
@@ -283,8 +375,17 @@ export function FlashcardWorkspaceCard({
             return;
         }
 
-        // With RGL v2, click events only fire for actual clicks (not drags)
-        // so we can safely flip without distance checking
+        // Prevent flipping if user was dragging
+        const wasDragging = hasMovedRef.current;
+        hasMovedRef.current = false; // Reset immediately after checking
+
+        if (wasDragging) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+
+        // Safe to flip - user clicked without dragging
         handleFlip();
     }, [handleFlip, isScrollLocked, onToggleSelection, item.id]);
 
@@ -324,6 +425,7 @@ export function FlashcardWorkspaceCard({
                     style={{
                         transition: 'box-shadow 150ms ease-out',
                     }}
+                    onMouseDown={handleMouseDown}
                     onClick={handleClick}
                 >
                     {/* Floating Controls */}
