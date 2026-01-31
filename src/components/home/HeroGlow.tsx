@@ -32,16 +32,16 @@ export function HeroGlow() {
 
     return (
         <>
-            {/* Hero glow - intensifies on mouse approach, slight purple hue */}
+            {/* Hero glow - intensifies on mouse approach, subtle purple hue */}
             <div
                 className="absolute -inset-20 rounded-3xl pointer-events-none transition-opacity duration-300"
                 style={{
                     background: `radial-gradient(ellipse at center,
-            rgba(156, 146, 250, ${0.95 + glowIntensity * 0.05}) 0%,
-            rgba(167, 139, 250, ${0.8 + glowIntensity * 0.1}) 35%,
-            rgba(140, 130, 220, 0.12) 80%,
-            rgba(130, 120, 200, 0.05) 100%)`,
-                    filter: `blur(${35 + glowIntensity * 25}px)`,
+            rgba(156, 146, 250, ${0.65 + glowIntensity * 0.10}) 0%,
+            rgba(167, 139, 250, ${0.55 + glowIntensity * 0.10}) 35%,
+            rgba(140, 130, 220, 0.14) 80%,
+            rgba(130, 120, 200, 0.06) 100%)`,
+                    filter: `blur(${32 + glowIntensity * 18}px)`,
                     opacity: 1,
                     zIndex: 0,
                 }}
