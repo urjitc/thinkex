@@ -90,7 +90,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
     const prompt = value.trim();
     if (!prompt || createFromPrompt.isLoading) return;
 
-    await createFromPrompt.mutate(prompt, {
+    createFromPrompt.mutate(prompt, {
       template: "getting_started", // Auto-include sample content (quiz/flashcards) for home prompt (magic feeling)
       onSuccess: (workspace) => {
         // Reset typing animation by changing key
