@@ -29,35 +29,13 @@ export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
     },
   },
   (() => {
-    const sampleColors = generateDistinctColors(4);
+    const sampleColors = generateDistinctColors(3);
     return {
       name: "Getting Started",
       description: "Start with sample content",
       template: "getting_started",
       initialState: {
         items: [
-          {
-            id: "sample-quiz-1",
-            type: "quiz",
-            name: "Quiz",
-            subtitle: "",
-            data: {
-              questions: []
-            },
-            color: sampleColors[0],
-            layout: { x: 0, y: 0, w: 2, h: 13 },
-          },
-          {
-            id: "sample-flashcard-1",
-            type: "flashcard",
-            name: "Flashcards",
-            subtitle: "",
-            data: {
-              cards: []
-            },
-            color: sampleColors[1],
-            layout: { x: 2, y: 0, w: 2, h: 7 },
-          },
           {
             id: "sample-note-1",
             type: "note",
@@ -75,22 +53,35 @@ export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
               ],
               field1: ""
             },
-            color: sampleColors[2],
-            layout: { x: 2, y: 7, w: 1, h: 4 },
+            color: sampleColors[0],
+            layout: { x: 0, y: 0, w: 4, h: 9 },
           },
           {
-            id: "sample-note-2",
-            type: "note",
-            name: "Note",
+            id: "sample-quiz-1",
+            type: "quiz",
+            name: "Quiz",
             subtitle: "",
-            data: { field1: "" },
-            color: sampleColors[3],
-            layout: { x: 3, y: 7, w: 1, h: 4 },
+            data: {
+              questions: []
+            },
+            color: sampleColors[1],
+            layout: { x: 0, y: 9, w: 2, h: 13 },
+          },
+          {
+            id: "sample-flashcard-1",
+            type: "flashcard",
+            name: "Flashcards",
+            subtitle: "",
+            data: {
+              cards: []
+            },
+            color: sampleColors[2],
+            layout: { x: 2, y: 9, w: 2, h: 9 },
           }
         ],
         globalTitle: "",
         globalDescription: "",
-        itemsCreated: 4,
+        itemsCreated: 3,
       },
     };
   })(),
