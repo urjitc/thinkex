@@ -73,7 +73,7 @@ export async function workspaceWorker(
         content?: string; // For notes
         itemId?: string;
 
-        itemType?: "note" | "flashcard" | "quiz" | "youtube"; // Defaults to "note" if undefined
+        itemType?: "note" | "flashcard" | "quiz" | "youtube" | "image"; // Defaults to "note" if undefined
         flashcardData?: {
             cards?: { front: string; back: string }[]; // For creating flashcards
             cardsToAdd?: { front: string; back: string }[]; // For updating flashcards (appending)
@@ -82,6 +82,11 @@ export async function workspaceWorker(
         questionsToAdd?: QuizQuestion[]; // For updating quizzes (appending questions)
         youtubeData?: {
             url: string; // For creating youtube cards
+        };
+        imageData?: {
+            url: string;
+            altText?: string;
+            caption?: string;
         };
         // Optional: deep research metadata to attach to a note
         deepResearchData?: {
@@ -180,6 +185,19 @@ export async function workspaceWorker(
                     itemData = {
                         url: params.youtubeData.url
                     };
+                } else if (itemType === "image") {
+                    // Image type
+                    if (!params.imageData || !params.imageData.url) {
+                        throw new Error("Image data required for image card creation");
+                    }
+                    itemData = {
+                        url: params.imageData.url, // Main URL
+                        // Store alt/caption in a flexible way if types allow, 
+                        // or just rely on Item name for title/caption.
+                        // based on NoteData structure, 'data' is basically any object.
+                        altText: params.imageData.altText,
+                        caption: params.imageData.caption
+                    };
                 } else if (itemType === "quiz") {
                     // Quiz type
                     if (!params.quizData) {
@@ -219,7 +237,7 @@ export async function workspaceWorker(
                 const item: Item = {
                     id: itemId,
                     type: itemType,
-                    name: params.title || (itemType === "youtube" ? "YouTube Video" : itemType === "quiz" ? "New Quiz" : itemType === "flashcard" ? "New Flashcard Deck" : "New Note"),
+                    name: params.title || (itemType === "youtube" ? "YouTube Video" : itemType === "image" ? "Image" : itemType === "quiz" ? "New Quiz" : itemType === "flashcard" ? "New Flashcard Deck" : "New Note"),
                     subtitle: "",
                     data: itemData,
                     color: getRandomCardColor(),
