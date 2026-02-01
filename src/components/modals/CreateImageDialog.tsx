@@ -13,7 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ImageIcon, Loader2 } from "lucide-react";
+import { ImageIcon, Loader2, UploadCloud } from "lucide-react";
+import { useDropzone } from "react-dropzone";
+import { cn } from "@/lib/utils";
 
 interface CreateImageDialogProps {
     open: boolean;
@@ -78,6 +80,43 @@ export function CreateImageDialog({
         }
     }, [open]);
 
+    // Shared upload function
+    const uploadFile = useCallback(async (file: File) => {
+        setIsUploading(true);
+        const toastId = toast.loading("Uploading image...");
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch('/api/upload-file', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to upload image');
+            }
+
+            const data = await response.json();
+
+            setUrl(data.url);
+            if (!name) {
+                // Use filename without extension as default name
+                const simpleName = file.name.split('.').slice(0, -1).join('.') || "Image";
+                setName(simpleName);
+            }
+
+            toast.success("Image uploaded successfully");
+        } catch (error) {
+            console.error("Upload failed:", error);
+            toast.error("Failed to upload image");
+        } finally {
+            setIsUploading(false);
+            toast.dismiss(toastId);
+        }
+    }, [name]);
+
     // Handle paste event to capture image data
     const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
         const items = e.clipboardData.items;
@@ -94,41 +133,24 @@ export function CreateImageDialog({
         if (!imageFile) return;
 
         // If we found an image, upload it
-        e.preventDefault(); // Prevent pasting the "file name" text if any
-        setIsUploading(true);
-        const toastId = toast.loading("Uploading pasted image...");
+        e.preventDefault();
+        await uploadFile(imageFile);
+    }, [uploadFile]);
 
-        try {
-            const formData = new FormData();
-            formData.append('file', imageFile);
-
-            const response = await fetch('/api/upload-file', {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to upload image');
-            }
-
-            const data = await response.json();
-
-            setUrl(data.url);
-            // Optionally auto-set name if empty
-            if (!name) {
-                // Determine a nice name, e.g. "Pasted Image" or filename if available
-                setName("Pasted Image");
-            }
-
-            toast.success("Image uploaded successfully");
-        } catch (error) {
-            console.error("Paste upload failed:", error);
-            toast.error("Failed to upload pasted image");
-        } finally {
-            setIsUploading(false);
-            toast.dismiss(toastId);
+    const onDrop = useCallback((acceptedFiles: File[]) => {
+        if (acceptedFiles.length > 0) {
+            uploadFile(acceptedFiles[0]);
         }
-    }, [name]);
+    }, [uploadFile]);
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: {
+            'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp']
+        },
+        maxFiles: 1,
+        disabled: isUploading
+    });
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -139,11 +161,43 @@ export function CreateImageDialog({
                         Add Image
                     </DialogTitle>
                     <DialogDescription>
-                        Enter an image URL to add it to your workspace.
+                        Drag and drop, paste from clipboard, or enter a URL.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4 py-4">
+                <div className="space-y-4 py-2">
+                    {/* Dropzone */}
+                    <div
+                        {...getRootProps()}
+                        className={cn(
+                            "border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                            isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50",
+                            isUploading && "opacity-50 pointer-events-none"
+                        )}
+                    >
+                        <input {...getInputProps()} />
+                        <div className="bg-muted p-3 rounded-full mb-3">
+                            {isUploading ? <Loader2 className="size-6 animate-spin text-muted-foreground" /> : <UploadCloud className="size-6 text-muted-foreground" />}
+                        </div>
+                        <p className="text-sm font-medium mb-1">
+                            {isUploading ? "Uploading..." : isDragActive ? "Drop image here" : "Click or drag image here"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            Supports PNG, JPG, GIF, WebP
+                        </p>
+                    </div>
+
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">
+                                Or via URL
+                            </span>
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
                         <Label htmlFor="image-url">Image URL</Label>
                         <Input
@@ -153,15 +207,8 @@ export function CreateImageDialog({
                             value={url}
                             onChange={(e) => setUrl(e.target.value)}
                             onPaste={handlePaste}
-                            autoFocus
                             disabled={isUploading}
                         />
-                        {isUploading && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1 animate-pulse mt-1">
-                                <Loader2 className="size-3 animate-spin" />
-                                Uploading image from clipboard...
-                            </p>
-                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -173,9 +220,6 @@ export function CreateImageDialog({
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                         />
-                        <p className="text-xs text-muted-foreground">
-                            Leave empty to use "Image"
-                        </p>
                     </div>
                 </div>
 
