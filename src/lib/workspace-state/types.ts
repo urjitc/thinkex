@@ -2,9 +2,20 @@ import type { CardColor } from './colors';
 
 export type CardType = "note" | "pdf" | "flashcard" | "folder" | "youtube" | "quiz";
 
+/**
+ * Source attribution for notes created from web search or deep research
+ */
+export interface Source {
+  title: string;  // Title of the source page
+  url: string;    // URL of the source
+  favicon?: string; // Optional favicon URL
+}
+
 export interface NoteData {
   field1?: string; // textarea - legacy plain text format
   blockContent?: unknown; // BlockNote JSON blocks - new rich-text format
+  // Optional: Sources from web search or deep research
+  sources?: Source[];
   // Optional: Deep Research metadata (when this note is a research result)
   deepResearch?: {
     prompt: string;           // Original research prompt

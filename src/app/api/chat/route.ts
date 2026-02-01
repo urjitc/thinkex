@@ -143,8 +143,16 @@ If the user asks to "add a youtube video" or "search for a video" but does not p
 CONFIDENCE THRESHOLD:
 If you are uncertain about a fact's accuracy or currency, prefer to search rather than risk providing outdated information.
 
+
 CITATION REQUIREMENT:
-When using search results (grounding), you must include the date of each article/source if available.`);
+When using search results (grounding), you must include the date of each article/source if available.
+
+SOURCE EXTRACTION REQUIREMENT:
+When creating a note that uses information from web search or grounding results, you MUST extract the sources and pass them to the createNote tool using the 'sources' parameter. Each source should include:
+- title: The title of the source article/page
+- url: The full URL of the source
+Format: Pass an array of source objects like [{ title: "Article Title", url: "https://..." }, ...]
+This is MANDATORY whenever you use search results to generate note content.`);
 
   // Add file detection hint if file URLs are present
   if (fileUrls.length > 0) {

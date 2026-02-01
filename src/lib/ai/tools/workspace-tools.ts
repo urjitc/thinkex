@@ -23,9 +23,16 @@ export function createNoteTool(ctx: WorkspaceToolContext) {
             z.object({
                 title: z.string().describe("The title of the note card"),
                 content: z.string().describe("The markdown body content. DO NOT repeat title in content. Start with subheadings/text. No Mermaid. Use $$...$$ for ALL math (both inline and block). Single $ is for currency only."),
+                sources: z.array(
+                    z.object({
+                        title: z.string().describe("Title of the source page"),
+                        url: z.string().describe("URL of the source"),
+                        favicon: z.string().optional().describe("Optional favicon URL"),
+                    })
+                ).optional().describe("Optional sources from web search or deep research"),
             })
         ),
-        execute: async ({ title, content }) => {
+        execute: async ({ title, content, sources }) => {
             // Validate inputs before use
             if (!title || typeof title !== 'string') {
                 return {
@@ -40,7 +47,7 @@ export function createNoteTool(ctx: WorkspaceToolContext) {
                 };
             }
 
-            logger.debug("🎯 [ORCHESTRATOR] Delegating to Workspace Worker (create note):", { title, contentLength: content.length });
+            logger.debug("🎯 [ORCHESTRATOR] Delegating to Workspace Worker (create note):", { title, contentLength: content.length, sourcesCount: sources?.length });
 
             if (!ctx.workspaceId) {
                 return {
@@ -53,6 +60,7 @@ export function createNoteTool(ctx: WorkspaceToolContext) {
                 workspaceId: ctx.workspaceId,
                 title,
                 content,
+                sources,
                 folderId: ctx.activeFolderId,
             });
         },

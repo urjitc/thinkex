@@ -1,5 +1,5 @@
 import { QuizContent } from "./QuizContent";
-import { MoreVertical, Trash2, Palette, CheckCircle2, FolderInput, FileText, Copy, X, Pencil, Columns } from "lucide-react";
+import { MoreVertical, Trash2, Palette, CheckCircle2, FolderInput, FileText, Copy, X, Pencil, Columns, Link2 } from "lucide-react";
 import { PiMouseScrollFill, PiMouseScrollBold } from "react-icons/pi";
 import { useCallback, useState, memo, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
@@ -743,22 +743,66 @@ function WorkspaceCard({
 
             <div className={(item.type === 'note' || item.type === 'pdf') && !shouldShowPreview ? "flex-1 flex flex-col" : "flex-shrink-0"}>
               {item.type !== 'youtube' && !(item.type === 'pdf' && shouldShowPreview) && (
-                <ItemHeader
-                  id={item.id}
-                  name={item.name}
-                  subtitle={item.subtitle}
-                  description={""}
-                  onNameChange={handleNameChange}
-                  onNameCommit={handleNameCommit}
-                  onSubtitleChange={handleSubtitleChange}
-                  readOnly={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview}
-                  noMargin={true}
-                  onTitleFocus={handleTitleFocus}
-                  onTitleBlur={handleTitleBlur}
-                  allowWrap={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview}
-                />
-              )
-              }
+                <>
+                  <ItemHeader
+                    id={item.id}
+                    name={item.name}
+                    subtitle={item.subtitle}
+                    description={""}
+                    onNameChange={handleNameChange}
+                    onNameCommit={handleNameCommit}
+                    onSubtitleChange={handleSubtitleChange}
+                    readOnly={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview}
+                    noMargin={true}
+                    onTitleFocus={handleTitleFocus}
+                    onTitleBlur={handleTitleBlur}
+                    allowWrap={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview}
+                  />
+
+
+
+                  {/* Sources Section - only shown when card is wide */}
+                  {item.type === 'note' && shouldShowPreview && (() => {
+                    const noteData = item.data as NoteData;
+                    const hasSources = noteData.sources && noteData.sources.length > 0;
+
+                    if (!hasSources) return null;
+
+                    return (
+                      <div className="mt-2 mb-2 flex flex-wrap gap-2">
+                        {noteData.sources!.map((source, index) => {
+                          let hostname = "";
+                          try {
+                            hostname = new URL(source.url).hostname.replace('www.', '');
+                          } catch {
+                            hostname = source.url;
+                          }
+
+                          return (
+                            <a
+                              key={index}
+                              href={source.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer"
+                              title={source.title}
+                              onMouseDown={(e) => {
+                                e.stopPropagation();
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                            >
+                              <Link2 className="h-3.5 w-3.5 flex-shrink-0" />
+                              <span className="truncate max-w-[150px]">{hostname}</span>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
               {/* Subtle type label for narrow cards without preview */}
               {/* Subtle type label for narrow cards without preview */}
               {(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview && (

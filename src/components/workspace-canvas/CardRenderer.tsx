@@ -7,6 +7,7 @@ import { DynamicBlockNoteEditor } from "@/components/editor/DynamicBlockNoteEdit
 import { plainTextToBlocks, type Block } from "@/components/editor/BlockNoteEditor";
 import FlashcardContent from "./FlashcardContent";
 import YouTubeCardContent from "./YouTubeCardContent";
+import { SourcesDisplay } from "./SourcesDisplay";
 
 import { QuizContent } from "./QuizContent";
 
@@ -51,20 +52,28 @@ export function CardRenderer(props: {
       }] as unknown as Block[];
     }, [noteData.blockContent, noteData.field1, item.id, item.lastSource]);
     return (
-      <DynamicBlockNoteEditor
-        key={item.id}
-        initialContent={initialBlocks}
-        cardName={item.name}
-        cardId={item.id}
-        lastSource={item.lastSource}
-        autofocus={true}
-        onChange={(blocks) => {
-          onUpdateData(() => ({
-            blockContent: blocks,
-            field1: blocksToPlainText(blocks),
-          }));
-        }}
-      />
+      <>
+        <DynamicBlockNoteEditor
+          key={item.id}
+          initialContent={initialBlocks}
+          cardName={item.name}
+          cardId={item.id}
+          lastSource={item.lastSource}
+          autofocus={true}
+          onChange={(blocks) => {
+            onUpdateData(() => ({
+              blockContent: blocks,
+              field1: blocksToPlainText(blocks),
+            }));
+          }}
+        />
+        {/* Sources section - only shown if sources exist */}
+        {noteData.sources && noteData.sources.length > 0 && (
+          <div className="px-4 pb-4">
+            <SourcesDisplay sources={noteData.sources} />
+          </div>
+        )}
+      </>
     );
   }
 
