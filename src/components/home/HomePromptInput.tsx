@@ -4,10 +4,13 @@ import { useState, useRef, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useCreateWorkspaceFromPrompt } from "@/hooks/workspace/use-create-workspace";
-import { ArrowUp, Loader2 } from "lucide-react";
+import { usePdfUpload } from "@/hooks/workspace/use-pdf-upload";
+import { ArrowUp, Loader2, X, FileText, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import TypingText from "@/components/ui/typing-text";
+import { useDropzone } from "react-dropzone";
+import type { PdfData } from "@/lib/workspace-state/types";
 
 const PLACEHOLDER_OPTIONS = [
   "Calc 3 double integrals",
@@ -57,8 +60,28 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const typingKeyRef = useRef(0);
-  
+
   const createFromPrompt = useCreateWorkspaceFromPrompt();
+  const { uploadFiles, uploadedFiles, isUploading, removeFile, clearFiles } = usePdfUpload();
+
+  // Setup drop zone for PDF files
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: {
+      'application/pdf': ['.pdf'],
+    },
+    multiple: true,
+    noClick: true, // Don't open file dialog on click (only on drag)
+    onDrop: async (acceptedFiles) => {
+      if (acceptedFiles.length > 0) {
+        try {
+          await uploadFiles(acceptedFiles);
+          toast.success(`Uploaded ${acceptedFiles.length} PDF${acceptedFiles.length > 1 ? 's' : ''}`);
+        } catch (error) {
+          toast.error("Failed to upload PDFs");
+        }
+      }
+    },
+  });
 
   // Shuffle options with random start for variety
   const shuffledOptions = useMemo(() => {
@@ -90,14 +113,111 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
     const prompt = value.trim();
     if (!prompt || createFromPrompt.isLoading) return;
 
+    // Construct initial state with PDF cards AND empty placeholder cards if files were uploaded
+    let initialState = undefined;
+    if (uploadedFiles.length > 0) {
+      // Calculate total PDF height (each PDF takes 10 rows)
+      const pdfHeight = 10;
+      const totalPdfY = uploadedFiles.length * pdfHeight;
+
+      // Create PDF card items from uploaded files (stacked vertically at top)
+      const pdfItems = uploadedFiles.map((file, index) => ({
+        id: crypto.randomUUID(),
+        type: 'pdf' as const,
+        name: file.name,
+        subtitle: '',
+        color: '#6366F1' as const, // Indigo for PDFs
+        layout: { x: 0, y: index * pdfHeight, w: 4, h: pdfHeight },
+        lastSource: 'user' as const,
+        data: {
+          fileUrl: file.fileUrl,
+          filename: file.filename,
+          fileSize: file.fileSize,
+        } as PdfData,
+      }));
+
+      // Create empty placeholder cards with fixed layout and colors
+      const noteId = crypto.randomUUID();
+      const quizId = crypto.randomUUID();
+      const flashcardId = crypto.randomUUID();
+
+      const emptyNote = {
+        id: noteId,
+        type: 'note' as const,
+        name: 'Summary Notes',
+        subtitle: 'AI will fill this from your PDFs',
+        color: '#10B981' as const, // Emerald for Note
+        layout: { x: 0, y: totalPdfY, w: 4, h: 13 },
+        lastSource: 'user' as const,
+        data: {
+          blockContent: [
+            {
+              id: 'placeholder-block',
+              type: 'paragraph',
+              props: { backgroundColor: 'default', textColor: 'default', textAlignment: 'left' },
+              content: [],
+              children: [],
+            },
+          ],
+          field1: '',
+        },
+      };
+
+      const emptyQuiz = {
+        id: quizId,
+        type: 'quiz' as const,
+        name: 'Quiz',
+        subtitle: 'AI will generate questions from your PDFs',
+        color: '#F59E0B' as const, // Amber for Quiz
+        layout: { x: 0, y: totalPdfY + 13, w: 2, h: 13 },
+        lastSource: 'user' as const,
+        data: {
+          questions: [],
+        },
+      };
+
+      const emptyFlashcard = {
+        id: flashcardId,
+        type: 'flashcard' as const,
+        name: 'Flashcards',
+        subtitle: 'AI will create study cards from your PDFs',
+        color: '#EC4899' as const, // Pink for Flashcards
+        layout: { x: 2, y: totalPdfY + 13, w: 2, h: 8 },
+        lastSource: 'user' as const,
+        data: {
+          cards: [],
+        },
+      };
+
+      const allItems = [...pdfItems, emptyNote, emptyQuiz, emptyFlashcard];
+
+      initialState = {
+        workspaceId: '', // Will be set by backend
+        globalTitle: '',
+        globalDescription: '',
+        items: allItems,
+        itemsCreated: allItems.length,
+      };
+    }
+
     createFromPrompt.mutate(prompt, {
-      template: "getting_started", // Auto-include sample content (quiz/flashcards) for home prompt (magic feeling)
+      template: uploadedFiles.length > 0 ? "blank" : "getting_started", // Use blank template if PDFs provided
+      initialState,
       onSuccess: (workspace) => {
         // Reset typing animation by changing key
         typingKeyRef.current += 1;
-        router.push(
-          `/workspace/${workspace.slug}?createFrom=${encodeURIComponent(prompt)}`
-        );
+        // Clear uploaded files
+        clearFiles();
+        const url = `/workspace/${workspace.slug}`;
+        const params = new URLSearchParams();
+
+        if (uploadedFiles.length > 0) {
+          params.set('action', 'generate_study_materials');
+        } else {
+          params.set('createFrom', prompt);
+        }
+
+        router.push(`${url}?${params.toString()}`);
       },
       onError: (err) => {
         toast.error("Could not create workspace", { description: err.message });
@@ -107,7 +227,48 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-2xl">
-      <div className="relative">
+      <div className="relative" {...getRootProps()}>
+        <input {...getInputProps()} />
+
+        {/* Drag overlay */}
+        {isDragActive && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center rounded-xl border-2 border-dashed border-white/40 bg-background/90 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-2 text-white/80">
+              <Upload className="h-8 w-8" />
+              <p className="text-sm font-medium">Drop PDFs here</p>
+            </div>
+          </div>
+        )}
+
+        {/* Uploaded files display */}
+        {uploadedFiles.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {uploadedFiles.map((file) => (
+              <div
+                key={file.fileUrl}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg px-3 py-1.5",
+                  "bg-white/5 border border-white/10",
+                  "text-sm text-white/80"
+                )}
+              >
+                <FileText className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate max-w-[200px]">{file.filename}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFile(file.fileUrl);
+                  }}
+                  className="ml-1 hover:text-white transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Input container styled to look like one input */}
         <div
           onClick={() => inputRef.current?.focus()}

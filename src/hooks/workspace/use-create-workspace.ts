@@ -69,7 +69,7 @@ export function useCreateWorkspace() {
       // Optimistically add the new workspace to the list
       queryClient.setQueryData<WorkspaceWithState[]>(["workspaces"], (old) => {
         if (!old) return old;
-        
+
         const optimisticWorkspace: WorkspaceWithState = {
           id: `temp-${Date.now()}`,
           slug: `temp-${Date.now()}`,
@@ -140,6 +140,7 @@ export function useCreateWorkspaceFromPrompt() {
     prompt: string,
     options?: {
       template?: WorkspaceTemplate;
+      initialState?: AgentState;
       onSuccess?: (workspace: CreateWorkspaceResponse["workspace"]) => void;
       onError?: (error: Error) => void;
     }
@@ -154,6 +155,7 @@ export function useCreateWorkspaceFromPrompt() {
         icon: icon || null,
         color: (color as CardColor) || null,
         template: options?.template || "getting_started",
+        initialState: options?.initialState,
       });
 
       options?.onSuccess?.(result.workspace);
