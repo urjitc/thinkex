@@ -88,6 +88,12 @@ export async function workspaceWorker(
             prompt: string;
             interactionId: string;
         };
+        // Optional: sources from web search or deep research
+        sources?: Array<{
+            title: string;
+            url: string;
+            favicon?: string;
+        }>;
         folderId?: string;
     }
 ): Promise<{ success: boolean; message: string; itemId?: string; cardsAdded?: number; cardCount?: number; event?: WorkspaceEvent; version?: number }> {
@@ -213,6 +219,15 @@ export async function workspaceWorker(
                             status: "researching",
                             thoughts: [],
                         };
+                    }
+
+                    // If sources are provided, attach them
+                    if (params.sources && params.sources.length > 0) {
+                        itemData.sources = params.sources;
+                        logger.debug("📚 [WORKSPACE-WORKER] Attaching sources to note:", {
+                            count: params.sources.length,
+                            sources: params.sources,
+                        });
                     }
                 }
 
@@ -373,6 +388,18 @@ export async function workspaceWorker(
                             field1: contentStr,
                             blockContent: blockContent,
                         } as NoteData;
+                    }
+
+                    // Update sources if provided
+                    if (params.sources !== undefined) {
+                        if (!changes.data) {
+                            changes.data = {} as NoteData;
+                        }
+                        (changes.data as NoteData).sources = params.sources;
+                        logger.debug("📚 [UPDATE-NOTE] Updating sources:", {
+                            count: params.sources.length,
+                            sources: params.sources,
+                        });
                     }
 
                     // If no changes, return early

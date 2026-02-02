@@ -24,7 +24,25 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
 
     const body = await request.json();
-    const { content, workspaceId, folderId } = body;
+    const { content, workspaceId, folderId, sources } = body;
+
+    if (sources !== undefined) {
+      const hasInvalidSource =
+        !Array.isArray(sources) ||
+        sources.some(
+          (source) =>
+            !source ||
+            typeof source.title !== "string" ||
+            typeof source.url !== "string"
+        );
+
+      if (hasInvalidSource) {
+        return NextResponse.json(
+          { error: "Sources must be an array of { title, url } objects" },
+          { status: 400 }
+        );
+      }
+    }
 
 
 
@@ -104,6 +122,7 @@ Return ONLY the reformatted note content in markdown format. Do not include any 
       workspaceId,
       title,
       content: cleanedContent,
+      sources,
       folderId,
     });
 
