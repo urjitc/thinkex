@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
 
     const body = await request.json();
-    const { content, workspaceId, folderId } = body;
+    const { content, workspaceId, folderId, sources } = body;
 
 
 
@@ -104,6 +104,7 @@ Return ONLY the reformatted note content in markdown format. Do not include any 
       workspaceId,
       title,
       content: cleanedContent,
+      sources,
       folderId,
     });
 

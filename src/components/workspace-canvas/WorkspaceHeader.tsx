@@ -1,9 +1,11 @@
+"use client";
+
 import type React from "react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, X, ChevronRight, ChevronDown, FolderOpen, ChevronLeft, Plus, Upload, FileText, Folder as FolderIcon, Settings, Share2, Play, MoreHorizontal, Globe, Brain, Maximize, File } from "lucide-react";
+import { Search, X, ChevronRight, ChevronDown, FolderOpen, ChevronLeft, Plus, Upload, FileText, Folder as FolderIcon, Settings, Share2, Play, MoreHorizontal, Globe, Brain, Maximize, File, Newspaper } from "lucide-react";
 import { LuBook } from "react-icons/lu";
 import { PiCardsThreeBold } from "react-icons/pi";
 import { cn } from "@/lib/utils";
@@ -46,6 +48,8 @@ import type { CardType, Item } from "@/lib/workspace-state/types";
 import { getFolderPath } from "@/lib/workspace-state/search";
 import { useMemo } from "react";
 import { CreateYouTubeDialog } from "@/components/modals/CreateYouTubeDialog";
+import { CreateArticleDialog } from "@/components/modals/CreateArticleDialog";
+import { useQueryClient } from "@tanstack/react-query";
 interface WorkspaceHeaderProps {
   titleInputRef: React.RefObject<HTMLInputElement | null>;
   searchQuery: string;
@@ -135,6 +139,7 @@ export default function WorkspaceHeader({
   const [renamingTarget, setRenamingTarget] = useState<{ id: string, type: 'folder' | 'item' } | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [showYouTubeDialog, setShowYouTubeDialog] = useState(false);
+  const [showArticleDialog, setShowArticleDialog] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
@@ -148,6 +153,9 @@ export default function WorkspaceHeader({
   // Assistant API for Deep Research action
   const aui = useAui();
   const setSelectedActions = useUIStore((state) => state.setSelectedActions);
+
+  // React Query client for cache invalidation
+  const queryClient = useQueryClient();
 
   // Consistent breadcrumb item styling
   const breadcrumbItemClass = "flex items-center gap-1.5 min-w-0 rounded transition-colors hover:bg-sidebar-accent cursor-pointer px-2 py-1.5 -mx-2 -my-1.5";
@@ -945,6 +953,16 @@ export default function WorkspaceHeader({
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
+                      setShowArticleDialog(true);
+                      setIsNewMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <Newspaper className="size-4" />
+                    Article
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
                       toast.success("Deep Research action selected");
                       setSelectedActions(["deep-research"]);
                       aui?.composer().setText("I want to do research on ");
@@ -1027,6 +1045,25 @@ export default function WorkspaceHeader({
         onOpenChange={setShowYouTubeDialog}
         onCreate={handleYouTubeCreate}
       />
+      {/* Article Dialog */}
+      {currentWorkspaceId && (
+        <CreateArticleDialog
+          open={showArticleDialog}
+          onOpenChange={setShowArticleDialog}
+          workspaceId={currentWorkspaceId}
+          folderId={activeFolderId || undefined}
+          onNoteCreated={(noteId) => {
+            // Invalidate workspace events cache to trigger refetch
+            void queryClient.invalidateQueries({
+              queryKey: ["workspace", currentWorkspaceId, "events"],
+            });
+            // Open the new note in the modal
+            if (setOpenModalItemId) {
+              setOpenModalItemId(noteId);
+            }
+          }}
+        />
+      )}
     </div >
   );
 }

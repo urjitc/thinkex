@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { useMessage } from "@assistant-ui/react";
+import { useMessage, useThread } from "@assistant-ui/react";
 import { toast } from "sonner";
 import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { useUIStore } from "@/lib/stores/ui-store";
@@ -22,8 +22,30 @@ export function useCreateCardFromMessage(options: CreateCardOptions = {}) {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const message = useMessage();
+  const thread = useThread(); // Access the full thread to find sources
+
   const currentWorkspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
   const queryClient = useQueryClient();
+
+  // Helper to extract sources from a tool result JSON string
+  const extractSourcesFromToolResult = (resultJson: string) => {
+    try {
+      const parsed = JSON.parse(resultJson);
+      const chunks = parsed?.groundingMetadata?.groundingChunks || [];
+      const extractedSources: Array<{ title: string; url: string; favicon?: string }> = [];
+
+      for (const chunk of chunks) {
+        const uri = chunk?.web?.uri;
+        const title = chunk?.web?.title;
+        if (uri && title) {
+          extractedSources.push({ title, url: uri });
+        }
+      }
+      return extractedSources;
+    } catch (e) {
+      return [];
+    }
+  };
 
   const createCard = useCallback(async () => {
     // Clear any existing debounce timer
@@ -62,6 +84,91 @@ export function useCreateCardFromMessage(options: CreateCardOptions = {}) {
         // Get the current active folder ID
         const activeFolderId = useUIStore.getState().activeFolderId;
 
+        // Extract sources from the thread history
+        // We look backwards from the current message to find the relevant webSearch result
+        let sources: Array<{ title: string; url: string; favicon?: string }> | undefined;
+
+        try {
+          // Use any cast since standard types might differ
+          const messages = (thread as any).messages || [];
+          const currentIndex = messages.findIndex((m: any) => m.id === message.id);
+
+          if (currentIndex !== -1) {
+            const allSources: Array<{ title: string; url: string; favicon?: string }> = [];
+
+            // Look backwards from current message up to the last user message
+            // or a reasonable limit to find the associated tool result
+            for (let i = currentIndex; i >= 0; i--) {
+              const msg = messages[i];
+
+              // Stop if we hit a user message (start of the turn)
+              // But carefully: sometimes the user message triggers the tool immediately
+              if (msg.role === 'user' && i !== currentIndex) {
+                // If we found sources, great. If not, maybe check this user message too if it has attachments?
+                // For now, break here as tool results usually come after user input.
+                break;
+              }
+
+              // Check 1: Tool message (role='tool') with webSearch content
+              if (msg.role === 'tool') {
+                // Determine if this is a webSearch tool
+                // Often inferred from content or toolName if available
+                const content = msg.content;
+                // Assistant UI uses parts; check for tool-result part
+                if (Array.isArray(content)) {
+                  for (const part of content) {
+                    if (part.type === 'tool-result' && (part as any).toolName === 'webSearch') {
+                      const result = (part as any).result;
+                      if (result) {
+                        allSources.push(...extractSourcesFromToolResult(JSON.stringify(result)));
+                      }
+                    }
+                  }
+                }
+                // Check simplified Vercel AI SDK structure
+                if ((msg as any).toolName === 'webSearch' && (msg as any).content) {
+                  allSources.push(...extractSourcesFromToolResult(JSON.stringify(msg.content)));
+                }
+              }
+
+              // Check 2: Assistant message with toolInvocations (AI SDK 3.x+ style)
+              if (msg.role === 'assistant') {
+                // Check extracted tool calls if stored in helper fields
+                // Or specialized parts
+                if (Array.isArray(msg.content)) {
+                  for (const part of msg.content) {
+                    if (part.type === 'tool-call' && (part as any).toolName === 'webSearch') {
+                      // Sometimes the result is attached to the call in the UI state
+                      const result = (part as any).result || (part as any).args; // Result is usually separate
+                      // Actually, in Assistant UI, result might be embedded if completed
+                      if ((part as any).result) {
+                        allSources.push(...extractSourcesFromToolResult((part as any).result));
+                      }
+                    }
+                  }
+                }
+
+                // Check 'toolInvocations' property if exposed directly
+                const invocations = (msg as any).toolInvocations;
+                if (Array.isArray(invocations)) {
+                  for (const tool of invocations) {
+                    if (tool.toolName === 'webSearch' && tool.state === 'result') {
+                      allSources.push(...extractSourcesFromToolResult(JSON.stringify(tool.result)));
+                    }
+                  }
+                }
+              }
+            }
+
+            if (allSources.length > 0) {
+              sources = allSources;
+              logger.debug("📝 [CREATE-CARD] Found sources in thread history", { count: sources.length });
+            }
+          }
+        } catch (err) {
+          logger.warn("📝 [CREATE-CARD] Error extracting sources from thread", err);
+        }
+
         const response = await fetch("/api/cards/from-message", {
           method: "POST",
           headers: {
@@ -71,6 +178,7 @@ export function useCreateCardFromMessage(options: CreateCardOptions = {}) {
             content,
             workspaceId: currentWorkspaceId,
             folderId: activeFolderId ?? undefined,
+            sources: sources ?? undefined,
           }),
         });
 
@@ -107,7 +215,7 @@ export function useCreateCardFromMessage(options: CreateCardOptions = {}) {
         setIsCreating(false);
       }
     }, debounceMs);
-  }, [message, currentWorkspaceId, isCreating, debounceMs]);
+  }, [message, thread, currentWorkspaceId, isCreating, debounceMs]);
 
   // Cleanup on unmount
   const cleanup = useCallback(() => {

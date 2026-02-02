@@ -28,6 +28,7 @@ import { useIsVisible } from "@/hooks/use-is-visible";
 import { getYouTubeEmbedUrl } from "@/lib/utils/youtube-url";
 import { YouTubeCardContent } from "./YouTubeCardContent";
 import { getLayoutForBreakpoint } from "@/lib/workspace-state/grid-layout-helpers";
+import { SourcesDisplay } from "./SourcesDisplay";
 
 import {
   DropdownMenu,
@@ -762,45 +763,11 @@ function WorkspaceCard({
 
 
                   {/* Sources Section - only shown when card is wide */}
-                  {item.type === 'note' && shouldShowPreview && (() => {
-                    const noteData = item.data as NoteData;
-                    const hasSources = noteData.sources && noteData.sources.length > 0;
-
-                    if (!hasSources) return null;
-
-                    return (
-                      <div className="mt-2 mb-2 flex flex-wrap gap-2">
-                        {noteData.sources!.map((source, index) => {
-                          let hostname = "";
-                          try {
-                            hostname = new URL(source.url).hostname.replace('www.', '');
-                          } catch {
-                            hostname = source.url;
-                          }
-
-                          return (
-                            <a
-                              key={index}
-                              href={source.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer"
-                              title={source.title}
-                              onMouseDown={(e) => {
-                                e.stopPropagation();
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                              }}
-                            >
-                              <Link2 className="h-3.5 w-3.5 flex-shrink-0" />
-                              <span className="truncate max-w-[150px]">{hostname}</span>
-                            </a>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
+                  {item.type === 'note' && shouldShowPreview && (item.data as NoteData).sources && (item.data as NoteData).sources!.length > 0 && (
+                    <div className="px-1 mt-2 mb-1">
+                      <SourcesDisplay sources={(item.data as NoteData).sources!} />
+                    </div>
+                  )}
                 </>
               )}
               {/* Subtle type label for narrow cards without preview */}
