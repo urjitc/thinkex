@@ -13,12 +13,27 @@ interface SourcesDisplayProps {
     sources: Source[];
 }
 
+const PLACEHOLDER_SOURCE_URLS = new Set(
+    [
+        "https://github.com/thinkex/docs",
+        "https://example.com/getting-started",
+    ].map((url) => url.replace(/\/+$/, "").toLowerCase())
+);
+
+function isPlaceholderSourceUrl(url: string | undefined): boolean {
+    if (!url) return false;
+    const normalized = url.trim().replace(/\/+$/, "").toLowerCase();
+    return PLACEHOLDER_SOURCE_URLS.has(normalized);
+}
+
 /**
  * SourcesDisplay - Renders a compact "Sources" button with dropdown
  * Displays sources as a scrollable dropdown menu
  */
 export function SourcesDisplay({ sources }: SourcesDisplayProps) {
-    if (!sources || sources.length === 0) {
+    const visibleSources = sources?.filter((source) => !isPlaceholderSourceUrl(source.url)) ?? [];
+
+    if (visibleSources.length === 0) {
         return null;
     }
 
@@ -34,7 +49,7 @@ export function SourcesDisplay({ sources }: SourcesDisplayProps) {
                     >
                         <ExternalLink className="h-3.5 w-3.5 text-white/50 group-hover:text-white/70" />
                         <span className="text-white/70 group-hover:text-white/90 font-medium">
-                            {sources.length} {sources.length === 1 ? "source" : "sources"}
+                            {visibleSources.length} {visibleSources.length === 1 ? "source" : "sources"}
                         </span>
                         <ChevronDown className="h-3.5 w-3.5 text-white/40 group-hover:text-white/60" />
                     </button>
@@ -44,7 +59,7 @@ export function SourcesDisplay({ sources }: SourcesDisplayProps) {
                     className="w-80 max-h-[400px] overflow-y-auto"
                     sideOffset={4}
                 >
-                    {sources.map((source, index) => {
+                    {visibleSources.map((source, index) => {
                         let hostname = "";
                         try {
                             hostname = new URL(source.url).hostname;
