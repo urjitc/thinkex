@@ -247,7 +247,7 @@ export const CreateFlashcardToolUI = makeAssistantToolUI<CreateFlashcardArgs, Fl
         } else if (status.type === "incomplete" && status.reason === "error") {
             content = (
                 <ToolUIErrorShell
-                    label="Failed to create flashcards"
+                    label="Trying to create flashcards"
                     message={parsed && !parsed.success ? parsed.message : undefined}
                 />
             );

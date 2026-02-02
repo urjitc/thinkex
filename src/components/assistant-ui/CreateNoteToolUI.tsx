@@ -253,7 +253,7 @@ export const CreateNoteToolUI = makeAssistantToolUI<CreateNoteArgs, WorkspaceRes
     } else if (status.type === "incomplete" && status.reason === "error") {
       content = (
         <ToolUIErrorShell
-          label="Failed to create note"
+          label="Trying to create note"
           message={parsed && !parsed.success ? parsed.message : undefined}
         />
       );

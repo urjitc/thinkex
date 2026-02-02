@@ -65,7 +65,7 @@ export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
                     },
                     {
                       type: "text",
-                      text: "\"Summarize this article: [URL]\"",
+                      text: "\"Summarize this website: [URL]\"",
                       styles: { italic: true }
                     },
                     {
@@ -341,4 +341,3 @@ export function getTemplateInitialState(template: string): AgentState {
     itemsCreated: templateDef.initialState.itemsCreated || 0,
   };
 }
-

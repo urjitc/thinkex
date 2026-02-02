@@ -42,7 +42,7 @@ export async function POST(req: Request) {
             url_context: google.tools.urlContext({}),
         };
 
-        const promptText = `Analyze the content from the following article URL(s) and create a comprehensive study note.
+        const promptText = `Analyze the content from the following website URL(s) and create a comprehensive study note.
 
 URLs to analyze:
 ${urls.map((url, i) => `${i + 1}. ${url}`).join('\n')}
@@ -60,7 +60,7 @@ Provide your response in this exact format with clear delimiters:
 
 Make sure to:
 - Generate a clear title that captures the main topic
-- Create comprehensive markdown content synthesizing key information from all articles
+- Create comprehensive markdown content synthesizing key information from all pages
 - Use proper markdown formatting (headings, bullet points, etc.)
 - Include all URLs in the sources section with their actual page titles`;
 
@@ -73,7 +73,7 @@ Make sure to:
         logger.debug("📝 [API] LLM response received:", { textLength: text?.length });
 
         // Parse the delimited response
-        let title = "Article Summary";
+        let title = "Website Summary";
         let content = "";
         let sources: Array<{ title: string; url: string }> = [];
 

@@ -123,14 +123,14 @@ export const UpdateNoteToolUI = makeAssistantToolUI<UpdateNoteArgs, WorkspaceRes
     } else if (status.type === "complete" && parsed && !parsed.success) {
       content = (
         <ToolUIErrorShell
-          label="Failed to update note"
+          label="Trying to update note"
           message={parsed.message}
         />
       );
     } else if (status.type === "incomplete" && status.reason === "error") {
       content = (
         <ToolUIErrorShell
-          label="Failed to update note"
+          label="Trying to update note"
           message={parsed?.message}
         />
       );

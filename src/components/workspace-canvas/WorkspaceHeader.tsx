@@ -48,7 +48,7 @@ import type { CardType, Item } from "@/lib/workspace-state/types";
 import { getFolderPath } from "@/lib/workspace-state/search";
 import { useMemo } from "react";
 import { CreateYouTubeDialog } from "@/components/modals/CreateYouTubeDialog";
-import { CreateArticleDialog } from "@/components/modals/CreateArticleDialog";
+import { CreateWebsiteDialog } from "@/components/modals/CreateWebsiteDialog";
 import { useQueryClient } from "@tanstack/react-query";
 interface WorkspaceHeaderProps {
   titleInputRef: React.RefObject<HTMLInputElement | null>;
@@ -139,7 +139,7 @@ export default function WorkspaceHeader({
   const [renamingTarget, setRenamingTarget] = useState<{ id: string, type: 'folder' | 'item' } | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [showYouTubeDialog, setShowYouTubeDialog] = useState(false);
-  const [showArticleDialog, setShowArticleDialog] = useState(false);
+  const [showWebsiteDialog, setShowWebsiteDialog] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
@@ -953,13 +953,13 @@ export default function WorkspaceHeader({
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
-                      setShowArticleDialog(true);
+                      setShowWebsiteDialog(true);
                       setIsNewMenuOpen(false);
                     }}
                     className="flex items-center gap-2 cursor-pointer"
                   >
                     <Newspaper className="size-4" />
-                    Article
+                    Website
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
@@ -1045,11 +1045,11 @@ export default function WorkspaceHeader({
         onOpenChange={setShowYouTubeDialog}
         onCreate={handleYouTubeCreate}
       />
-      {/* Article Dialog */}
+      {/* Website Dialog */}
       {currentWorkspaceId && (
-        <CreateArticleDialog
-          open={showArticleDialog}
-          onOpenChange={setShowArticleDialog}
+        <CreateWebsiteDialog
+          open={showWebsiteDialog}
+          onOpenChange={setShowWebsiteDialog}
           workspaceId={currentWorkspaceId}
           folderId={activeFolderId || undefined}
           onNoteCreated={(noteId) => {
@@ -1067,6 +1067,5 @@ export default function WorkspaceHeader({
     </div >
   );
 }
-
 
 

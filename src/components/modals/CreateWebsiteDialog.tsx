@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-interface CreateArticleDialogProps {
+interface CreateWebsiteDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     workspaceId: string;
@@ -35,13 +35,13 @@ function isValidUrl(str: string): boolean {
     }
 }
 
-export function CreateArticleDialog({
+export function CreateWebsiteDialog({
     open,
     onOpenChange,
     workspaceId,
     folderId,
     onNoteCreated,
-}: CreateArticleDialogProps) {
+}: CreateWebsiteDialogProps) {
     const [urlsText, setUrlsText] = useState("");
     const [isCreating, setIsCreating] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -78,7 +78,7 @@ export function CreateArticleDialog({
         setUrlsText("");
 
         // Show loading toast
-        const toastId = toast.loading("Creating note from articles...", {
+        const toastId = toast.loading("Creating note from websites...", {
             description: `Processing ${validUrls.length} URL${validUrls.length > 1 ? 's' : ''}`,
         });
 
@@ -103,7 +103,7 @@ export function CreateArticleDialog({
             const result = await response.json();
 
             if (result.success && result.itemId) {
-                toast.success("Article note created!", {
+                toast.success("Website note created!", {
                     id: toastId,
                     description: "Your note is ready",
                 });
@@ -112,8 +112,8 @@ export function CreateArticleDialog({
                 throw new Error(result.message || "Failed to create note");
             }
         } catch (error) {
-            console.error("Error creating article note:", error);
-            toast.error("Failed to create note from articles", {
+            console.error("Error creating website note:", error);
+            toast.error("Failed to create note from websites", {
                 id: toastId,
                 description: error instanceof Error ? error.message : undefined,
             });
@@ -149,19 +149,19 @@ export function CreateArticleDialog({
         <Dialog open={open} onOpenChange={isCreating ? undefined : onOpenChange}>
             <DialogContent onKeyDown={handleKeyDown} className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Create Note from Articles</DialogTitle>
+                    <DialogTitle>Create Note from Websites</DialogTitle>
                     <DialogDescription>
-                        Paste one or more article URLs (one per line). A note will be created with content synthesized from these articles.
+                        Paste one or more website URLs (one per line). A note will be created with content synthesized from these pages.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="article-urls">Article URLs</Label>
+                        <Label htmlFor="website-urls">Website URLs</Label>
                         <Textarea
                             ref={textareaRef}
-                            id="article-urls"
-                            placeholder="https://example.com/article-1&#10;https://example.com/article-2"
+                            id="website-urls"
+                            placeholder="https://example.com/page-1&#10;https://example.com/page-2"
                             value={urlsText}
                             onChange={(e) => setUrlsText(e.target.value)}
                             rows={5}
