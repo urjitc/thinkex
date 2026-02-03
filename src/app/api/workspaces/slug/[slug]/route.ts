@@ -73,9 +73,12 @@ async function handleGET(
 
       if (validCollab) {
         // Found the specific workspace instance this user has access to
-        workspace = candidateWorkspaces.find(w => w.id === validCollab.workspaceId);
-        isShared = true;
-        permissionLevel = validCollab.permissionLevel;
+        const foundWorkspace = candidateWorkspaces.find(w => w.id === validCollab.workspaceId);
+        if (foundWorkspace) {
+          workspace = foundWorkspace;
+          isShared = true;
+          permissionLevel = validCollab.permissionLevel;
+        }
       }
     }
   }

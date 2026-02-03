@@ -13,12 +13,12 @@ export function generateSlug(name: string): string {
         .replace(/-+/g, '-')
         .replace(/^-+|-+$/g, ''); // Strip leading/trailing hyphens
 
-    // Enforce max length of 50 total (45 base + 1 hyphen + 4 suffix)
-    const truncated = base.substring(0, 45);
+    // Enforce max length of 50 total (43 base + 1 hyphen + 6 suffix)
+    const truncated = base.substring(0, 43);
 
     // Use Web Crypto API for better randomness and guaranteed length
     // (fallback to Math.random if crypto not available, though in Node/modern browsers it is)
-    const suffix = Math.random().toString(36).substring(2, 6).padEnd(4, '0');
+    const suffix = Math.random().toString(36).substring(2, 8).padEnd(6, '0');
 
     // If truncated is empty (e.g. name was "!!!"), fallback to 'workspace'
     const finalSlug = truncated || 'workspace';
