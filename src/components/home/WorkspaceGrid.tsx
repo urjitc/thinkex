@@ -58,6 +58,19 @@ export function WorkspaceGrid({ searchQuery = "" }: WorkspaceGridProps) {
 
   const clearSelection = () => {
     setSelectedIds(new Set());
+
+    // Reset inline border styles that may have been set during selection
+    // We need to manually reset these because they were set via inline styles
+    setTimeout(() => {
+      filteredWorkspaces.forEach((workspace) => {
+        const element = document.querySelector(`[data-workspace-id="${workspace.id}"]`);
+        if (element instanceof HTMLElement) {
+          const color = workspace.color as CardColor | undefined;
+          const borderColor = color ? getCardAccentColor(color, 0.5) : 'var(--sidebar-border)';
+          element.style.borderColor = borderColor;
+        }
+      });
+    }, 0);
   };
 
   const handleBulkDelete = async () => {
@@ -197,6 +210,7 @@ export function WorkspaceGrid({ searchQuery = "" }: WorkspaceGridProps) {
             return (
               <div
                 key={workspace.id}
+                data-workspace-id={workspace.id}
                 role="button"
                 tabIndex={0}
                 onClick={() => switchWorkspace(workspace.slug || workspace.id)}

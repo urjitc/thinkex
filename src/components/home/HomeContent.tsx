@@ -32,7 +32,7 @@ export function HomeContent() {
   const [scrollY, setScrollY] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [heroVisible, setHeroVisible] = useState(true);
-  
+
   const createWorkspace = useCreateWorkspace();
   const [workspacesVisible, setWorkspacesVisible] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
