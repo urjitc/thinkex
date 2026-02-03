@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, UserPlus, X } from "lucide-react";
 import { WORKSPACE_TEMPLATES } from "@/lib/workspace/templates";
 import type { WorkspaceTemplate } from "@/lib/workspace-state/types";
 import { IconPicker } from "@/components/workspace/IconPicker";
@@ -27,6 +27,13 @@ import { validateImportedJSON, generateImportPreview, type ValidationResult } fr
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileText } from "lucide-react";
 import type { AgentState } from "@/lib/workspace-state/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Workspace {
   id: string;
@@ -69,6 +76,11 @@ export default function CreateWorkspaceModal({
   const [jsonInput, setJsonInput] = useState(initialData?.initialState ? JSON.stringify(initialData.initialState, null, 2) : "");
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
 
+  // Collaboration state
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [invitePermission, setInvitePermission] = useState<"viewer" | "editor">("editor");
+  const [pendingInvites, setPendingInvites] = useState<Array<{ email: string; permission: "viewer" | "editor" }>>([]);
+
   // Initialize form when initialData changes or modal opens
   useEffect(() => {
     if (open && initialData) {
@@ -106,6 +118,31 @@ export default function CreateWorkspaceModal({
     }
   };
 
+  const handleAddInvite = () => {
+    const email = inviteEmail.trim();
+    if (!email) return;
+
+    // Check for valid email format
+    if (!email.includes("@")) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    // Check if already in list
+    if (pendingInvites.some(inv => inv.email === email)) {
+      setError("This email is already in the invite list");
+      return;
+    }
+
+    setPendingInvites([...pendingInvites, { email, permission: invitePermission }]);
+    setInviteEmail("");
+    setError("");
+  };
+
+  const handleRemoveInvite = (email: string) => {
+    setPendingInvites(pendingInvites.filter(inv => inv.email !== email));
+  };
+
   const handleCreate = () => {
     if (!name.trim()) {
       setError("Workspace name is required");
@@ -129,7 +166,7 @@ export default function CreateWorkspaceModal({
         initialState: importMode === "json" && validationResult?.data ? validationResult.data : undefined,
       },
       {
-        onSuccess: ({ workspace }) => {
+        onSuccess: async ({ workspace }) => {
           posthog.capture('workspace-created', {
             workspace_id: workspace.id,
             workspace_slug: workspace.slug,
@@ -139,7 +176,43 @@ export default function CreateWorkspaceModal({
             has_color: !!selectedColor,
             color: selectedColor,
             imported_items_count: importMode === "json" && validationResult?.data ? validationResult.data.items.length : 0,
+            pending_invites_count: pendingInvites.length,
           });
+
+          // Send pending invites if any
+          if (pendingInvites.length > 0) {
+            let successCount = 0;
+            for (const invite of pendingInvites) {
+              try {
+                const response = await fetch(`/api/workspaces/${workspace.id}/collaborators`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    email: invite.email,
+                    permissionLevel: invite.permission,
+                  }),
+                });
+
+                if (response.ok) {
+                  successCount++;
+                }
+              } catch (err) {
+                console.error(`Failed to invite ${invite.email}`, err);
+              }
+            }
+
+            if (successCount > 0) {
+              if (successCount === pendingInvites.length) {
+                toast.success(`Workspace created and ${successCount} invite${successCount > 1 ? 's' : ''} sent!`);
+              } else {
+                toast.success(`Workspace created. ${successCount}/${pendingInvites.length} invites sent successfully.`);
+              }
+            } else {
+              toast.success("Workspace created, but failed to send invites");
+            }
+          } else {
+            toast.success("Workspace created successfully");
+          }
 
           // Reset form
           setName("");
@@ -149,9 +222,10 @@ export default function CreateWorkspaceModal({
           setImportMode("template");
           setJsonInput("");
           setValidationResult(null);
+          setPendingInvites([]);
+          setInviteEmail("");
+          setInvitePermission("editor");
           onOpenChange(false);
-
-          toast.success("Workspace created successfully");
 
           // Call success callback or navigate (use slug, not ID)
           if (onSuccess) {
@@ -183,6 +257,9 @@ export default function CreateWorkspaceModal({
           setImportMode("template");
           setJsonInput("");
           setValidationResult(null);
+          setPendingInvites([]);
+          setInviteEmail("");
+          setInvitePermission("editor");
           setError("");
         } else {
           // Reset to initialData values when closing share modal
@@ -207,7 +284,7 @@ export default function CreateWorkspaceModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-[600px] border-white/20 bg-black/40 backdrop-blur-2xl shadow-2xl"
         style={{
           backdropFilter: "blur(24px)",
@@ -246,10 +323,10 @@ export default function CreateWorkspaceModal({
                   className="w-full justify-start"
                   disabled={createWorkspace.isPending}
                 >
-                  <IconRenderer 
-                    icon={selectedIcon} 
+                  <IconRenderer
+                    icon={selectedIcon}
                     className="mr-2 size-4"
-                    style={{ 
+                    style={{
                       color: selectedColor || undefined,
                     }}
                   />
@@ -257,7 +334,7 @@ export default function CreateWorkspaceModal({
                 </Button>
               </IconPicker>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Color</Label>
               <div>
@@ -276,10 +353,10 @@ export default function CreateWorkspaceModal({
                   />
                   {selectedColor ? "Change color" : "Select color"}
                 </Button>
-                
+
                 {/* Color Picker Dialog */}
                 <Dialog open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
-                  <DialogContent 
+                  <DialogContent
                     className="w-auto max-w-fit p-6 border-white/20 bg-black/40 backdrop-blur-2xl shadow-2xl"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -302,6 +379,86 @@ export default function CreateWorkspaceModal({
             </div>
           </div>
 
+          {/* Collaboration Invites Section */}
+          <div className="space-y-3 pt-2 border-t border-border/40">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-muted-foreground" />
+                <Label className="text-sm font-medium">Invite Collaborators (Optional)</Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Add team members to collaborate on this workspace in real-time.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="colleague@example.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddInvite()}
+                className="flex-1"
+                disabled={createWorkspace.isPending}
+              />
+              <Select
+                value={invitePermission}
+                onValueChange={(v: string) => setInvitePermission(v as "viewer" | "editor")}
+                disabled={createWorkspace.isPending}
+              >
+                <SelectTrigger className="w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="editor">Editor</SelectItem>
+                  <SelectItem value="viewer">Viewer</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                onClick={handleAddInvite}
+                disabled={createWorkspace.isPending || !inviteEmail.trim()}
+                size="sm"
+              >
+                Add
+              </Button>
+            </div>
+
+            {/* Pending Invites List */}
+            {pendingInvites.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {pendingInvites.length} pending invite{pendingInvites.length > 1 ? 's' : ''}
+                </p>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {pendingInvites.map((invite) => (
+                    <div
+                      key={invite.email}
+                      className="flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-sm"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="truncate">{invite.email}</span>
+                        <span className="text-xs text-muted-foreground px-2 py-0.5 rounded bg-white/5">
+                          {invite.permission}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleRemoveInvite(invite.email)}
+                        disabled={createWorkspace.isPending}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Error Message */}
           {error && (
             <div className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
@@ -318,11 +475,11 @@ export default function CreateWorkspaceModal({
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleCreate} 
+          <Button
+            onClick={handleCreate}
             disabled={
-              createWorkspace.isPending || 
-              !name.trim() || 
+              createWorkspace.isPending ||
+              !name.trim() ||
               (importMode === "json" && (!validationResult?.isValid || !validationResult.data))
             }
           >
