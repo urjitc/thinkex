@@ -37,6 +37,15 @@ interface Collaborator {
   createdAt: string;
 }
 
+interface FrequentCollaborator {
+  userId: string;
+  name?: string;
+  email?: string;
+  image?: string;
+  lastCollaboratedAt: string;
+  collaborationCount: number;
+}
+
 interface ShareWorkspaceDialogProps {
   workspace: WorkspaceWithState | null;
   workspaceIds?: string[]; // For bulk selection
@@ -67,6 +76,8 @@ export default function ShareWorkspaceDialog({
   const [isInviting, setIsInviting] = useState(false);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false);
+  const [frequentCollaborators, setFrequentCollaborators] = useState<FrequentCollaborator[]>([]);
+  const [isLoadingFrequent, setIsLoadingFrequent] = useState(false);
 
   // Bulk mode check
   const isBulk = !!workspaceIds && workspaceIds.length > 1;
@@ -91,6 +102,9 @@ export default function ShareWorkspaceDialog({
       setShareUrl(url);
       loadCollaborators();
     }
+    if (open) {
+      loadFrequentCollaborators();
+    }
   }, [workspace, open, isBulk]);
 
   const loadCollaborators = async () => {
@@ -107,6 +121,21 @@ export default function ShareWorkspaceDialog({
       console.error("Failed to load collaborators:", error);
     } finally {
       setIsLoadingCollaborators(false);
+    }
+  };
+
+  const loadFrequentCollaborators = async () => {
+    setIsLoadingFrequent(true);
+    try {
+      const response = await fetch("/api/collaborators/frequent");
+      if (response.ok) {
+        const data = await response.json();
+        setFrequentCollaborators(data.collaborators || []);
+      }
+    } catch (error) {
+      console.error("Failed to load frequent collaborators:", error);
+    } finally {
+      setIsLoadingFrequent(false);
     }
   };
 
@@ -128,6 +157,54 @@ export default function ShareWorkspaceDialog({
     const emailBody = `Check out this workspace on ThinkEx: ${shareUrl}`;
     const emailUrl = `mailto:?subject=${encodeURIComponent(shareText)}&body=${encodeURIComponent(emailBody)}`;
     window.location.href = emailUrl;
+  };
+
+  const handleQuickAddCollaborator = async (collaborator: FrequentCollaborator) => {
+    if (!collaborator.email) {
+      toast.error("Collaborator email not found");
+      return;
+    }
+
+    setIsInviting(true);
+    const email = collaborator.email;
+    let successCount = 0;
+
+    try {
+      for (const id of targetIds) {
+        try {
+          const response = await fetch(`/api/workspaces/${id}/collaborators`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: email,
+              permissionLevel: "editor",
+            }),
+          });
+
+          if (response.ok) {
+            successCount++;
+          }
+        } catch (err) {
+          console.error(`Failed to invite to ${id}`, err);
+        }
+      }
+
+      const total = targetIds.length;
+      if (successCount === total) {
+        toast.success(`Added ${collaborator.name || email} to ${isBulk ? 'all workspaces' : 'workspace'}`);
+        if (!isBulk) loadCollaborators();
+      } else if (successCount > 0) {
+        toast.warning(`Added ${collaborator.name || email} to ${successCount}/${total} workspaces (some failed)`);
+      } else {
+        toast.error("Failed to add collaborator. They may already have access.");
+      }
+
+    } catch (error) {
+      console.error("Failed to add collaborator:", error);
+      toast.error("Failed to add collaborator");
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   const handleInvite = async () => {
@@ -272,12 +349,57 @@ export default function ShareWorkspaceDialog({
           </TabsList>
 
           <TabsContent value="invite" className="space-y-4 mt-4">
-            <div className="space-y-1">
-              <h3 className="font-medium">Real-time Collaboration</h3>
-              <p className="text-xs text-muted-foreground">
-                Invite team members to work on this workspace with you in real-time.
-              </p>
-            </div>
+
+            {/* Frequent Collaborators Section */}
+            {frequentCollaborators.length > 0 && (
+              <div className="space-y-2 pb-2 border-b border-white/10">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>Frequent Collaborators</span>
+                </div>
+                {isLoadingFrequent ? (
+                  <div className="flex items-center justify-center py-3">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {frequentCollaborators.slice(0, 6).map((collab) => (
+                      <div
+                        key={collab.userId}
+                        className="group flex items-center justify-between p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                        onClick={() => handleQuickAddCollaborator(collab)}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={collab.image} />
+                            <AvatarFallback className="text-[10px] bg-primary/20 text-primary-foreground">
+                              {getInitials(collab.name, collab.email)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium truncate group-hover:text-primary transition-colors">
+                              {collab.name || collab.email}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-6 px-2 text-[10px] opacity-0 group-hover:opacity-100 transition-all duration-200"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleQuickAddCollaborator(collab);
+                          }}
+                          disabled={isInviting || !canInvite}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Invite Form */}
             <div className="space-y-3">
@@ -293,19 +415,6 @@ export default function ShareWorkspaceDialog({
                   className="flex-1"
                   disabled={!canInvite}
                 />
-                <Select
-                  value={invitePermission}
-                  onValueChange={(v: string) => setInvitePermission(v as "viewer" | "editor")}
-                  disabled={!canInvite}
-                >
-                  <SelectTrigger className="w-28">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="editor">Editor</SelectItem>
-                    <SelectItem value="viewer">Viewer</SelectItem>
-                  </SelectContent>
-                </Select>
                 <Button onClick={handleInvite} disabled={isInviting || !inviteEmail.trim() || !canInvite}>
                   {isInviting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Invite"}
                 </Button>
@@ -388,12 +497,6 @@ export default function ShareWorkspaceDialog({
           </TabsContent>
 
           <TabsContent value="link" className="space-y-4 mt-4">
-            <div className="space-y-1">
-              <h3 className="font-medium">Share a Copy</h3>
-              <p className="text-xs text-muted-foreground">
-                Anyone with this link can create their own personal copy of this workspace. Their changes will not affect your original workspace.
-              </p>
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="share-url">Share Link (Copy)</Label>
