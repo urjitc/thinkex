@@ -314,20 +314,8 @@ export default function ShareWorkspaceDialog({
                           <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded border border-primary/20">
                             Owner
                           </span>
-                        ) : canManage ? (
-                          <>
-                            <Select
-                              value={collab.permissionLevel}
-                              onValueChange={(v: string) => handleUpdatePermission(collab.id, v as "viewer" | "editor")}
-                            >
-                              <SelectTrigger className="w-24 h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="editor">Editor</SelectItem>
-                                <SelectItem value="viewer">Viewer</SelectItem>
-                              </SelectContent>
-                            </Select>
+                        ) : (
+                          canManage && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -336,11 +324,7 @@ export default function ShareWorkspaceDialog({
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </>
-                        ) : (
-                          <span className="text-xs text-muted-foreground capitalize border border-white/10 px-2 py-1 rounded">
-                            {collab.permissionLevel}
-                          </span>
+                          )
                         )}
                       </div>
                     </div>
