@@ -5,11 +5,26 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useCreateWorkspaceFromPrompt } from "@/hooks/workspace/use-create-workspace";
 import { usePdfUpload } from "@/hooks/workspace/use-pdf-upload";
-import { ArrowUp, Loader2, X, FileText, Upload } from "lucide-react";
+import { ArrowUp, AudioLines, FileText, Loader2, Plus, Upload, X, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import TypingText from "@/components/ui/typing-text";
 import { useDropzone } from "react-dropzone";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import type { PdfData } from "@/lib/workspace-state/types";
 
 const PLACEHOLDER_OPTIONS = [
@@ -49,8 +64,6 @@ const PLACEHOLDER_OPTIONS = [
   "physics kinematics problems",
 ];
 
-const baseText = "Create a workspace for ";
-
 interface HomePromptInputProps {
   shouldFocus?: boolean;
 }
@@ -58,6 +71,8 @@ interface HomePromptInputProps {
 export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
   const router = useRouter();
   const [value, setValue] = useState("");
+  const [isUrlDialogOpen, setIsUrlDialogOpen] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const typingKeyRef = useRef(0);
 
@@ -65,7 +80,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
   const { uploadFiles, uploadedFiles, isUploading, removeFile, clearFiles } = usePdfUpload();
 
   // Setup drop zone for PDF files
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     accept: {
       'application/pdf': ['.pdf'],
     },
@@ -225,8 +240,23 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
     });
   };
 
+  const handleUrlSubmit = () => {
+    if (!urlInput.trim()) return;
+
+    // Append URL to current value, adding a space if needed
+    const newValue = value + (value && !value.endsWith(' ') ? ' ' : '') + urlInput.trim() + ' ';
+    setValue(newValue);
+    setUrlInput("");
+    setIsUrlDialogOpen(false);
+
+    // Focus back on input
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-2xl">
+    <form onSubmit={handleSubmit} className="w-full max-w-[760px]">
       <div className="relative" {...getRootProps()}>
         <input {...getInputProps()} />
 
@@ -273,29 +303,16 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
         <div
           onClick={() => inputRef.current?.focus()}
           className={cn(
-            "relative flex items-center gap-0 min-h-[56px] w-full",
-            "bg-background/80 backdrop-blur-xl",
-            "border border-white/10 rounded-xl",
-            "shadow-[0_0_60px_-15px_rgba(255,255,255,0.1)]",
-            "focus-within:shadow-[0_0_80px_-10px_rgba(255,255,255,0.15)]",
-            "focus-within:border-white/60",
+            "relative w-full min-h-[96px]",
+            "rounded-[32px] border border-white/25",
+            "bg-gradient-to-r from-[#292929] to-[#242424] backdrop-blur-xl",
+            "px-4 py-3 md:px-6 md:py-4",
+            "shadow-[0_24px_90px_-40px_rgba(0,0,0,0.85)]",
+            "focus-within:border-white/40",
             "transition-all duration-300",
             "cursor-text"
           )}
         >
-          {/* Prefix label */}
-          <span
-            id="workspace-prompt-label"
-            className={cn(
-              "text-lg text-foreground whitespace-nowrap flex-shrink-0",
-              "pl-4 pr-0"
-            )}
-            style={{ fontSize: '1.125rem', lineHeight: '1.75rem' }}
-          >
-            {baseText}
-          </span>
-
-          {/* Input field */}
           <div className="relative flex-1 min-w-0">
             <Input
               ref={inputRef}
@@ -304,23 +321,23 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
               placeholder=""
               maxLength={300}
               autoFocus
-              aria-labelledby="workspace-prompt-label"
+              aria-label="Workspace prompt"
               style={{
-                fontSize: '1.125rem',
-                lineHeight: '1.75rem',
+                fontSize: '2rem',
+                lineHeight: '2.35rem',
                 height: 'auto',
-                minHeight: '60px',
-                paddingTop: '1rem',
-                paddingBottom: '1rem',
-                paddingLeft: '0.25rem',
-                paddingRight: '3.5rem'
+                minHeight: '3rem',
+                paddingTop: '0.5rem',
+                paddingBottom: '0.5rem',
+                paddingLeft: '0',
+                paddingRight: '0'
               }}
               className={cn(
                 "w-full border-0",
                 "focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
-                "!text-lg md:!text-lg",
+                "!text-base !font-normal !tracking-normal",
                 "bg-transparent dark:bg-transparent",
-                "h-auto"
+                "h-auto text-white placeholder:text-transparent"
               )}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -335,14 +352,10 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
               <div
                 className={cn(
                   "absolute inset-0 flex items-center pointer-events-none",
-                  "pl-2 pr-14",
-                  "text-lg text-muted-foreground/50"
+                  "text-base text-white/60 tracking-normal"
                 )}
                 style={{
-                  willChange: 'transform',
-                  fontSize: '1.125rem',
-                  lineHeight: '1.75rem',
-                  transform: 'translateX(-4px)'
+                  willChange: 'transform'
                 }}
               >
                 <TypingText
@@ -353,32 +366,119 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
                   pauseDuration={2500}
                   loop={true}
                   showCursor={false}
-                  className=""
+                  className="leading-[1.15]"
                 />
               </div>
             )}
+          </div>
 
-            {/* Submit arrow */}
-            <button
-              type="submit"
-              disabled={!value.trim() || createFromPrompt.isLoading}
-              onClick={(e) => e.stopPropagation()}
-              className={cn(
-                "absolute right-3 top-1/2 -translate-y-1/2 z-20",
-                "p-1 transition-opacity duration-200",
-                "disabled:opacity-30 disabled:cursor-not-allowed",
-                "hover:opacity-80"
-              )}
-            >
-              {createFromPrompt.isLoading ? (
-                <Loader2 className="h-6 w-6 text-white animate-spin" />
-              ) : (
-                <ArrowUp className="h-6 w-6 text-white" />
-              )}
-            </button>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "h-8 w-8 md:h-9 md:w-9 rounded-full border border-white/35",
+                    "flex items-center justify-center text-white/85",
+                    "hover:bg-white/10 transition-colors"
+                  )}
+                  aria-label="Add attachment"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" sideOffset={10}>
+                <DropdownMenuItem onClick={() => open()}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>Upload PDF</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsUrlDialogOpen(true)}>
+                  <LinkIcon className="mr-2 h-4 w-4" />
+                  <span>Add URL</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="flex items-center gap-3 md:gap-4">
+              <button
+                type="button"
+                onClick={() => { }}
+                className={cn(
+                  "rounded-full px-3 py-1.5 md:px-4 md:py-2",
+                  "text-white/75 text-sm md:text-base leading-none",
+                  "hover:bg-white/10 transition-colors"
+                )}
+              >
+                Plan
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { }}
+                className={cn(
+                  "h-8 w-8 md:h-9 md:w-9 rounded-full",
+                  "flex items-center justify-center text-white/85",
+                  "hover:bg-white/10 transition-colors"
+                )}
+                aria-label="Voice input"
+              >
+                <AudioLines className="h-5 w-5" />
+              </button>
+
+              <button
+                type="submit"
+                disabled={!value.trim() || createFromPrompt.isLoading}
+                onClick={(e) => e.stopPropagation()}
+                className={cn(
+                  "h-8 w-8 md:h-9 md:w-9 rounded-full",
+                  "flex items-center justify-center",
+                  "bg-[#9B9B9B] text-[#1F1F1F]",
+                  "transition-colors",
+                  "hover:bg-[#B1B1B1]",
+                  "disabled:opacity-40 disabled:cursor-not-allowed"
+                )}
+                aria-label="Submit prompt"
+              >
+                {createFromPrompt.isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <ArrowUp className="h-5 w-5" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      <Dialog open={isUrlDialogOpen} onOpenChange={setIsUrlDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Link</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Input
+              placeholder="Paste URL here..."
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleUrlSubmit();
+                }
+              }}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUrlDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUrlSubmit} disabled={!urlInput.trim()}>
+              Add
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }
