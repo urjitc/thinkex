@@ -1,6 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { WorkspaceEvent, EventResponse } from "@/lib/workspace/events";
 import { logger } from "@/lib/utils/logger";
+import { useRef } from "react";
+
+/**
+ * Maximum number of automatic retries for version conflicts
+ * This prevents infinite retry loops while allowing concurrent edits to succeed
+ */
+const MAX_RETRY_ATTEMPTS = 3;
 
 interface AppendEventParams {
   workspaceId: string;
@@ -50,6 +57,9 @@ async function appendWorkspaceEvent(
 export function useWorkspaceMutation(workspaceId: string | null, options: WorkspaceMutationOptions = {}) {
   const queryClient = useQueryClient();
   const { onEventSaved } = options;
+
+  // Track retry attempts per event ID to prevent infinite loops
+  const retryAttemptsRef = useRef<Map<string, number>>(new Map());
 
   return useMutation({
     mutationFn: (event: WorkspaceEvent) => {
@@ -174,40 +184,191 @@ export function useWorkspaceMutation(workspaceId: string | null, options: Worksp
     },
 
     // Refetch to ensure consistency on success
-    onSuccess: (data, event) => {
+    onSuccess: (data, event, context) => {
       if (!workspaceId) return;
 
       logger.debug("✅ [SUCCESS] Mutation succeeded:", {
         conflict: data.conflict,
         newVersion: data.version,
+        eventId: event.id,
       });
 
-      // Handle conflicts
+      // Handle conflicts with automatic retry
       if (data.conflict) {
-        logger.warn("⚠️ [CONFLICT] Event conflict detected, refetching...");
+        // Check retry count for this event
+        const currentRetries = retryAttemptsRef.current.get(event.id) || 0;
 
-        // First, remove the optimistic event from cache to prevent baseVersion calculation issues
-        queryClient.setQueryData<EventResponse>(
-          ["workspace", workspaceId, "events"],
-          (old) => {
-            if (!old) return old;
+        if (currentRetries < MAX_RETRY_ATTEMPTS) {
+          logger.warn(`⚠️ [CONFLICT] Version conflict detected, auto-retrying (attempt ${currentRetries + 1}/${MAX_RETRY_ATTEMPTS})...`);
 
-            // Remove events without version numbers (optimistic events)
-            const confirmedEvents = old.events.filter(e => typeof e.version === 'number');
+          // Increment retry counter
+          retryAttemptsRef.current.set(event.id, currentRetries + 1);
 
-            return {
-              ...old,
-              events: confirmedEvents,
-            };
-          }
-        );
+          // First, remove the optimistic event from cache
+          queryClient.setQueryData<EventResponse>(
+            ["workspace", workspaceId, "events"],
+            (old) => {
+              if (!old) return old;
 
-        // Then invalidate to force refetch with server state
-        queryClient.invalidateQueries({
-          queryKey: ["workspace", workspaceId, "events"],
-        });
+              // Remove events without version numbers (optimistic events)
+              const confirmedEvents = old.events.filter(e => typeof e.version === 'number');
+
+              return {
+                ...old,
+                events: confirmedEvents,
+                version: data.version, // Update to current server version
+              };
+            }
+          );
+
+          // Refetch to get latest events, then automatically retry
+          queryClient.invalidateQueries({
+            queryKey: ["workspace", workspaceId, "events"],
+          }).then(() => {
+            // After cache is updated with latest events, retry the mutation
+            logger.debug("🔄 [RETRY] Retrying event after refetch:", event.type);
+
+            // Re-apply optimistic update
+            queryClient.setQueryData<EventResponse>(
+              ["workspace", workspaceId, "events"],
+              (old) => {
+                if (!old) return old;
+
+                return {
+                  ...old,
+                  events: [...old.events, { ...event }],
+                };
+              }
+            );
+
+            // Retry the mutation with updated base version
+            const currentData = queryClient.getQueryData<EventResponse>(["workspace", workspaceId, "events"]);
+            if (currentData) {
+              const events = currentData.events ?? [];
+              const maxEventVersion = events
+                .filter(e => typeof e.version === 'number')
+                .reduce((max, e) => Math.max(max, e.version!), currentData.version ?? 0);
+              const currentVersion = Math.max(currentData.version ?? 0, maxEventVersion);
+
+              logger.debug("🔄 [RETRY] Using base version:", currentVersion);
+
+              // Call API directly to retry
+              appendWorkspaceEvent({
+                workspaceId,
+                event,
+                baseVersion: currentVersion
+              }).then((retryResult) => {
+                if (retryResult.conflict) {
+                  // Still conflicting after retry - treat as final failure
+                  logger.error("❌ [RETRY] Retry failed with conflict, giving up");
+
+                  // Remove optimistic event
+                  queryClient.setQueryData<EventResponse>(
+                    ["workspace", workspaceId, "events"],
+                    (old) => {
+                      if (!old) return old;
+                      return {
+                        ...old,
+                        events: old.events.filter(e => e.id !== event.id),
+                      };
+                    }
+                  );
+
+                  // Clean up retry counter
+                  retryAttemptsRef.current.delete(event.id);
+
+                  // Force full refetch
+                  queryClient.invalidateQueries({
+                    queryKey: ["workspace", workspaceId, "events"],
+                  });
+                } else {
+                  // Retry succeeded!
+                  logger.debug("✅ [RETRY] Retry succeeded, version:", retryResult.version);
+
+                  // Update event with version
+                  queryClient.setQueryData<EventResponse>(
+                    ["workspace", workspaceId, "events"],
+                    (old) => {
+                      if (!old) return old;
+
+                      const updatedEvents = old.events.map(e =>
+                        e.id === event.id ? { ...e, version: retryResult.version } : e
+                      );
+
+                      return {
+                        ...old,
+                        events: updatedEvents,
+                        version: retryResult.version,
+                      };
+                    }
+                  );
+
+                  // Clean up retry counter
+                  retryAttemptsRef.current.delete(event.id);
+
+                  // Broadcast the successful event
+                  if (onEventSaved) {
+                    onEventSaved({ ...event, version: retryResult.version });
+                  }
+                }
+              }).catch((err) => {
+                logger.error("❌ [RETRY] Retry failed with error:", err);
+
+                // Remove optimistic event
+                queryClient.setQueryData<EventResponse>(
+                  ["workspace", workspaceId, "events"],
+                  (old) => {
+                    if (!old) return old;
+                    return {
+                      ...old,
+                      events: old.events.filter(e => e.id !== event.id),
+                    };
+                  }
+                );
+
+                // Clean up retry counter
+                retryAttemptsRef.current.delete(event.id);
+
+                // Restore from context if available
+                if (context?.previous) {
+                  queryClient.setQueryData(
+                    ["workspace", workspaceId, "events"],
+                    context.previous
+                  );
+                }
+              });
+            }
+          });
+        } else {
+          // Max retries exceeded
+          logger.error(`❌ [CONFLICT] Max retries (${MAX_RETRY_ATTEMPTS}) exceeded for event ${event.id}`);
+
+          // Remove optimistic event
+          queryClient.setQueryData<EventResponse>(
+            ["workspace", workspaceId, "events"],
+            (old) => {
+              if (!old) return old;
+              return {
+                ...old,
+                events: old.events.filter(e => e.id !== event.id),
+              };
+            }
+          );
+
+          // Clean up retry counter
+          retryAttemptsRef.current.delete(event.id);
+
+          // Force full refetch to get true server state
+          queryClient.invalidateQueries({
+            queryKey: ["workspace", workspaceId, "events"],
+          });
+        }
       } else {
-        // Success! Update the version in cache without full refetch
+        // Success! No conflict
+        // Clean up retry counter if it exists
+        retryAttemptsRef.current.delete(event.id);
+
+        // Update the version in cache without full refetch
         queryClient.setQueryData<EventResponse>(
           ["workspace", workspaceId, "events"],
           (old) => {
