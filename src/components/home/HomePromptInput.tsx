@@ -71,9 +71,10 @@ interface HomePromptInputProps {
 export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
   const router = useRouter();
   const [value, setValue] = useState("");
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isUrlDialogOpen, setIsUrlDialogOpen] = useState(false);
   const [urlInput, setUrlInput] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingKeyRef = useRef(0);
 
   const createFromPrompt = useCreateWorkspaceFromPrompt();
@@ -117,10 +118,18 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
     }
   }, [shouldFocus]);
 
-  // Handle user typing - stop animation
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle user typing - stop animation and auto-resize
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     setValue(newValue);
+
+    // Auto-resize
+    const target = e.target;
+    target.style.height = 'auto';
+    target.style.height = `${target.scrollHeight}px`;
+
+    // Check expansion for shape shifting (threshold approx 3 lines)
+    setIsExpanded(target.scrollHeight > 80);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -283,7 +292,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
                 )}
               >
                 <FileText className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="truncate max-w-[200px]">{file.filename}</span>
+                <span className="truncate max-w-[200px]">{file.name}</span>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -304,24 +313,27 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
           onClick={() => inputRef.current?.focus()}
           className={cn(
             "relative w-full min-h-[96px]",
-            "rounded-[32px] border border-white/25",
+            isExpanded ? "rounded-[24px]" : "rounded-[32px]",
+            "border border-white/25",
             "bg-gradient-to-r from-[#292929] to-[#242424] backdrop-blur-xl",
-            "px-4 py-3 md:px-6 md:py-4",
+            "bg-gradient-to-r from-[#292929] to-[#242424] backdrop-blur-xl",
+            "px-4 py-2 md:px-6 md:py-3",
             "shadow-[0_24px_90px_-40px_rgba(0,0,0,0.85)]",
             "focus-within:border-white/40",
-            "transition-all duration-300",
+            "transition-[border-radius,height] duration-300 ease-in-out",
             "cursor-text"
           )}
         >
           <div className="relative flex-1 min-w-0">
-            <Input
+            <textarea
               ref={inputRef}
               value={value}
               onChange={handleInput}
               placeholder=""
-              maxLength={300}
+
               autoFocus
               aria-label="Workspace prompt"
+              rows={1}
               style={{
                 fontSize: '2rem',
                 lineHeight: '2.35rem',
@@ -330,14 +342,16 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
                 paddingTop: '0.5rem',
                 paddingBottom: '0.5rem',
                 paddingLeft: '0',
-                paddingRight: '0'
+                paddingRight: '0',
+                maxHeight: '50vh',
+                overflowY: 'auto'
               }}
               className={cn(
-                "w-full border-0",
-                "focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                "w-full border-0 resize-none",
+                "focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 outline-none",
                 "!text-base !font-normal !tracking-normal",
-                "bg-transparent dark:bg-transparent",
-                "h-auto text-white placeholder:text-transparent"
+                "bg-transparent",
+                "text-white placeholder:text-transparent"
               )}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -351,7 +365,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
             {!value && (
               <div
                 className={cn(
-                  "absolute inset-0 flex items-center pointer-events-none",
+                  "absolute inset-0 flex items-start pt-[0.6rem] pointer-events-none",
                   "text-base text-white/60 tracking-normal"
                 )}
                 style={{
@@ -372,7 +386,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
             )}
           </div>
 
-          <div className="mt-2 flex items-center justify-between gap-3">
+          <div className="mt-0 flex items-center justify-between gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
