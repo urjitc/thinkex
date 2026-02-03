@@ -74,7 +74,9 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isUrlDialogOpen, setIsUrlDialogOpen] = useState(false);
   const [urlInput, setUrlInput] = useState("");
+  const [textIndent, setTextIndent] = useState(180); // Default fallback
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const prefixRef = useRef<HTMLSpanElement>(null);
   const typingKeyRef = useRef(0);
 
   const createFromPrompt = useCreateWorkspaceFromPrompt();
@@ -117,6 +119,17 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
       return () => clearTimeout(timer);
     }
   }, [shouldFocus]);
+
+  // Dynamic width measurement for perfect alignment
+  // using useLayoutEffect to prevent layout shift flash if possible, or useEffect
+  useEffect(() => {
+    if (prefixRef.current) {
+      // Measure width of static text
+      const width = prefixRef.current.offsetWidth;
+      // Add roughly one space width (approx 4-5px for typical font, but let's say 6px to be safe)
+      setTextIndent(width + 6);
+    }
+  }, []);
 
   // Handle user typing - stop animation and auto-resize
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -325,6 +338,22 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
           )}
         >
           <div className="relative flex-1 min-w-0">
+            {/* Static Prefix - positioned absolutely but matched with text-indent */}
+            {/* Static Prefix - positioned absolutely but matched with text-indent */}
+            <span
+              ref={prefixRef}
+              className={cn(
+                "absolute left-0 top-0 select-none",
+                "!text-base text-white/50 !font-normal !tracking-normal", // Match textarea exactly
+                "pt-[0.5rem]" // Matches textarea padding-top
+              )}
+              style={{
+                pointerEvents: 'none'
+              }}
+            >
+              Create a workspace on
+            </span>
+
             <textarea
               ref={inputRef}
               value={value}
@@ -335,8 +364,6 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
               aria-label="Workspace prompt"
               rows={1}
               style={{
-                fontSize: '2rem',
-                lineHeight: '2.35rem',
                 height: 'auto',
                 minHeight: '3rem',
                 paddingTop: '0.5rem',
@@ -344,7 +371,8 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
                 paddingLeft: '0',
                 paddingRight: '0',
                 maxHeight: '50vh',
-                overflowY: 'auto'
+                overflowY: 'auto',
+                textIndent: `${textIndent}px`
               }}
               className={cn(
                 "w-full border-0 resize-none",
@@ -369,7 +397,8 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
                   "text-base text-white/60 tracking-normal"
                 )}
                 style={{
-                  willChange: 'transform'
+                  willChange: 'transform',
+                  textIndent: `${textIndent}px`
                 }}
               >
                 <TypingText
