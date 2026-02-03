@@ -1,7 +1,8 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db, workspaces } from "@/lib/db/client";
-import { eq, sql } from "drizzle-orm";
+import { workspaceCollaborators } from "@/lib/db/schema";
+import { eq, sql, and } from "drizzle-orm";
 import { createEvent } from "@/lib/workspace/events";
 import { generateItemId } from "@/lib/workspace-state/item-helpers";
 import { getRandomCardColor } from "@/lib/workspace-state/colors";
@@ -114,7 +115,7 @@ export async function workspaceWorker(
             }
             const userId = session.user.id;
 
-            // Verify workspace access - ownership only (sharing is fork-based)
+            // Verify workspace access - owner OR editor collaborator
             const workspace = await db
                 .select({ userId: workspaces.userId })
                 .from(workspaces)
@@ -125,9 +126,25 @@ export async function workspaceWorker(
                 throw new Error("Workspace not found");
             }
 
-            // Enforce strict ownership (sharing is fork-based)
-            if (workspace[0].userId !== userId) {
-                throw new Error("Access denied");
+            // Check if user is owner
+            const isOwner = workspace[0].userId === userId;
+
+            // If not owner, check if user is an editor collaborator
+            if (!isOwner) {
+                const [collaborator] = await db
+                    .select({ permissionLevel: workspaceCollaborators.permissionLevel })
+                    .from(workspaceCollaborators)
+                    .where(
+                        and(
+                            eq(workspaceCollaborators.workspaceId, params.workspaceId),
+                            eq(workspaceCollaborators.userId, userId)
+                        )
+                    )
+                    .limit(1);
+
+                if (!collaborator || collaborator.permissionLevel !== 'editor') {
+                    throw new Error("Access denied - editor permission required");
+                }
             }
 
 
