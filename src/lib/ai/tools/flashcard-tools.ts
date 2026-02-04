@@ -73,7 +73,7 @@ export function createFlashcardsTool(ctx: WorkspaceToolContext) {
  */
 export function createUpdateFlashcardsTool(ctx: WorkspaceToolContext) {
     return tool({
-        description: "Add more flashcards to an existing flashcard deck. Use $$...$$ for ALL math expressions.",
+        description: "Add more flashcards to an existing flashcard deck and/or update its title. Use $$...$$ for ALL math expressions.",
         inputSchema: zodSchema(
             z.object({
                 deckName: z.string().describe("The name or ID of the flashcard deck to update"),
@@ -82,12 +82,14 @@ export function createUpdateFlashcardsTool(ctx: WorkspaceToolContext) {
                         front: z.string().describe("The question or term on the front of the card"),
                         back: z.string().describe("The answer or definition on the back of the card"),
                     })
-                ).min(1).describe("Array of flashcard objects to add, each with 'front' and 'back' properties"),
+                ).optional().describe("Array of flashcard objects to add, each with 'front' and 'back' properties"),
+                title: z.string().optional().describe("New title for the flashcard deck. If not provided, the existing title will be preserved."),
             })
         ),
-        execute: async (input: { deckName: string; cards: Array<{ front: string; back: string }> }) => {
+        execute: async (input: { deckName: string; cards?: Array<{ front: string; back: string }>; title?: string }) => {
             const deckName = input.deckName;
             const cardsToAdd = input.cards || [];
+            const newTitle = input.title;
 
             if (!deckName) {
                 return {
@@ -96,10 +98,10 @@ export function createUpdateFlashcardsTool(ctx: WorkspaceToolContext) {
                 };
             }
 
-            if (cardsToAdd.length === 0) {
+            if (cardsToAdd.length === 0 && !newTitle) {
                 return {
                     success: false,
-                    message: "At least one flashcard is required. Provide an array of cards with 'front' and 'back' properties.",
+                    message: "At least one flashcard must be provided OR a new title must be specified.",
                 };
             }
 
@@ -130,18 +132,37 @@ export function createUpdateFlashcardsTool(ctx: WorkspaceToolContext) {
                     };
                 }
 
-                const workerResult = await workspaceWorker("updateFlashcard", {
-                    workspaceId: ctx.workspaceId,
-                    itemId: matchedDeck.id,
-                    itemType: "flashcard",
-                    flashcardData: { cardsToAdd },
-                });
+                // Handle title update first if provided
+                if (newTitle) {
+                    const titleUpdateResult = await workspaceWorker("update", {
+                        workspaceId: ctx.workspaceId,
+                        itemId: matchedDeck.id,
+                        title: newTitle,
+                    });
+
+                    if (!titleUpdateResult.success) {
+                        return titleUpdateResult;
+                    }
+                }
+
+                // If adding cards, run that update
+                let workerResult = { success: true, message: "Deck updated successfully" };
+                if (cardsToAdd.length > 0) {
+                    workerResult = await workspaceWorker("updateFlashcard", {
+                        workspaceId: ctx.workspaceId,
+                        itemId: matchedDeck.id,
+                        itemType: "flashcard",
+                        flashcardData: { cardsToAdd },
+                    });
+                }
 
                 if (workerResult.success) {
                     return {
                         ...workerResult,
                         deckName: matchedDeck.name,
                         cardsAdded: cardsToAdd.length,
+                        titleUpdated: !!newTitle,
+                        newTitle: newTitle || undefined,
                     };
                 }
 

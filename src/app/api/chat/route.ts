@@ -137,7 +137,7 @@ CREATE-FROM WORKSPACE INITIALIZATION MODE:
 This is an automatic workspace initialization request. The user wants to transform this workspace into a curated learning/research space about: "${topic}"
 
 CRITICAL INSTRUCTIONS FOR WORKSPACE CURATION:
-1. **Update ALL existing workspace items** with comprehensive, well-structured content about the topic:
+1. **For each of the existing workspace items** update the title and content to be about the topic:
    - Use \`updateNote\` tool for notes
    - Use \`updateFlashcards\` tool for flashcard sets
    - Use \`updateQuiz\` tool for quizzes
