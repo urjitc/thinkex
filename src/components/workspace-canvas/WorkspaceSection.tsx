@@ -9,6 +9,9 @@ import { WorkspaceSkeleton } from "@/components/workspace/WorkspaceSkeleton";
 import { MarqueeSelector } from "./MarqueeSelector";
 import { useUIStore, selectSelectedCardIdsArray } from "@/lib/stores/ui-store";
 import { useShallow } from "zustand/react/shallow";
+import { useSession } from "@/lib/auth-client";
+import { LoginGate } from "@/components/workspace/LoginGate";
+import { AccessDenied } from "@/components/workspace/AccessDenied";
 
 import MoveToDialog from "@/components/modals/MoveToDialog";
 import {
@@ -146,6 +149,7 @@ export function WorkspaceSection({
   const clearCardSelection = useUIStore((state) => state.clearCardSelection);
   const openPanel = useUIStore((state) => state.openPanel);
   const setSelectedActions = useUIStore((state) => state.setSelectedActions);
+  const { data: session } = useSession();
 
   // Assistant API for Deep Research action
   // Note: WorkspaceSection is inside WorkspaceRuntimeProvider in DashboardLayout, so this hook works
@@ -423,7 +427,17 @@ export function WorkspaceSection({
             )}>
               {/* Show skeleton until workspace content is loaded */}
               {(!currentWorkspaceId && currentSlug) || (currentWorkspaceId && isLoadingWorkspace) ? (
-                <WorkspaceSkeleton />
+                // If it's taking too long or we have no workspace ID but have a slug,
+                // check if we're anonymous to show login gate, or authenticated to show access denied
+                !isLoadingWorkspace && !currentWorkspaceId ? (
+                  session?.user?.isAnonymous ? (
+                    <LoginGate />
+                  ) : (
+                    <AccessDenied />
+                  )
+                ) : (
+                  <WorkspaceSkeleton />
+                )
               ) : (
                 /* Workspace content - assumes workspace exists (home route handles no-workspace state) */
                 (<WorkspaceContent
