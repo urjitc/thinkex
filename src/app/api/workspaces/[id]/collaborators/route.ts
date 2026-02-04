@@ -179,9 +179,9 @@ async function handlePOST(
 
     // Send invitation email
     try {
-        const workspaceUrl = `${process.env.NEXT_PUBLIC_APP_URL}/share-copy/${workspaceId}`;
+        const workspaceUrl = `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${workspaceId}`;
         const { data, error } = await resend.emails.send({
-            from: 'ThinkEx <onboarding@resend.dev>', // Update this with your verified domain if available
+            from: 'ThinkEx <hello@thinkex.app>', // Update this with your verified domain if available
             to: [email],
             subject: `You've been invited to collaborate on ${ws.name || 'a workspace'}`,
             react: InviteEmailTemplate({
