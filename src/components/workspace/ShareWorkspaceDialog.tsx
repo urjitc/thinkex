@@ -540,12 +540,7 @@ export default function ShareWorkspaceDialog({
           {/* History Tab - only shown on workspace routes */}
           {!isBulk && showHistoryTab && (
             <TabsContent value="history" className="space-y-4 mt-4">
-              <div className="space-y-1">
-                <h3 className="font-medium">Version History</h3>
-                <p className="text-xs text-muted-foreground">
-                  View and manage versions of this workspace.
-                </p>
-              </div>
+
 
               {/* Embed the version history content inline */}
               <div className="max-h-[400px] overflow-y-auto pr-2">

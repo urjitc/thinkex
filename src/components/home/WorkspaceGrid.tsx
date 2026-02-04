@@ -216,8 +216,29 @@ export function WorkspaceGrid({ searchQuery = "" }: WorkspaceGridProps) {
                 data-workspace-id={workspace.id}
                 role="button"
                 tabIndex={0}
-                onClick={() => switchWorkspace(workspace.slug || workspace.id)}
-                onKeyDown={(e) => handleKeyDown(e, () => switchWorkspace(workspace.slug || workspace.id))}
+                onClick={(e) => {
+                  if (isSelectionMode) {
+                    toggleSelection(e, workspace.id);
+                  } else {
+                    switchWorkspace(workspace.slug || workspace.id);
+                  }
+                }}
+                onKeyDown={(e) => handleKeyDown(e, () => {
+                  if (isSelectionMode) {
+                    // We need a synthetic event or just call the logic
+                    // toggleSelection expects a MouseEvent, but we can extract logic or mock it
+                    // Let's refactor toggleSelection slightly or just pass a mock
+                    const newSelected = new Set(selectedIds);
+                    if (newSelected.has(workspace.id)) {
+                      newSelected.delete(workspace.id);
+                    } else {
+                      newSelected.add(workspace.id);
+                    }
+                    setSelectedIds(newSelected);
+                  } else {
+                    switchWorkspace(workspace.slug || workspace.id);
+                  }
+                })}
                 className={cn(
                   "group relative rounded-md shadow-sm min-h-[180px] overflow-hidden",
                   "hover:shadow-lg",
