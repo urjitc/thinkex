@@ -22,7 +22,14 @@ export default async function AuthPage({
   const { path } = await params;
   const { redirect_url } = await searchParams;
 
-  const redirectTo = redirect_url || "/onboarding";
+  let redirectTo = redirect_url;
+  if (!redirectTo) {
+    if (path === "sign-in") {
+      redirectTo = "/home";
+    } else {
+      redirectTo = "/onboarding";
+    }
+  }
 
   let title = "Welcome to ThinkEx";
   if (path === "sign-up") title = "Create an account";
