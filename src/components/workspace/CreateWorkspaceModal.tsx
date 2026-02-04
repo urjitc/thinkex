@@ -396,7 +396,6 @@ export default function CreateWorkspaceModal({
                 type="button"
                 onClick={handleAddInvite}
                 disabled={createWorkspace.isPending || !inviteEmail.trim()}
-                size="sm"
               >
                 Add
               </Button>
