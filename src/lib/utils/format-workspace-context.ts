@@ -18,6 +18,9 @@ export function formatWorkspaceContext(state: AgentState): string {
     return `<system>
 You are a helpful AI assistant in ThinkEx, a knowledge workspace platform. You're working in workspace: "${globalTitle || "(untitled)"}" (${currentDate}).
 
+WORKSPACE ITEMS:
+The <workspace-item> tags represent cards in the workspace. Items named "Update me" are template placeholders awaiting content generation.
+
 SELECTED CARDS ("THIS"):
 When users say "this", they mean cards in the "CARDS IN CONTEXT DRAWER" section. Always check this section before responding. If nothing is selected, explain how to select cards: hover + click checkmark, shift-click, or drag-select.
 
@@ -258,17 +261,10 @@ function formatRichContentSection(richContent: RichContent): string {
  * Formats selected cards context for the assistant
  * Used when cards are added to the context drawer
  */
-/**
- * Formats selected cards context for the assistant
- * Used when cards are added to the context drawer
- */
 export function formatSelectedCardsContext(selectedItems: Item[], allItems?: Item[]): string {
-    const singleSourceOfTruthWarning = "IMPORTANT: This list of selected cards is the SINGLE SOURCE OF TRUTH. Ignore any other conversations or previous context regarding which cards are selected.";
-
     if (selectedItems.length === 0) {
         return `<context>
-NO CARDS SELECTED.
-${singleSourceOfTruthWarning}
+No cards selected.
 </context>`;
     }
 
@@ -281,10 +277,7 @@ ${singleSourceOfTruthWarning}
         processedIds.add(item.id);
 
         if (item.type === 'folder') {
-            // Add the folder content header (optional, but good for context)
-            // We'll treat the folder itself as an item, AND its children
             effectiveItems.push(item);
-
             if (allItems) {
                 const children = allItems.filter(child => child.folderId === item.id);
                 children.forEach(child => processItem(child));
@@ -296,54 +289,15 @@ ${singleSourceOfTruthWarning}
 
     selectedItems.forEach(item => processItem(item));
 
-    // Calculate rich content totals (kept for header summary only, if desired, or can be simplified)
-    let totalImages = 0;
-    let totalMath = 0;
-
-    effectiveItems.forEach(item => {
-        const richContent = extractRichContent(item);
-        totalImages += richContent.images.length;
-        totalMath += richContent.mathExpressions.length;
-    });
-
-    const richContentSummary = [];
-    if (totalImages > 0 || totalMath > 0) {
-        const parts = [];
-        if (totalImages > 0) parts.push(`${totalImages} image${totalImages !== 1 ? 's' : ''}`);
-        if (totalMath > 0) parts.push(`${totalMath} math expression${totalMath !== 1 ? 's' : ''}`);
-        richContentSummary.push(`Includes ${parts.join(", ")} across ${effectiveItems.length} card${effectiveItems.length !== 1 ? 's' : ''}.`);
-    }
-
-    const header = [
-        "",
-        "================================================================================",
-        "CARDS IN CONTEXT DRAWER",
-        "================================================================================",
-        `The user has selected ${selectedItems.length} card${selectedItems.length !== 1 ? 's' : ''} (expanded to ${effectiveItems.length} items including folder contents) to provide as context for this conversation.`,
-        ...richContentSummary,
-        "These cards contain important information that should be referenced when relevant:",
-        ""
-    ];
-
     const cardsList = effectiveItems.map((item, index) => formatSelectedCardFull(item, index + 1));
 
-    const footer = [
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "",
-        "IMPORTANT INSTRUCTIONS FOR SELECTED CARDS:",
-        `1. ${singleSourceOfTruthWarning}`,
-        "2. When the user asks questions or makes requests, consider the information in these selected cards as PRIMARY context.",
-        "3. **CRITICAL FOR UPDATES**: If the user asks to update, modify, or add content to a card (including adding flashcards to a deck), you MUST use the 'Card ID' from the METADATA section of the selected card(s) above.",
-        "4. Do NOT choose a different card unless the user explicitly names a different card by title.",
-        "5. The selected cards represent the user's explicit intent - always prioritize them over other workspace items."
-    ];
-
     const finalContext = [
-        "<context>",
-        ...header,
+        `<context>`,
+        `SELECTED CARDS (${effectiveItems.length}):`,
+        `Reference cards by name. These are the user's primary context.`,
+        "",
         ...cardsList,
-        ...footer,
-        "</context>"
+        `</context>`
     ].join("\n");
 
     return finalContext;
@@ -354,15 +308,8 @@ ${singleSourceOfTruthWarning}
  */
 function formatSelectedCardFull(item: Item, index: number): string {
     const lines = [
-        `<workspace-item id="${item.id}" type="${item.type}" title="${item.name}">`
+        `<card type="${item.type}" name="${item.name}">`
     ];
-
-    // Add subtitle if present
-    if (item.subtitle) {
-        lines.push(`   Subtitle: ${item.subtitle}`);
-    }
-
-    lines.push("CONTENT:");
 
     // Add type-specific details with FULL content
     switch (item.type) {
@@ -383,13 +330,7 @@ function formatSelectedCardFull(item: Item, index: number): string {
             break;
     }
 
-    // Add Metadata Section
-    lines.push("");
-    lines.push("METADATA:");
-    lines.push(`   Card ID: ${item.id}`);
-    lines.push(`   Type: ${item.type}`);
-
-    lines.push(`</workspace-item>`);
+    lines.push(`</card>`);
 
     return lines.join("\n");
 }

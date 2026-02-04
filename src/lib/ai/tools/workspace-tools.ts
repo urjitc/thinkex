@@ -169,18 +169,18 @@ export function createUpdateNoteTool(ctx: WorkspaceToolContext) {
 
 
 /**
- * Create the deleteCard tool
+ * Create the deleteItem tool
  */
-export function createDeleteCardTool(ctx: WorkspaceToolContext) {
+export function createDeleteItemTool(ctx: WorkspaceToolContext) {
     return tool({
-        description: "Permanently delete a card/note from the workspace.",
+        description: "Permanently delete a card/note from the workspace by name.",
         inputSchema: zodSchema(
             z.object({
-                id: z.string().describe("The ID of the card to delete"),
+                itemName: z.string().describe("The name of the item to delete (will be matched using fuzzy search)"),
             })
         ),
-        execute: async ({ id }) => {
-            logger.debug("🎯 [ORCHESTRATOR] Delegating to Workspace Worker (delete):", { id });
+        execute: async ({ itemName }) => {
+            logger.debug("🎯 [ORCHESTRATOR] Delegating to Workspace Worker (delete):", { itemName });
 
             if (!ctx.workspaceId) {
                 return {
@@ -189,10 +189,52 @@ export function createDeleteCardTool(ctx: WorkspaceToolContext) {
                 };
             }
 
-            return await workspaceWorker("delete", {
-                workspaceId: ctx.workspaceId,
-                itemId: id,
-            });
+            try {
+                // Load workspace state to find item by name
+                const accessResult = await loadStateForTool(ctx);
+                if (!accessResult.success) {
+                    return accessResult;
+                }
+
+                const { state } = accessResult;
+
+                // Fuzzy match the item by name (any type)
+                const matchedItem = fuzzyMatchItem(state.items, itemName);
+
+                if (!matchedItem) {
+                    const availableItems = state.items.map(i => `"${i.name}" (${i.type})`).slice(0, 5).join(", ");
+                    return {
+                        success: false,
+                        message: `Could not find item "${itemName}". ${availableItems ? `Available items: ${availableItems}` : 'No items found in workspace.'}`,
+                    };
+                }
+
+                logger.debug("🎯 [DELETE-ITEM] Found item via fuzzy match:", {
+                    searchedName: itemName,
+                    matchedName: matchedItem.name,
+                    matchedId: matchedItem.id,
+                });
+
+                const result = await workspaceWorker("delete", {
+                    workspaceId: ctx.workspaceId,
+                    itemId: matchedItem.id,
+                });
+
+                if (result.success) {
+                    return {
+                        ...result,
+                        deletedItem: matchedItem.name,
+                    };
+                }
+
+                return result;
+            } catch (error) {
+                logger.error("Error deleting item:", error);
+                return {
+                    success: false,
+                    message: `Error deleting item: ${error instanceof Error ? error.message : String(error)}`,
+                };
+            }
         },
     });
 }
