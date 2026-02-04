@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useCreateWorkspaceFromPrompt } from "@/hooks/workspace/use-create-workspace";
 import { usePdfUpload } from "@/hooks/workspace/use-pdf-upload";
-import { ArrowUp, AudioLines, FileText, Loader2, Plus, Upload, X, Link as LinkIcon } from "lucide-react";
+import { ArrowUp, FileText, Loader2, Plus, Upload, X, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -91,6 +91,14 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
     noClick: true, // Don't open file dialog on click (only on drag)
     onDrop: async (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
+        // Auto-populate input immediately
+        const totalFiles = uploadedFiles.length + acceptedFiles.length;
+        if (totalFiles === 1) {
+          setValue("this pdf");
+        } else if (totalFiles > 1) {
+          setValue("these pdfs");
+        }
+
         try {
           await uploadFiles(acceptedFiles);
           toast.success(`Uploaded ${acceptedFiles.length} PDF${acceptedFiles.length > 1 ? 's' : ''}`);
@@ -131,18 +139,25 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
     }
   }, []);
 
-  // Handle user typing - stop animation and auto-resize
+  // Handle user typing
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-    setValue(newValue);
+    setValue(e.target.value);
+  };
 
-    // Auto-resize
-    const target = e.target;
-    target.style.height = 'auto';
-    target.style.height = `${target.scrollHeight}px`;
+  // Auto-resize effect
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+      setIsExpanded(textarea.scrollHeight > 80);
+    }
+  }, [value]);
 
-    // Check expansion for shape shifting (threshold approx 3 lines)
-    setIsExpanded(target.scrollHeight > 80);
+  const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    if (prefixRef.current) {
+      prefixRef.current.style.transform = `translateY(-${e.currentTarget.scrollTop}px)`;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -328,8 +343,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
             "relative w-full min-h-[96px]",
             isExpanded ? "rounded-[24px]" : "rounded-[32px]",
             "border border-white/25",
-            "bg-gradient-to-r from-[#292929] to-[#242424] backdrop-blur-xl",
-            "bg-gradient-to-r from-[#292929] to-[#242424] backdrop-blur-xl",
+            "bg-sidebar backdrop-blur-xl",
             "px-4 py-2 md:px-6 md:py-3",
             "shadow-[0_24px_90px_-40px_rgba(0,0,0,0.85)]",
             "focus-within:border-white/40",
@@ -337,14 +351,14 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
             "cursor-text"
           )}
         >
-          <div className="relative flex-1 min-w-0">
+          <div className="relative flex-1 min-w-0 overflow-hidden">
             {/* Static Prefix - positioned absolutely but matched with text-indent */}
             {/* Static Prefix - positioned absolutely but matched with text-indent */}
             <span
               ref={prefixRef}
               className={cn(
                 "absolute left-0 top-0 select-none",
-                "!text-base text-white/50 !font-normal !tracking-normal", // Match textarea exactly
+                "!text-base text-white !font-normal !tracking-normal", // Match textarea exactly
                 "pt-[0.5rem]" // Matches textarea padding-top
               )}
               style={{
@@ -387,13 +401,14 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
                   handleSubmit(e);
                 }
               }}
+              onScroll={handleScroll}
             />
 
             {/* Typing placeholder - dimmer for contrast with white prefix */}
             {!value && (
               <div
                 className={cn(
-                  "absolute inset-0 flex items-start pt-[0.6rem] pointer-events-none",
+                  "absolute inset-0 flex items-start pt-[0.5rem] pointer-events-none",
                   "text-base text-white/60 tracking-normal"
                 )}
                 style={{
@@ -409,7 +424,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
                   pauseDuration={2500}
                   loop={true}
                   showCursor={false}
-                  className="leading-[1.15]"
+                  className="!leading-6"
                 />
               </div>
             )}
@@ -443,30 +458,9 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
             </DropdownMenu>
 
             <div className="flex items-center gap-3 md:gap-4">
-              <button
-                type="button"
-                onClick={() => { }}
-                className={cn(
-                  "rounded-full px-3 py-1.5 md:px-4 md:py-2",
-                  "text-white/75 text-sm md:text-base leading-none",
-                  "hover:bg-white/10 transition-colors"
-                )}
-              >
-                Plan
-              </button>
 
-              <button
-                type="button"
-                onClick={() => { }}
-                className={cn(
-                  "h-8 w-8 md:h-9 md:w-9 rounded-full",
-                  "flex items-center justify-center text-white/85",
-                  "hover:bg-white/10 transition-colors"
-                )}
-                aria-label="Voice input"
-              >
-                <AudioLines className="h-5 w-5" />
-              </button>
+
+
 
               <button
                 type="submit"
@@ -475,9 +469,9 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
                 className={cn(
                   "h-8 w-8 md:h-9 md:w-9 rounded-full",
                   "flex items-center justify-center",
-                  "bg-[#9B9B9B] text-[#1F1F1F]",
+                  "bg-white text-[#1F1F1F]",
                   "transition-colors",
-                  "hover:bg-[#B1B1B1]",
+                  "hover:bg-white/90",
                   "disabled:opacity-40 disabled:cursor-not-allowed"
                 )}
                 aria-label="Submit prompt"
