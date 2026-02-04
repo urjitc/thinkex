@@ -780,22 +780,17 @@ export default function WorkspaceHeader({
 
             {/* Share Button - hidden in compact mode */}
             {!isCompactMode && onOpenShare && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onOpenShare}
-                    className="h-8 px-2 text-muted-foreground hover:text-foreground font-normal relative"
-                  >
-                    Share
-                    <span className="ml-1.5 bg-red-600 text-white text-[9px] px-1.5 py-0.5 rounded-full font-semibold">
-                      NEW
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Share workspace</TooltipContent>
-              </Tooltip>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onOpenShare}
+                className="h-8 px-2 text-muted-foreground hover:text-foreground font-normal relative"
+              >
+                Share
+                <span className="ml-1.5 bg-red-600 text-white text-[9px] px-1.5 py-0.5 rounded-full font-semibold">
+                  NEW
+                </span>
+              </Button>
             )}
 
             {/* Search Input */}
