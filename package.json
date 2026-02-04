@@ -39,7 +39,6 @@
     "@blocknote/react": "^0.46.2",
     "@blocknote/server-util": "^0.46.2",
     "@blocknote/shadcn": "^0.46.2",
-    "@daveyplate/better-auth-ui": "^3.3.11",
     "@dnd-kit/react": "^0.1.21",
     "@embedpdf/core": "^2.1.1",
     "@embedpdf/engines": "^2.1.1",
