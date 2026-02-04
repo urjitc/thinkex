@@ -33,14 +33,10 @@ export function ToolUIErrorShell({
           <Loader2 className="size-4 animate-spin" />
         </div>
         <div className="flex flex-col min-w-0 flex-1">
-          <span className="text-xs font-medium truncate">
-            {label}
-          </span>
-          {message && (
-            <span className="text-[10px] text-muted-foreground truncate">{message}</span>
-          )}
-        </div>
+          {label}
+        </span>
       </div>
     </div>
+    </div >
   );
 }
