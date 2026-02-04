@@ -42,6 +42,7 @@ export function WorkspaceGrid({ searchQuery = "" }: WorkspaceGridProps) {
   const [settingsWorkspace, setSettingsWorkspace] = useState<WorkspaceWithState | null>(null);
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
   const hasAttemptedWelcomeWorkspace = useRef(false);
+  const prefetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -231,12 +232,22 @@ export function WorkspaceGrid({ searchQuery = "" }: WorkspaceGridProps) {
                   borderColor: borderColor,
                 }}
                 onMouseEnter={(e) => {
-                  router.prefetch(`/workspace/${workspace.slug || workspace.id}`);
+                  // Debounce prefetching to prevent spam when sweeping across grid
+                  prefetchTimeoutRef.current = setTimeout(() => {
+                    router.prefetch(`/workspace/${workspace.slug || workspace.id}`);
+                  }, 100); // 100ms delay
+
                   if (!selectedIds.has(workspace.id)) {
                     e.currentTarget.style.borderColor = 'white';
                   }
                 }}
                 onMouseLeave={(e) => {
+                  // Cancel prefetch if user leaves quickly
+                  if (prefetchTimeoutRef.current) {
+                    clearTimeout(prefetchTimeoutRef.current);
+                    prefetchTimeoutRef.current = null;
+                  }
+
                   if (!selectedIds.has(workspace.id)) {
                     e.currentTarget.style.borderColor = borderColor;
                   }
