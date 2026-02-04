@@ -39,55 +39,11 @@ export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
           {
             id: "sample-note-1",
             type: "note",
-            name: "Prompt to Workspace",
-            subtitle: "AI-Generated Note",
+            name: "Update me", // Special name triggers generating skeleton in UI
+            subtitle: "",
             data: {
-              blockContent: [
-                {
-                  id: "nb1",
-                  type: "paragraph",
-                  props: { backgroundColor: "default", textColor: "default", textAlignment: "left" },
-                  content: [
-                    {
-                      type: "text",
-                      text: "Try typing a prompt like ",
-                      styles: {}
-                    },
-                    {
-                      type: "text",
-                      text: "\"Research AI trends and create a note\"",
-                      styles: { italic: true }
-                    },
-                    {
-                      type: "text",
-                      text: " or ",
-                      styles: {}
-                    },
-                    {
-                      type: "text",
-                      text: "\"Summarize this website: [URL]\"",
-                      styles: { italic: true }
-                    },
-                    {
-                      type: "text",
-                      text: ". When notes are generated from web searches or URLs, they'll include source links like the ones shown above.",
-                      styles: {}
-                    }
-                  ],
-                  children: []
-                }
-              ],
+              blockContent: [], // Empty content for generating state
               field1: "",
-              sources: [
-                {
-                  title: "ThinkEx Documentation",
-                  url: "https://github.com/thinkex/docs"
-                },
-                {
-                  title: "Getting Started Guide",
-                  url: "https://example.com/getting-started"
-                }
-              ]
             },
             color: sampleColors[0],
             layout: { x: 0, y: 0, w: 4, h: 9 },
@@ -95,7 +51,7 @@ export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
           {
             id: "sample-quiz-1",
             type: "quiz",
-            name: "Quiz",
+            name: "Update me", // Special name triggers generating skeleton in UI
             subtitle: "",
             data: {
               questions: []
@@ -106,7 +62,7 @@ export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
           {
             id: "sample-flashcard-1",
             type: "flashcard",
-            name: "Flashcards",
+            name: "Update me", // Special name triggers generating skeleton in UI
             subtitle: "",
             data: {
               cards: []
