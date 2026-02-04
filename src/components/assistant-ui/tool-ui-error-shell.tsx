@@ -18,7 +18,6 @@ export interface ToolUIErrorShellProps {
  */
 export function ToolUIErrorShell({
   label,
-  message,
   className,
 }: ToolUIErrorShellProps) {
   return (
