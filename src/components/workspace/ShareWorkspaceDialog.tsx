@@ -98,7 +98,7 @@ export default function ShareWorkspaceDialog({
   useEffect(() => {
     if (workspace && open && !isBulk) {
       const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-      const url = `${baseUrl}/share/${workspace.id}`;
+      const url = `${baseUrl}/share-copy/${workspace.id}`;
       setShareUrl(url);
       loadCollaborators();
     }

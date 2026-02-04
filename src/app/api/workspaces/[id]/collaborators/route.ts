@@ -22,6 +22,10 @@ import {
     requireAuth,
     requireAuthWithUserInfo
 } from "@/lib/api/workspace-helpers";
+import { Resend } from "resend";
+import { InviteEmailTemplate } from "@/components/email/invite-email";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // GET /api/workspaces/[id]/collaborators
 async function handleGET(
@@ -148,7 +152,10 @@ async function handlePOST(
 
     // Get workspace to check if invitee is the owner
     const [ws] = await db
-        .select({ userId: workspaces.userId })
+        .select({
+            userId: workspaces.userId,
+            name: workspaces.name
+        })
         .from(workspaces)
         .where(eq(workspaces.id, workspaceId))
         .limit(1);
@@ -169,6 +176,27 @@ async function handlePOST(
             permissionLevel: permissionLevel === "viewer" ? "viewer" : "editor",
         })
         .returning();
+
+    // Send invitation email
+    try {
+        const workspaceUrl = `${process.env.NEXT_PUBLIC_APP_URL}/share-copy/${workspaceId}`;
+        const { data, error } = await resend.emails.send({
+            from: 'ThinkEx <onboarding@resend.dev>', // Update this with your verified domain if available
+            to: [email],
+            subject: `You've been invited to collaborate on ${ws.name || 'a workspace'}`,
+            react: InviteEmailTemplate({
+                inviterName: currentUser.name || 'A user',
+                workspaceName: ws.name || 'Workspace',
+                workspaceUrl,
+            }),
+        });
+
+        if (error) {
+            console.error("Failed to send invitation email:", error);
+        }
+    } catch (emailError) {
+        console.error("Error sending invitation email:", emailError);
+    }
 
     return NextResponse.json({ collaborator: newCollaborator }, { status: 201 });
 }

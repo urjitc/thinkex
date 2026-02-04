@@ -134,7 +134,8 @@
     "tailwind-merge": "^3.4.0",
     "tw-shimmer": "^0.4.3",
     "zod": "^4.3.4",
-    "zustand": "^5.0.9"
+    "zustand": "^5.0.9",
+    "resend": "^4.1.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",
