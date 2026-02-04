@@ -1,11 +1,15 @@
-import { authViewPaths } from "@daveyplate/better-auth-ui/server";
 import { AuthPageBackground } from "@/components/auth/AuthPageBackground";
-import { AuthViewWrapper } from "@/components/auth/AuthViewWrapper";
+import { SignInForm, SignUpForm, ForgotPasswordForm } from "@/components/auth/AuthForms";
+import Link from "next/link";
 
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return Object.values(authViewPaths).map((path) => ({ path }));
+  return [
+    { path: "sign-in" },
+    { path: "sign-up" },
+    { path: "forgot-password" },
+  ];
 }
 
 export default async function AuthPage({
@@ -18,9 +22,18 @@ export default async function AuthPage({
   const { path } = await params;
   const { redirect_url } = await searchParams;
 
-  // Default to /onboarding if no redirect_url is provided
-  // Otherwise use the redirect_url from query params (e.g., from share links)
-  const redirectTo = redirect_url || "/onboarding";
+  let redirectTo = redirect_url;
+  if (!redirectTo) {
+    if (path === "sign-in") {
+      redirectTo = "/home";
+    } else {
+      redirectTo = "/onboarding";
+    }
+  }
+
+  let title = "Welcome to ThinkEx";
+  if (path === "sign-up") title = "Create an account";
+  if (path === "forgot-password") title = "Reset Password";
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4 md:p-6 overflow-hidden">
@@ -28,18 +41,17 @@ export default async function AuthPage({
       <AuthPageBackground />
 
       {/* Auth content */}
-      <div className="relative z-10 w-full max-w-md flex flex-col items-center">
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-center mb-6 text-foreground">
-          Welcome to ThinkEx
-        </h1>
+      <div className="relative z-10 w-full max-w-sm flex flex-col items-center">
+        {/* <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-center mb-6 text-foreground">
+          {title}
+        </h1> */}
+
         <div className="w-full flex justify-center">
-          <AuthViewWrapper
-            path={path}
-            redirectTo={redirectTo}
-            classNames={{
-              base: "bg-background/60 backdrop-blur-md border border-blue-500/20 shadow-xl",
-            }}
-          />
+          <div className="w-full bg-background/60 backdrop-blur-md border border-blue-500/20 shadow-xl rounded-xl p-6 md:p-8">
+            {path === "sign-in" && <SignInForm redirectTo={redirectTo} />}
+            {path === "sign-up" && <SignUpForm redirectTo={redirectTo} />}
+            {path === "forgot-password" && <ForgotPasswordForm redirectTo={redirectTo} />}
+          </div>
         </div>
       </div>
     </main>
