@@ -73,15 +73,18 @@ export function InviteGuard({ children }: InviteGuardProps) {
     }
 
     // 2. Invite Token Present: Handle Invite Flow
-    if (inviteToken) {
-        // If not logged in (or anonymous), redirect to auth with invite context
-        if (!session || session.user?.isAnonymous) {
+    // Handle redirect for unauthenticated users in an effect to avoid "Cannot update a component while rendering"
+    useEffect(() => {
+        if (inviteToken && (!session || session.user?.isAnonymous) && !isSessionLoading) {
             const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
-            // Determine if we should send to sign-in or sign-up (default to sign-up for new invites)
-            // We pass the invite token so the auth page can show the custom header
-            // We pass redirect_url so they come back here to claim the invite after auth
             router.replace(`/auth/sign-up?invite=${inviteToken}&redirect_url=${encodeURIComponent(currentUrl)}`);
-            return null; // Don't render anything while redirecting
+        }
+    }, [inviteToken, session, isSessionLoading, router]);
+
+    if (inviteToken) {
+        // If not logged in (or anonymous), show loader (or null) while redirecting
+        if (!session || session.user?.isAnonymous) {
+            return null;
         }
 
         // If logged in, we are "claiming" the invite. Show loading state.

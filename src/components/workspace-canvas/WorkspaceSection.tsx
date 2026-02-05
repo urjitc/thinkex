@@ -392,6 +392,10 @@ export function WorkspaceSection({
   };
 
 
+  // Get search params for invite check
+  const searchParams = useSearchParams();
+  const hasInviteParam = searchParams.get('invite');
+
   return (
     <div
       className="relative size-full flex flex-col"
@@ -433,7 +437,7 @@ export function WorkspaceSection({
                 !isLoadingWorkspace && !loadingWorkspaces && !currentWorkspaceId ? (
                   session?.user?.isAnonymous ? (
                     <LoginGate />
-                  ) : useSearchParams().get('invite') ? (
+                  ) : hasInviteParam ? (
                     // If we have an invite query param, show skeleton instead of Access Denied
                     // This handles the race condition where workspace fetch 404s before claim completes
                     <WorkspaceSkeleton />
