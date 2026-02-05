@@ -17,11 +17,24 @@ import {
 import { AccountModal } from "@/components/auth/AccountModal";
 
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+
 export function UserProfileDropdown() {
   const { data: session } = useSession();
   const router = useRouter();
   const [showAccountModal, setShowAccountModal] = useState(false);
-
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const userName = session?.user?.name || session?.user?.email || "User";
   const userImage = session?.user?.image || undefined;
@@ -40,6 +53,28 @@ export function UserProfileDropdown() {
     await signOut();
     router.push("/");
   }, [router]);
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch("/api/user/delete", {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete account");
+      }
+
+      toast.success("Account deleted successfully");
+      await signOut();
+      router.push("/");
+    } catch (error: any) {
+      toast.error(error.message);
+      setIsDeleting(false);
+      setShowDeleteAlert(false);
+    }
+  };
 
   // Anonymous user: show sign in/up buttons
   if (session?.user?.isAnonymous) {
@@ -81,6 +116,14 @@ export function UserProfileDropdown() {
             Account
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => setShowDeleteAlert(true)}
+            className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-500/10"
+          >
+            <LogOut className="mr-2 h-4 w-4 rotate-180" /> {/* Re-using icon, maybe Trash is better but keeping simple */}
+            Delete Account
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
             <LogOut className="mr-2 h-4 w-4" />
             Sign out
@@ -89,6 +132,31 @@ export function UserProfileDropdown() {
       </DropdownMenu>
 
       <AccountModal open={showAccountModal} onOpenChange={setShowAccountModal} />
+
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your account
+              and remove your data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteAccount();
+              }}
+              className="bg-red-500 hover:bg-red-600 focus:ring-red-500 text-white"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete Account"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
