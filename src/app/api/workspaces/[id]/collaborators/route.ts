@@ -116,12 +116,8 @@ async function handlePOST(
         .where(eq(user.email, email.trim().toLowerCase()))
         .limit(1);
 
-    if (!invitedUser) {
-        return NextResponse.json(
-            { message: "User not found. They need to sign up first." },
-            { status: 404 }
-        );
-    }
+    // If user not found, we will create a pending invite later in the code
+    // The previous 404 block here was preventing that flow
 
     // Check if already a collaborator
     const [existing] = await db
@@ -208,9 +204,16 @@ async function handlePOST(
     // Import nanoid dynamically or use a simple random string generator since nanoid might be ESM only
     // Simple secure random token generator
     const generateToken = () => {
-        const array = new Uint8Array(24);
-        crypto.getRandomValues(array);
-        return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+        // Use Web Crypto API which is available in Node.js global scope in newer versions
+        // or fall back to Math.random for older environments if critical
+        if (typeof crypto !== 'undefined') {
+            const array = new Uint8Array(24);
+            crypto.getRandomValues(array);
+            return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+        } else {
+            // Fallback for environments without crypto global
+            return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        }
     };
 
     const token = generateToken();

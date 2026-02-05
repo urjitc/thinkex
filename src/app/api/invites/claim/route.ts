@@ -40,7 +40,7 @@ async function handlePOST(request: NextRequest) {
     }
 
     // Verify email matches current user
-    if (invite.email.toLowerCase() !== session.user.email.toLowerCase()) {
+    if (!session.user.email || invite.email.toLowerCase() !== session.user.email.toLowerCase()) {
         return NextResponse.json({
             error: "Email mismatch",
             message: `This invite is for ${invite.email}, but you are logged in as ${session.user.email}. Please log out and sign up/in with the invited email.`

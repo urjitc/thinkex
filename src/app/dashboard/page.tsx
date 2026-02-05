@@ -513,15 +513,29 @@ export function DashboardPage() {
           // Remove query param
           const newParams = new URLSearchParams(searchParams.toString());
           newParams.delete('invite');
-          router.replace(`/workspace/${data.workspaceSlug || ''}?${newParams.toString()}`);
+
+          // Construct proper URL
+          const targetPath = `/workspace/${data.workspaceSlug || data.workspaceId}`;
+          const queryString = newParams.toString();
+          const targetUrl = queryString ? `${targetPath}?${queryString}` : targetPath;
+
+          router.replace(targetUrl);
           // Force reload to get permission updates
           window.location.reload();
         } else {
+          // Error case: show error and remove param to prevent infinite loop
           toast.error(data.message || data.error || 'Failed to accept invitation');
+          const newParams = new URLSearchParams(searchParams.toString());
+          newParams.delete('invite');
+          router.replace(`/workspace?${newParams.toString()}`);
         }
       } catch (e) {
         console.error(e);
         toast.error('Failed to accept invitation');
+        // Error case: remove param to prevent infinite loop
+        const newParams = new URLSearchParams(searchParams.toString());
+        newParams.delete('invite');
+        router.replace(`/workspace?${newParams.toString()}`);
       }
     }
 
