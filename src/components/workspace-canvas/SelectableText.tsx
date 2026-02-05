@@ -105,6 +105,13 @@ export const SelectableText = React.forwardRef<SelectableTextRef, SelectableText
       };
     }, [containerSelector]);
 
+    const currentSelectionRef = useRef<SelectionInfo | null>(null);
+
+    // Sync ref with state
+    useEffect(() => {
+      currentSelectionRef.current = currentSelection;
+    }, [currentSelection]);
+
     // Calculate tooltip position based on selection
     const calculateTooltipPosition = useCallback((range: Range): { x: number; y: number } => {
       const rects = range.getClientRects();
@@ -143,8 +150,10 @@ export const SelectableText = React.forwardRef<SelectableTextRef, SelectableText
       const selection = window.getSelection();
 
       if (!selection || selection.isCollapsed) {
-        setCurrentSelection(null);
-        onSelectionChange?.(null);
+        if (currentSelectionRef.current) {
+          setCurrentSelection(null);
+          onSelectionChange?.(null);
+        }
         mouseUpPositionRef.current = null;
         isMouseUpTriggeredRef.current = false;
         return;
@@ -154,8 +163,10 @@ export const SelectableText = React.forwardRef<SelectableTextRef, SelectableText
       const selectedText = selection.toString().trim();
 
       if (!selectedText) {
-        setCurrentSelection(null);
-        onSelectionChange?.(null);
+        if (currentSelectionRef.current) {
+          setCurrentSelection(null);
+          onSelectionChange?.(null);
+        }
         mouseUpPositionRef.current = null;
         isMouseUpTriggeredRef.current = false;
         return;
@@ -168,8 +179,10 @@ export const SelectableText = React.forwardRef<SelectableTextRef, SelectableText
         : containerRef.current;
 
       if (!chatContainer) {
-        setCurrentSelection(null);
-        onSelectionChange?.(null);
+        if (currentSelectionRef.current) {
+          setCurrentSelection(null);
+          onSelectionChange?.(null);
+        }
         mouseUpPositionRef.current = null;
         isMouseUpTriggeredRef.current = false;
         return;
@@ -183,8 +196,10 @@ export const SelectableText = React.forwardRef<SelectableTextRef, SelectableText
       const endInChat = chatContainer.contains(endContainer);
 
       if (!startInChat || !endInChat) {
-        setCurrentSelection(null);
-        onSelectionChange?.(null);
+        if (currentSelectionRef.current) {
+          setCurrentSelection(null);
+          onSelectionChange?.(null);
+        }
         mouseUpPositionRef.current = null;
         isMouseUpTriggeredRef.current = false;
         return;
