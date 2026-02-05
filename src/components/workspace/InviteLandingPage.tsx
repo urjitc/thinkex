@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { AuthPageBackground } from "@/components/auth/AuthPageBackground";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, ArrowRight, UserPlus, LogIn } from "lucide-react";
@@ -85,9 +86,8 @@ export function InviteLandingPage({ token }: InviteLandingPageProps) {
 
     return (
         <div className="flex h-screen w-full items-center justify-center bg-black/95 relative overflow-hidden">
-            {/* Abstract Background */}
-            <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
-            <div className="absolute h-full w-full bg-black [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]" />
+            {/* Background with grid and cards - same as auth page */}
+            <AuthPageBackground />
 
             <Card className="max-w-md w-full border-white/10 bg-black/50 backdrop-blur-xl relative z-10 shadow-2xl">
                 <CardHeader className="text-center space-y-4 pb-2">

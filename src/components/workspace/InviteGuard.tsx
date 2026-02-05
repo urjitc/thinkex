@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { AuthPageBackground } from "@/components/auth/AuthPageBackground";
 import { InviteLandingPage } from "@/components/workspace/InviteLandingPage";
 
 interface InviteGuardProps {
@@ -82,10 +83,22 @@ export function InviteGuard({ children }: InviteGuardProps) {
         // If logged in, we are "claiming" the invite. Show loading state.
         // The useEffect above will handle the network request and redirect.
         return (
-            <div className="flex h-screen w-full flex-col items-center justify-center bg-black/95 gap-4">
-                <Loader2 className="h-8 w-8 animate-spin text-white/50" />
-                <p className="text-sm text-zinc-400">Joining workspace...</p>
-            </div>
+            <main className="relative flex min-h-screen flex-col items-center justify-center p-4 md:p-6 overflow-hidden">
+                <div className="absolute inset-0 bg-black z-0" />
+                <AuthPageBackground />
+
+                <div className="relative z-10 text-center space-y-6 max-w-md">
+                    <div className="flex justify-center">
+                        <Loader2 className="w-10 h-10 animate-spin text-white" />
+                    </div>
+                    <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-white">
+                        Joining workspace...
+                    </h1>
+                    <p className="text-sm text-white/70">
+                        This will only take a moment
+                    </p>
+                </div>
+            </main>
         );
     }
 
