@@ -150,11 +150,12 @@ async function handlePOST(
         );
     }
 
-    // Get workspace to check if invitee is the owner
+    // Get workspace to check if invitee is the owner and get slug for url
     const [ws] = await db
         .select({
             userId: workspaces.userId,
-            name: workspaces.name
+            name: workspaces.name,
+            slug: workspaces.slug
         })
         .from(workspaces)
         .where(eq(workspaces.id, workspaceId))
@@ -180,7 +181,9 @@ async function handlePOST(
     // Send invitation email
     try {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://thinkex.app';
-        const workspaceUrl = `https://thinkex.app/workspace/${workspaceId}`;
+        // Use slug if available, otherwise fallback to id (though slug should always be present for access)
+        const identifier = ws.slug || workspaceId;
+        const workspaceUrl = `https://thinkex.app/workspace/${identifier}`;
         const { data, error } = await resend.emails.send({
             from: 'ThinkEx <hello@thinkex.app>', // Update this with your verified domain if available
             to: [email],
