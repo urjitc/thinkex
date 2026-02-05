@@ -331,6 +331,7 @@ export async function POST(req: Request) {
         googleSearchRetrieval: {
           dynamicRetrievalConfig: {
             mode: 'MODE_DYNAMIC',
+            dynamicThreshold: 1.0,
           },
         },
       },
