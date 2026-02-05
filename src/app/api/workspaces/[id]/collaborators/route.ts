@@ -69,6 +69,19 @@ async function handleGET(
         .leftJoin(user, eq(workspaceCollaborators.userId, user.id))
         .where(eq(workspaceCollaborators.workspaceId, workspaceId));
 
+    // Get pending invites
+    const invites = await db
+        .select({
+            id: workspaceInvites.id,
+            email: workspaceInvites.email,
+            permissionLevel: workspaceInvites.permissionLevel,
+            createdAt: workspaceInvites.createdAt,
+            expiresAt: workspaceInvites.expiresAt,
+            inviterId: workspaceInvites.inviterId,
+        })
+        .from(workspaceInvites)
+        .where(eq(workspaceInvites.workspaceId, workspaceId));
+
     const ownerAsCollaborator = workspaceOwner ? {
         id: `owner-${workspaceOwner.userId}`,
         userId: workspaceOwner.userId,
@@ -83,7 +96,7 @@ async function handleGET(
         ? [ownerAsCollaborator, ...collaborators]
         : collaborators;
 
-    return NextResponse.json({ collaborators: allCollaborators });
+    return NextResponse.json({ collaborators: allCollaborators, invites });
 }
 
 // POST /api/workspaces/[id]/collaborators

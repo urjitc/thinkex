@@ -12,13 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -35,6 +28,15 @@ interface Collaborator {
   image?: string;
   permissionLevel: "viewer" | "editor" | "owner";
   createdAt: string;
+}
+
+interface PendingInvite {
+  id: string;
+  email: string;
+  permissionLevel: string;
+  createdAt: string;
+  expiresAt: string;
+  inviterId: string;
 }
 
 interface FrequentCollaborator {
@@ -79,6 +81,10 @@ export default function ShareWorkspaceDialog({
   const [frequentCollaborators, setFrequentCollaborators] = useState<FrequentCollaborator[]>([]);
   const [isLoadingFrequent, setIsLoadingFrequent] = useState(false);
 
+  // Pending Invites State
+  const [invites, setInvites] = useState<PendingInvite[]>([]);
+  const [isRevoking, setIsRevoking] = useState<string | null>(null);
+
   // Bulk mode check
   const isBulk = !!workspaceIds && workspaceIds.length > 1;
   const targetIds = isBulk ? workspaceIds! : (workspace ? [workspace.id] : []);
@@ -116,6 +122,8 @@ export default function ShareWorkspaceDialog({
       if (response.ok) {
         const data = await response.json();
         setCollaborators(data.collaborators || []);
+        // Set pending invites
+        setInvites(data.invites || []);
       }
     } catch (error) {
       console.error("Failed to load collaborators:", error);
@@ -274,25 +282,24 @@ export default function ShareWorkspaceDialog({
     }
   };
 
-  const handleUpdatePermission = async (collaboratorId: string, newPermission: "viewer" | "editor") => {
+  const handleRevokeInvite = async (inviteId: string) => {
     if (!workspace) return;
-
+    setIsRevoking(inviteId);
     try {
-      const response = await fetch(`/api/workspaces/${workspace.id}/collaborators/${collaboratorId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ permissionLevel: newPermission }),
+      const response = await fetch(`/api/workspaces/${workspace.id}/invites/${inviteId}`, {
+        method: 'DELETE'
       });
 
       if (response.ok) {
-        toast.success("Permission updated");
-        loadCollaborators();
+        toast.success("Invite revoked");
+        setInvites(prev => prev.filter(i => i.id !== inviteId));
       } else {
-        toast.error("Failed to update permission");
+        toast.error("Failed to revoke invite");
       }
-    } catch (error) {
-      console.error("Failed to update permission:", error);
-      toast.error("Failed to update permission");
+    } catch (e) {
+      toast.error("Failed to revoke invite");
+    } finally {
+      setIsRevoking(null);
     }
   };
 
@@ -429,65 +436,109 @@ export default function ShareWorkspaceDialog({
 
             {/* Collaborators List - Only show for single workspace */}
             {!isBulk && (
-              <div className="space-y-2 pt-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Users className="h-4 w-4" />
-                  <span>People with access ({collaborators.length})</span>
-                </div>
+              <div className="space-y-4 pt-2">
 
-                {isLoadingCollaborators ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                {/* Active Collaborators */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>People with access ({collaborators.length})</span>
                   </div>
-                ) : collaborators.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">
-                    No collaborators yet. Invite someone above!
-                  </p>
-                ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {collaborators.map((collab) => (
-                      <div
-                        key={collab.id}
-                        className="flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={collab.image} />
-                            <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                              {getInitials(collab.name, collab.email)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {collab.name || collab.email || "Unknown"}
-                            </p>
-                            {collab.name && collab.email && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {collab.email}
+
+                  {isLoadingCollaborators ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : collaborators.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">
+                      No collaborators yet. Invite someone above!
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {collaborators.map((collab) => (
+                        <div
+                          key={collab.id}
+                          className="flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={collab.image} />
+                              <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                                {getInitials(collab.name, collab.email)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">
+                                {collab.name || collab.email || "Unknown"}
                               </p>
+                              {collab.name && collab.email && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {collab.email}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {collab.permissionLevel === "owner" ? (
+                              <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded border border-primary/20">
+                                Owner
+                              </span>
+                            ) : (
+                              canManage && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                  onClick={() => handleRemoveCollaborator(collab.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {collab.permissionLevel === "owner" ? (
-                            <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded border border-primary/20">
-                              Owner
-                            </span>
-                          ) : (
-                            canManage && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                onClick={() => handleRemoveCollaborator(collab.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pending Invites */}
+                {!isLoadingCollaborators && invites.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Mail className="h-4 w-4" />
+                      <span>Pending Invites ({invites.length})</span>
+                    </div>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {invites.map((invite) => (
+                        <div key={invite.id} className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-dashed border-white/10">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center">
+                              <Mail className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate opacity-80">{invite.email}</p>
+                              <p className="text-xs text-muted-foreground">Invited as {invite.permissionLevel}</p>
+                            </div>
+                          </div>
+                          {canManage && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-muted-foreground hover:text-red-400"
+                              onClick={() => handleRevokeInvite(invite.id)}
+                              disabled={isRevoking === invite.id}
+                            >
+                              {isRevoking === invite.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                "Revoke"
+                              )}
+                            </Button>
                           )}
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

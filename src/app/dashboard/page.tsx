@@ -37,7 +37,8 @@ import WorkspaceSettingsModal from "@/components/workspace/WorkspaceSettingsModa
 import ShareWorkspaceDialog from "@/components/workspace/ShareWorkspaceDialog";
 import { RealtimeProvider } from "@/contexts/RealtimeContext";
 import { toast } from "sonner";
-import { InviteLandingPage } from "@/components/workspace/InviteLandingPage";
+
+import { InviteGuard } from "@/components/workspace/InviteGuard";
 
 // Main dashboard content component
 interface DashboardContentProps {
@@ -488,58 +489,18 @@ function DashboardContent({
 
 // Main page component
 // Main page component
+// Main page component (wrapper)
 export function DashboardPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const inviteToken = searchParams.get('invite');
-  const { data: session, isPending: isSessionLoading } = useSession();
+  return (
+    <InviteGuard>
+      <DashboardView />
+    </InviteGuard>
+  );
+}
 
-  // Handle invitation auto-claiming
-  useEffect(() => {
-    async function claimInvite() {
-      if (!inviteToken || !session?.user || session.user.isAnonymous || isSessionLoading) return;
-
-      try {
-        const res = await fetch('/api/invites/claim', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: inviteToken })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          toast.success('Invitation accepted!');
-
-          // 1. Remove invite param using router to trigger re-render in WorkspaceContext
-          // This removes the 'pause' on the workspace query
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('invite');
-          router.replace(newUrl.pathname + newUrl.search);
-        } else {
-          // Error case (e.g. 404 Not Found - likely because already claimed or double-fired)
-          // Don't toast error immediately for 404/410 to avoid confusing users if they actually ARE added
-          if (res.status !== 404 && res.status !== 410) {
-            toast.error(data.message || data.error || 'Failed to accept invitation');
-          }
-
-          // Just remove the param and stay on the page. 
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('invite');
-          router.replace(newUrl.pathname + newUrl.search);
-        }
-      } catch (e) {
-        console.error(e);
-        // On network error etc, just clean URL and let it fail gracefully
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete('invite');
-        router.replace(newUrl.pathname + newUrl.search);
-      }
-    }
-
-    claimInvite();
-  }, [inviteToken, session, isSessionLoading]);
-
+// Inner component with all the dashboard hooks
+// Only rendered when InviteGuard allows (authenticated + invite processed)
+function DashboardView() {
   // Get workspace context - currentWorkspace is loaded directly by slug (fast path)
   const {
     currentSlug,
@@ -588,12 +549,6 @@ export function DashboardPage() {
   useEffect(() => {
     clearPlayingYouTubeCards();
   }, [currentWorkspaceId, clearPlayingYouTubeCards]);
-
-  const showInviteLanding = inviteToken && !isSessionLoading && (!session || session.user?.isAnonymous);
-
-  if (showInviteLanding) {
-    return <InviteLandingPage token={inviteToken} />;
-  }
 
   return (
     <RealtimeProvider workspaceId={currentWorkspaceId}>
