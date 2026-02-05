@@ -510,37 +510,35 @@ export function DashboardPage() {
 
         if (res.ok) {
           toast.success('Invitation accepted!');
-          // Remove query param
-          const newParams = new URLSearchParams(searchParams.toString());
-          newParams.delete('invite');
 
-          // Construct proper URL
-          const targetPath = `/workspace/${data.workspaceSlug || data.workspaceId}`;
-          const queryString = newParams.toString();
-          const targetUrl = queryString ? `${targetPath}?${queryString}` : targetPath;
-
-          router.replace(targetUrl);
-          // Force reload to get permission updates
-          window.location.reload();
+          // 1. Remove invite param using router to trigger re-render in WorkspaceContext
+          // This removes the 'pause' on the workspace query
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('invite');
+          router.replace(newUrl.pathname + newUrl.search);
         } else {
-          // Error case: show error and remove param to prevent infinite loop
-          toast.error(data.message || data.error || 'Failed to accept invitation');
-          const newParams = new URLSearchParams(searchParams.toString());
-          newParams.delete('invite');
-          router.replace(`/workspace?${newParams.toString()}`);
+          // Error case (e.g. 404 Not Found - likely because already claimed or double-fired)
+          // Don't toast error immediately for 404/410 to avoid confusing users if they actually ARE added
+          if (res.status !== 404 && res.status !== 410) {
+            toast.error(data.message || data.error || 'Failed to accept invitation');
+          }
+
+          // Just remove the param and stay on the page. 
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('invite');
+          router.replace(newUrl.pathname + newUrl.search);
         }
       } catch (e) {
         console.error(e);
-        toast.error('Failed to accept invitation');
-        // Error case: remove param to prevent infinite loop
-        const newParams = new URLSearchParams(searchParams.toString());
-        newParams.delete('invite');
-        router.replace(`/workspace?${newParams.toString()}`);
+        // On network error etc, just clean URL and let it fail gracefully
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('invite');
+        router.replace(newUrl.pathname + newUrl.search);
       }
     }
 
     claimInvite();
-  }, [inviteToken, session, isSessionLoading, router, searchParams]);
+  }, [inviteToken, session, isSessionLoading]);
 
   // Get workspace context - currentWorkspace is loaded directly by slug (fast path)
   const {
@@ -591,8 +589,9 @@ export function DashboardPage() {
     clearPlayingYouTubeCards();
   }, [currentWorkspaceId, clearPlayingYouTubeCards]);
 
-  // Show InviteLandingPage if we have a token and NO session (and not loading)
-  if (inviteToken && !isSessionLoading && (!session || session.user?.isAnonymous)) {
+  const showInviteLanding = inviteToken && !isSessionLoading && (!session || session.user?.isAnonymous);
+
+  if (showInviteLanding) {
     return <InviteLandingPage token={inviteToken} />;
   }
 
