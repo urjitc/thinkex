@@ -55,7 +55,8 @@ export function InviteLandingPage({ token }: InviteLandingPageProps) {
         const authPath = action === 'signin' ? '/auth/sign-in' : '/auth/sign-up';
         const emailParam = details?.email ? `&email=${encodeURIComponent(details.email)}` : '';
 
-        router.push(`${authPath}?callbackUrl=${encodeURIComponent(currentUrl)}${emailParam}`);
+        // Use redirect_url to match what AuthPage expects
+        router.push(`${authPath}?redirect_url=${encodeURIComponent(currentUrl)}${emailParam}`);
     };
 
     if (loading) {
@@ -127,13 +128,15 @@ export function InviteLandingPage({ token }: InviteLandingPageProps) {
                         Create Account
                         <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
-                    <Button
-                        onClick={() => handleAction('signin')}
-                        variant="ghost"
-                        className="w-full text-zinc-400 hover:text-white"
-                    >
-                        Start Session
-                    </Button>
+                    <div className="text-center">
+                        <span className="text-sm text-zinc-500">Already have an account? </span>
+                        <button
+                            onClick={() => handleAction('signin')}
+                            className="text-sm text-white hover:underline font-medium"
+                        >
+                            Sign In
+                        </button>
+                    </div>
                 </CardFooter>
             </Card>
         </div>

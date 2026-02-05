@@ -17,18 +17,23 @@ export default async function AuthPage({
   searchParams
 }: {
   params: Promise<{ path: string }>;
-  searchParams: Promise<{ redirect_url?: string }>;
+  searchParams: Promise<{ redirect_url?: string; callbackUrl?: string }>;
 }) {
   const { path } = await params;
-  const { redirect_url } = await searchParams;
+  const { redirect_url, callbackUrl } = await searchParams;
 
-  let redirectTo = redirect_url;
-  if (!redirectTo) {
-    if (path === "sign-in") {
-      redirectTo = "/home";
+  let redirectTo = redirect_url || callbackUrl;
+
+  // For sign-up, always route through onboarding, but preserve the final destination
+  if (path === "sign-up") {
+    if (redirectTo) {
+      redirectTo = `/onboarding?redirect_url=${encodeURIComponent(redirectTo)}`;
     } else {
       redirectTo = "/onboarding";
     }
+  } else if (!redirectTo) {
+    // For sign-in without a specific target, go to home
+    redirectTo = "/home";
   }
 
   let title = "Welcome to ThinkEx";
