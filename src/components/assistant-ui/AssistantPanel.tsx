@@ -190,13 +190,13 @@ function GenerateStudyMaterialsHandler({
 
     setIsChatExpanded?.(true);
 
-    const prompt = `First, process the PDF file in this workspace to read its content.
+    const prompt = `First, process any PDF files in this workspace.
     
-Then, using that PDF content:
+Then, using the content:
 1. Update the note with a comprehensive summary
 2. Update the quiz with 5-10 relevant questions
 3. Update the flashcards with key terms and concepts
-4. Search and add one relevant youtube video if possible`;
+4. Search and add one relevant YouTube video if possible`;
 
     let attempts = 0;
     const maxAttempts = 12;
