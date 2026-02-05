@@ -48,7 +48,7 @@ export function createChatTools(config: ChatToolsConfig): Record<string, any> {
 
     return {
         // File & URL processing
-        processFiles: createProcessFilesTool(),
+        processFiles: createProcessFilesTool(ctx),
         processUrls: createProcessUrlsTool(),
 
         // Search & code execution

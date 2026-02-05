@@ -5,6 +5,9 @@ import { logger } from "@/lib/utils/logger";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
+import { loadStateForTool, fuzzyMatchItem } from "./tool-utils";
+import type { WorkspaceToolContext } from "./workspace-tools";
+import type { PdfData } from "@/lib/workspace-state/types";
 
 type FileInfo = { fileUrl: string; filename: string; mediaType: string };
 
@@ -205,12 +208,12 @@ Provide a clear, comprehensive analysis of the video content.`;
 /**
  * Create the processFiles tool
  */
-export function createProcessFilesTool() {
+export function createProcessFilesTool(ctx?: WorkspaceToolContext) {
     return tool({
-        description: "Process and analyze files including PDFs, images, documents, and videos. Handles local file URLs (/api/files/...), Supabase storage URLs (files uploaded to your workspace), and YouTube videos. Files are downloaded and analyzed directly by Gemini. You can provide custom instructions for what to extract or focus on. Use this for file URLs and video URLs, NOT for regular web pages.",
+        description: "Process and analyze files including PDFs, images, documents, and videos. Handles local file URLs (/api/files/...), Supabase storage URLs (files uploaded to your workspace), and YouTube videos. Files are downloaded and analyzed directly by Gemini. You can provide custom instructions for what to extract or focus on. Use this for file URLs, video URLs, OR by providing the names of files/videos existing in the workspace (fuzzy matched).",
         inputSchema: zodSchema(
             z.object({
-                jsonInput: z.string().describe("JSON string containing an object with 'urls' (array of file/video URLs) and optional 'instruction' (string for custom analysis). Example: '{\"urls\": [\"https://...storage.../file.pdf\"], \"instruction\": \"summarize key points\"}'"),
+                jsonInput: z.string().describe("JSON string containing an object with 'urls' (array of file/video URLs), optional 'fileNames' (array of workspace item names to look up, e.g. 'Annual Report'), and optional 'instruction' (string for custom analysis). Example: '{\"urls\": [], \"fileNames\": [\"My PDF Report\"], \"instruction\": \"summarize key points\"}'"),
             })
         ),
         execute: async ({ jsonInput }) => {
@@ -227,15 +230,70 @@ export function createProcessFilesTool() {
                 return "Error: Input must be a JSON object with 'urls' array.";
             }
 
-            const urlList = parsed.urls;
+            let urlList = parsed.urls || [];
+            const fileNames = parsed.fileNames || [];
             const instruction = parsed.instruction;
+
+            // Resolve file names to URLs using fuzzy matching if context is available
+            if (fileNames && Array.isArray(fileNames) && fileNames.length > 0) {
+                if (ctx && ctx.workspaceId) {
+                    try {
+                        const accessResult = await loadStateForTool(ctx);
+                        if (accessResult.success) {
+                            const { state } = accessResult;
+                            const notFoundData: string[] = [];
+
+                            for (const name of fileNames) {
+                                // Try to match any item type that might contain a file
+                                const matchedItem = fuzzyMatchItem(state.items, name);
+
+                                if (matchedItem) {
+                                    if (matchedItem.type === 'pdf') {
+                                        const pdfData = matchedItem.data as PdfData;
+                                        if (pdfData.fileUrl) {
+                                            urlList.push(pdfData.fileUrl);
+                                            logger.debug(`📁 [FILE_TOOL] Resolved file name "${name}" to URL: ${pdfData.fileUrl}`);
+                                        } else {
+                                            notFoundData.push(`Item "${name}" found but has no file URL.`);
+                                        }
+                                    } else if (matchedItem.type === 'youtube') {
+                                        // Handle YouTube items if we want to support them via name too
+                                        const ytData = matchedItem.data as any; // Cast to avoid full import cycle if possible, or just use 'any' safely
+                                        if (ytData.url) {
+                                            urlList.push(ytData.url);
+                                            logger.debug(`📁 [FILE_TOOL] Resolved video name "${name}" to URL: ${ytData.url}`);
+                                        }
+                                    } else {
+                                        notFoundData.push(`Item "${name}" found but is type "${matchedItem.type}" which is not a file/video.`);
+                                    }
+                                } else {
+                                    notFoundData.push(`Could not find file with name "${name}".`);
+                                }
+                            }
+
+                            if (notFoundData.length > 0) {
+                                // If we failed to find some files, we should probably inform the model/user
+                                // Append this to the result later or return partial error?
+                                // For now, let's log it. We continue with whatever URLs we found.
+                                logger.warn("📁 [FILE_TOOL] Some file names could not be resolved:", notFoundData);
+                                // Is it better to fail fast or best effort?
+                                // Best effort seems appropriate here, but maybe return a note in the result.
+                            }
+                        }
+                    } catch (error) {
+                        logger.error("📁 [FILE_TOOL] Error resolving file names:", error);
+                    }
+                } else {
+                    logger.warn("📁 [FILE_TOOL] fileNames provided but no workspace context available for resolution.");
+                }
+            }
 
             if (!Array.isArray(urlList)) {
                 return "Error: 'urls' must be an array.";
             }
 
             if (urlList.length === 0) {
-                return "No file URLs provided";
+                return "No file URLs provided (and no file names could be resolved).";
             }
 
             if (urlList.length > 20) {
