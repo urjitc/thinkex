@@ -160,14 +160,14 @@ export const UpdateFlashcardToolUI = makeAssistantToolUI<UpdateFlashcardArgs, Fl
         } else if (status.type === "complete" && parsed && !parsed.success) {
             content = (
                 <ToolUIErrorShell
-                    label="Failed to update flashcard deck"
+                    label="Trying to update flashcard deck"
                     message={parsed.message}
                 />
             );
         } else if (status.type === "incomplete" && status.reason === "error") {
             content = (
                 <ToolUIErrorShell
-                    label="Failed to update flashcard deck"
+                    label="Trying to update flashcard deck"
                     message={parsed?.message}
                 />
             );

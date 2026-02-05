@@ -1,10 +1,10 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ToolUIErrorShellProps {
-  /** Main label shown next to the X icon (e.g. "Failed to create note") */
+  /** Main label shown next to the spinner (e.g. "Trying to create note") */
   label: string;
   /** Optional error message with more details */
   message?: string;
@@ -13,12 +13,11 @@ export interface ToolUIErrorShellProps {
 
 /**
  * Shared error shell for assistant-ui tool UIs. Card-style layout with
- * X icon + label (+ optional message). Use when status.type === "incomplete" with error.
+ * spinner + label (+ optional message). Use when status.type === "incomplete" with error.
  * Matches the subtle styling of ToolUILoadingShell for consistency.
  */
 export function ToolUIErrorShell({
   label,
-  message,
   className,
 }: ToolUIErrorShellProps) {
   return (
@@ -30,15 +29,12 @@ export function ToolUIErrorShell({
     >
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <div className="flex size-4 items-center justify-center text-muted-foreground">
-          <X className="size-4" />
+          <Loader2 className="size-4 animate-spin" />
         </div>
         <div className="flex flex-col min-w-0 flex-1">
           <span className="text-xs font-medium truncate">
             {label}
           </span>
-          {message && (
-            <span className="text-[10px] text-muted-foreground truncate">{message}</span>
-          )}
         </div>
       </div>
     </div>

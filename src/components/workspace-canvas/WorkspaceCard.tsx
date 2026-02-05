@@ -1,5 +1,5 @@
 import { QuizContent } from "./QuizContent";
-import { MoreVertical, Trash2, Palette, CheckCircle2, FolderInput, FileText, Copy, X, Pencil, Columns } from "lucide-react";
+import { MoreVertical, Trash2, Palette, CheckCircle2, FolderInput, FileText, Copy, X, Pencil, Columns, Link2 } from "lucide-react";
 import { PiMouseScrollFill, PiMouseScrollBold } from "react-icons/pi";
 import { useCallback, useState, memo, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ import { useIsVisible } from "@/hooks/use-is-visible";
 import { getYouTubeEmbedUrl } from "@/lib/utils/youtube-url";
 import { YouTubeCardContent } from "./YouTubeCardContent";
 import { getLayoutForBreakpoint } from "@/lib/workspace-state/grid-layout-helpers";
+import { SourcesDisplay } from "./SourcesDisplay";
 
 import {
   DropdownMenu,
@@ -140,6 +141,26 @@ function WorkspaceCardNoteContent({ item, isScrollLocked }: { item: Item, isScro
     // Create a simple hash from block IDs and content
     return JSON.stringify(displayContent.map(b => ({ id: b.id, type: b.type })));
   }, [displayContent]);
+
+  // Check for template-created items awaiting generation
+  // Items with name "Update me" and empty content are template items waiting for AI
+  const isAwaitingGeneration = item.name === "Update me" && displayContent.length === 0;
+
+  if (isAwaitingGeneration) {
+    return (
+      <div className="flex-1 min-h-0 p-4 flex flex-col gap-3">
+        <div className="flex items-center gap-2 text-white/60 text-sm">
+          <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+          Generating note...
+        </div>
+        <Skeleton className="h-4 w-full bg-white/10" />
+        <Skeleton className="h-4 w-3/4 bg-white/10" />
+        <Skeleton className="h-4 w-5/6 bg-white/10" />
+        <Skeleton className="h-4 w-2/3 bg-white/10" />
+        <Skeleton className="h-4 w-4/5 bg-white/10" />
+      </div>
+    );
+  }
 
   if (displayContent.length > 0) {
     return (
@@ -742,23 +763,34 @@ function WorkspaceCard({
             </Dialog>
 
             <div className={(item.type === 'note' || item.type === 'pdf') && !shouldShowPreview ? "flex-1 flex flex-col" : "flex-shrink-0"}>
-              {item.type !== 'youtube' && !(item.type === 'pdf' && shouldShowPreview) && (
-                <ItemHeader
-                  id={item.id}
-                  name={item.name}
-                  subtitle={item.subtitle}
-                  description={""}
-                  onNameChange={handleNameChange}
-                  onNameCommit={handleNameCommit}
-                  onSubtitleChange={handleSubtitleChange}
-                  readOnly={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview}
-                  noMargin={true}
-                  onTitleFocus={handleTitleFocus}
-                  onTitleBlur={handleTitleBlur}
-                  allowWrap={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview}
-                />
-              )
-              }
+              {/* Hide header for template items awaiting generation */}
+              {item.type !== 'youtube' && !(item.type === 'pdf' && shouldShowPreview) && item.name !== "Update me" && (
+                <>
+                  <ItemHeader
+                    id={item.id}
+                    name={item.name}
+                    subtitle={item.subtitle}
+                    description={""}
+                    onNameChange={handleNameChange}
+                    onNameCommit={handleNameCommit}
+                    onSubtitleChange={handleSubtitleChange}
+                    readOnly={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview}
+                    noMargin={true}
+                    onTitleFocus={handleTitleFocus}
+                    onTitleBlur={handleTitleBlur}
+                    allowWrap={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview}
+                  />
+
+
+
+                  {/* Sources Section - only shown when card is wide */}
+                  {item.type === 'note' && shouldShowPreview && (item.data as NoteData).sources && (item.data as NoteData).sources!.length > 0 && (
+                    <div className="px-1 mt-2 mb-1">
+                      <SourcesDisplay sources={(item.data as NoteData).sources!} />
+                    </div>
+                  )}
+                </>
+              )}
               {/* Subtle type label for narrow cards without preview */}
               {/* Subtle type label for narrow cards without preview */}
               {(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview && (

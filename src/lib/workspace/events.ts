@@ -199,7 +199,7 @@ export function createEvent<T extends WorkspaceEvent['type']>(
     timestamp: Date.now(),
     userId,
     userName,
-    id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: crypto.randomUUID(),
   } as Extract<WorkspaceEvent, { type: T }>;
 }
 

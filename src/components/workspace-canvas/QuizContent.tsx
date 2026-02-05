@@ -210,79 +210,97 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
     };
 
     if (!currentQuestion && !showResults) {
-        return (
-            <div className="flex flex-col h-full">
-                {/* Question Area Skeleton */}
-                <div className={cn(
-                    "flex-1 p-2",
-                    "overflow-y-auto",
-                    "workspace-card-readonly-editor",
-                    "cursor-default"
-                )}>
-                    <div className="mb-6">
-                        <div className="text-sm text-white/40 prose prose-invert prose-sm max-w-none">
-                            No questions yet. Ask the AI to add quiz questions to get started.
-                        </div>
-                    </div>
+        // Template-created items have "Update me" name and should show generating skeleton
+        const isAwaitingGeneration = item.name === "Update me" && questions.length === 0;
 
-                    {/* Options Skeleton */}
-                    <div className="space-y-2">
-                        {[0, 1, 2, 3].map((index) => (
-                            <div
-                                key={index}
-                                className="w-full p-3 text-left rounded-lg border bg-white/5 border-white/10 opacity-50"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium border bg-white/10 border-white/20 text-white/60">
-                                        {String.fromCharCode(65 + index)}
-                                    </span>
-                                    <div className="text-sm text-white/40 flex-1">
-                                        Option {String.fromCharCode(65 + index)}
-                                    </div>
+        if (isAwaitingGeneration) {
+            return (
+                <div className="flex flex-col h-full">
+                    {/* Question Area Skeleton */}
+                    <div className={cn(
+                        "flex-1 p-2",
+                        "overflow-y-auto",
+                        "workspace-card-readonly-editor",
+                        "cursor-default"
+                    )}>
+                        <div className="mb-6">
+                            <div className="text-sm text-white/60 prose prose-invert prose-sm max-w-none">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                                    Generating quiz questions...
                                 </div>
                             </div>
-                        ))}
+                        </div>
+
+                        {/* Options Skeleton */}
+                        <div className="space-y-2">
+                            {[0, 1, 2, 3].map((index) => (
+                                <div
+                                    key={index}
+                                    className="w-full p-3 text-left rounded-lg border bg-white/5 border-white/10"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium border bg-white/10 border-white/20 text-white/60">
+                                            {String.fromCharCode(65 + index)}
+                                        </span>
+                                        <div className="text-sm text-white/40 flex-1">
+                                            <div className="w-3/4 h-3 bg-white/10 rounded animate-pulse"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Hint Area Skeleton */}
+                        <div className="mt-4 flex items-center justify-between">
+                            <div className="flex-1 mx-4">
+                                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-400 rounded-full animate-pulse" style={{ width: '30%' }} />
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Hint Area Skeleton */}
-                    <div className="mt-4 flex items-center justify-between">
-                        <div className="flex-1 mx-4">
-                            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                <div className="h-full bg-white/20 rounded-full" style={{ width: '0%' }} />
+                    {/* Footer Skeleton */}
+                    <div className="flex-shrink-0">
+                        <div className="flex items-center w-full px-2">
+                            {/* Left: Restart Button Skeleton */}
+                            <div className="flex-1 flex items-center justify-start">
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg text-sm text-white/20">
+                                    <RotateCcw className="w-4 h-4 rotate-180" />
+                                </div>
+                            </div>
+
+                            {/* Center: Navigation Skeleton */}
+                            <div className="flex items-center gap-1 justify-center">
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg text-sm text-white/20">
+                                    <ChevronLeft className="w-4 h-4" />
+                                </div>
+                                <span className="text-xs text-white/40 px-2">
+                                    <div className="w-8 h-3 bg-white/10 rounded animate-pulse"></div>
+                                </span>
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg text-sm text-white/20">
+                                    <ChevronRight className="w-4 h-4" />
+                                </div>
+                            </div>
+
+                            {/* Right: Check Button Skeleton */}
+                            <div className="flex-1 flex items-center justify-end">
+                                <div className="px-4 py-2 rounded-lg text-sm font-medium bg-white/10 text-white/40">
+                                    <div className="w-8 h-3 bg-white/10 rounded animate-pulse"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+            );
+        }
 
-                {/* Footer Skeleton */}
-                <div className="flex-shrink-0">
-                    <div className="flex items-center w-full px-2">
-                        {/* Left: Restart Button Skeleton */}
-                        <div className="flex-1 flex items-center justify-start">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-lg text-sm text-white/20 cursor-not-allowed">
-                                <RotateCcw className="w-4 h-4 rotate-180" />
-                            </div>
-                        </div>
-
-                        {/* Center: Navigation Skeleton */}
-                        <div className="flex items-center gap-1 justify-center">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-lg text-sm text-white/20 cursor-not-allowed">
-                                <ChevronLeft className="w-4 h-4" />
-                            </div>
-                            <span className="text-xs text-white/40 px-1">0 / 0</span>
-                            <div className="flex items-center justify-center w-8 h-8 rounded-lg text-sm text-white/20 cursor-not-allowed">
-                                <ChevronRight className="w-4 h-4" />
-                            </div>
-                        </div>
-
-                        {/* Right: Check Button Skeleton */}
-                        <div className="flex-1 flex items-center justify-end">
-                            <div className="px-4 py-2 rounded-lg text-sm font-medium bg-white/10 text-white/20 cursor-not-allowed">
-                                Check
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        // User-created quiz with no questions - show empty state
+        return (
+            <div className="flex flex-col h-full items-center justify-center p-4 text-center">
+                <p className="text-white/60 text-sm">No questions yet</p>
+                <p className="text-white/40 text-xs mt-1">Ask the AI to generate quiz questions</p>
             </div>
         );
     }
@@ -406,7 +424,7 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
                             />
                         </div>
                     </div>
-            </div>
+                </div>
 
                 {/* Explanation */}
                 {isSubmitted && (

@@ -74,10 +74,6 @@ export function FloatingCard({ data, className, breatheDelay = 0 }: FloatingCard
                         <p className="text-white/50 text-xs">{data.itemCount || 0} items</p>
                     </div>
 
-                    {/* Decorative icons (non-interactive) */}
-                    <div className="absolute top-3 right-3 opacity-50">
-                        <MoreVertical className="w-4 h-4 text-white" />
-                    </div>
                 </div>
             </div>
         );

@@ -39,19 +39,11 @@ export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
           {
             id: "sample-note-1",
             type: "note",
-            name: "Note",
+            name: "Update me", // Special name triggers generating skeleton in UI
             subtitle: "",
             data: {
-              blockContent: [
-                {
-                  id: "nb1",
-                  type: "paragraph",
-                  props: { backgroundColor: "default", textColor: "default", textAlignment: "left" },
-                  content: [],
-                  children: []
-                }
-              ],
-              field1: ""
+              blockContent: [], // Empty content for generating state
+              field1: "",
             },
             color: sampleColors[0],
             layout: { x: 0, y: 0, w: 4, h: 9 },
@@ -59,7 +51,7 @@ export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
           {
             id: "sample-quiz-1",
             type: "quiz",
-            name: "Quiz",
+            name: "Update me", // Special name triggers generating skeleton in UI
             subtitle: "",
             data: {
               questions: []
@@ -70,7 +62,7 @@ export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
           {
             id: "sample-flashcard-1",
             type: "flashcard",
-            name: "Flashcards",
+            name: "Update me", // Special name triggers generating skeleton in UI
             subtitle: "",
             data: {
               cards: []
@@ -305,4 +297,3 @@ export function getTemplateInitialState(template: string): AgentState {
     itemsCreated: templateDef.initialState.itemsCreated || 0,
   };
 }
-

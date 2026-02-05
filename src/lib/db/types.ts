@@ -8,7 +8,8 @@ import {
   workspaces,
   workspaceEvents,
   workspaceSnapshots,
-  userProfiles
+  userProfiles,
+  workspaceCollaborators
 } from './schema';
 import type { AgentState } from '@/lib/workspace-state/types';
 
@@ -28,10 +29,17 @@ export type WorkspaceSnapshotInsert = InferInsertModel<typeof workspaceSnapshots
 export type UserProfile = InferSelectModel<typeof userProfiles>;
 export type UserProfileInsert = InferInsertModel<typeof userProfiles>;
 
+export type WorkspaceCollaborator = InferSelectModel<typeof workspaceCollaborators>;
+export type WorkspaceCollaboratorInsert = InferInsertModel<typeof workspaceCollaborators>;
+
+export type PermissionLevel = 'viewer' | 'editor';
+
 
 // Extended types for frontend use
 export interface WorkspaceWithState extends Workspace {
   state?: AgentState;
+  isShared?: boolean;
+  permissionLevel?: 'viewer' | 'editor' | 'admin'; // admin is implied for owner but good to have in types
 }
 
 // API response types

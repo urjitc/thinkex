@@ -3,7 +3,7 @@
 import { useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Github, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { UserProfileDropdown } from "./UserProfileDropdown";
@@ -41,7 +41,7 @@ export function HomeTopBar({ scrollY, searchQuery, onSearchChange, shouldFocusSe
         "transition-all duration-300"
       )}
       style={{
-        backgroundColor: `hsl(240 5.9% 10% / 0)`,
+        backgroundColor: `hsl(240 5.9% 10% / ${0.18 * bgOpacity})`,
       }}
     >
       {/* Left: Logo */}
@@ -103,8 +103,19 @@ export function HomeTopBar({ scrollY, searchQuery, onSearchChange, shouldFocusSe
         </div>
       </div>
 
-      {/* Right: User profile */}
-      <UserProfileDropdown />
+      {/* Right: Open source + User profile */}
+      <div className="flex items-center gap-3">
+        <a
+          href="https://github.com/thinkex-oss/thinkex"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-md text-violet-100 hover:text-violet-50 transition-colors"
+        >
+          <Github className="h-4 w-4" />
+          <span className="text-xs font-medium">Open Source</span>
+        </a>
+        <UserProfileDropdown />
+      </div>
     </header>
   );
 }

@@ -30,6 +30,13 @@ export function eventReducer(state: AgentState, event: WorkspaceEvent): AgentSta
             ? {
               ...item,
               ...event.payload.changes,
+              // Deep merge data field to preserve existing properties like sources
+              data: event.payload.changes.data
+                ? {
+                  ...item.data, // Preserve existing data properties
+                  ...event.payload.changes.data, // Apply new data updates
+                }
+                : item.data,
               lastSource: event.payload.source // Propagate source to item state
             }
             : item
@@ -81,7 +88,7 @@ export function eventReducer(state: AgentState, event: WorkspaceEvent): AgentSta
       if (event.payload.items) {
         // Full items array format (used for bulk delete and item add/remove operations)
         const newItems = event.payload.items;
-        
+
         // Find folders that were deleted (existed in old state but not in new state)
         const newItemIds = new Set(newItems.map(item => item.id));
         const deletedFolderIds = new Set(
@@ -89,18 +96,18 @@ export function eventReducer(state: AgentState, event: WorkspaceEvent): AgentSta
             .filter(item => item.type === 'folder' && !newItemIds.has(item.id))
             .map(item => item.id)
         );
-        
+
         // If any folders were deleted, clear folderId and layout on orphaned items
         // This prevents items from pointing to non-existent folders
         // Layout is cleared so items get fresh positioning in root (same as when moving to folder)
         const cleanedItems = deletedFolderIds.size > 0
-          ? newItems.map(item => 
-              item.folderId && deletedFolderIds.has(item.folderId)
-                ? { ...item, folderId: undefined, layout: undefined }
-                : item
-            )
+          ? newItems.map(item =>
+            item.folderId && deletedFolderIds.has(item.folderId)
+              ? { ...item, folderId: undefined, layout: undefined }
+              : item
+          )
           : newItems;
-        
+
         return {
           ...state,
           items: cleanedItems,

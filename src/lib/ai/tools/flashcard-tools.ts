@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { zodSchema } from "ai";
+import { tool, zodSchema } from "ai";
 import { logger } from "@/lib/utils/logger";
 import { workspaceWorker } from "@/lib/ai/workers";
 import type { WorkspaceToolContext } from "./workspace-tools";
@@ -9,7 +9,7 @@ import { loadStateForTool, fuzzyMatchItem, getAvailableItemsList } from "./tool-
  * Create the createFlashcards tool
  */
 export function createFlashcardsTool(ctx: WorkspaceToolContext) {
-    return {
+    return tool({
         description: "Create a new flashcard deck. Use $$...$$ for ALL math expressions.",
         inputSchema: zodSchema(
             z.object({
@@ -20,7 +20,7 @@ export function createFlashcardsTool(ctx: WorkspaceToolContext) {
                         back: z.string().describe("The answer or definition on the back of the card"),
                     })
                 ).min(1).describe("Array of flashcard objects, each with 'front' and 'back' properties"),
-            }).passthrough()
+            })
         ),
         execute: async (input: { title?: string | null; cards: Array<{ front: string; back: string }> }) => {
             logger.debug("🎴 [CREATE-FLASHCARDS] Tool execution started");
@@ -65,15 +65,15 @@ export function createFlashcardsTool(ctx: WorkspaceToolContext) {
                 };
             }
         },
-    };
+    });
 }
 
 /**
  * Create the updateFlashcards tool
  */
 export function createUpdateFlashcardsTool(ctx: WorkspaceToolContext) {
-    return {
-        description: "Add more flashcards to an existing flashcard deck. Use $$...$$ for ALL math expressions.",
+    return tool({
+        description: "Add more flashcards to an existing flashcard deck and/or update its title. Use $$...$$ for ALL math expressions.",
         inputSchema: zodSchema(
             z.object({
                 deckName: z.string().describe("The name or ID of the flashcard deck to update"),
@@ -82,12 +82,14 @@ export function createUpdateFlashcardsTool(ctx: WorkspaceToolContext) {
                         front: z.string().describe("The question or term on the front of the card"),
                         back: z.string().describe("The answer or definition on the back of the card"),
                     })
-                ).min(1).describe("Array of flashcard objects to add, each with 'front' and 'back' properties"),
-            }).passthrough()
+                ).optional().describe("Array of flashcard objects to add, each with 'front' and 'back' properties"),
+                title: z.string().optional().describe("New title for the flashcard deck. If not provided, the existing title will be preserved."),
+            })
         ),
-        execute: async (input: { deckName: string; cards: Array<{ front: string; back: string }> }) => {
+        execute: async (input: { deckName: string; cards?: Array<{ front: string; back: string }>; title?: string }) => {
             const deckName = input.deckName;
             const cardsToAdd = input.cards || [];
+            const newTitle = input.title;
 
             if (!deckName) {
                 return {
@@ -96,10 +98,10 @@ export function createUpdateFlashcardsTool(ctx: WorkspaceToolContext) {
                 };
             }
 
-            if (cardsToAdd.length === 0) {
+            if (cardsToAdd.length === 0 && !newTitle) {
                 return {
                     success: false,
-                    message: "At least one flashcard is required. Provide an array of cards with 'front' and 'back' properties.",
+                    message: "At least one flashcard must be provided OR a new title must be specified.",
                 };
             }
 
@@ -130,10 +132,12 @@ export function createUpdateFlashcardsTool(ctx: WorkspaceToolContext) {
                     };
                 }
 
+                // Optimized: Update both title and cards in a single worker call
                 const workerResult = await workspaceWorker("updateFlashcard", {
                     workspaceId: ctx.workspaceId,
                     itemId: matchedDeck.id,
                     itemType: "flashcard",
+                    title: newTitle, // Pass title to rename
                     flashcardData: { cardsToAdd },
                 });
 
@@ -142,6 +146,8 @@ export function createUpdateFlashcardsTool(ctx: WorkspaceToolContext) {
                         ...workerResult,
                         deckName: matchedDeck.name,
                         cardsAdded: cardsToAdd.length,
+                        titleUpdated: !!newTitle,
+                        newTitle: newTitle || undefined,
                     };
                 }
 
@@ -154,5 +160,5 @@ export function createUpdateFlashcardsTool(ctx: WorkspaceToolContext) {
                 };
             }
         },
-    };
+    });
 }

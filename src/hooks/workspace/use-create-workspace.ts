@@ -99,9 +99,9 @@ export function useCreateWorkspace() {
       }
     },
 
-    onSuccess: () => {
+    onSuccess: async () => {
       // Invalidate to get the real data from server
-      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      await queryClient.invalidateQueries({ queryKey: ["workspaces"] });
     },
   });
 }

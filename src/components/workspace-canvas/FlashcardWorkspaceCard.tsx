@@ -579,30 +579,47 @@ export function FlashcardWorkspaceCard({
                     <div className="relative size-full flex flex-col">
                         {/* Main Flashcard - takes up space minus the tabs */}
                         <div className="relative flex-1" style={{ marginBottom: '12px' }}>
-                            <FlipCard
-                                front={
-                                    <FlashcardSideContent
-                                        blocks={currentCard.frontBlocks}
-                                        textFallback={currentCard.front}
-                                        isEditing={isEditingInModal}
-                                        isScrollLocked={isScrollLocked}
-                                        className="p-4"
-                                    />
-                                }
-                                back={
-                                    <FlashcardSideContent
-                                        blocks={currentCard.backBlocks}
-                                        textFallback={currentCard.back}
-                                        isEditing={isEditingInModal}
-                                        isScrollLocked={isScrollLocked}
-                                        className="p-4"
-                                    />
-                                }
-                                color={item.color}
-                                isFlipped={isFlipped}
-                                borderColor={borderColor}
-                                borderWidth={borderWidth}
-                            />
+                            {/* Check for template-created items awaiting generation */}
+                            {item.name === "Update me" && (!flashcardData.cards || flashcardData.cards.length === 0) ? (
+                                // Generating skeleton for template-created flashcards
+                                <div
+                                    className="size-full rounded-md flex flex-col items-center justify-center p-6 text-center"
+                                    style={{
+                                        backgroundColor: item.color ? getCardColorCSS(item.color as CardColor, 0.25) : 'var(--card)',
+                                        border: `${borderWidth} solid ${borderColor}`,
+                                    }}
+                                >
+                                    <div className="flex items-center gap-2 text-white/60 text-sm">
+                                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                                        Generating flashcards...
+                                    </div>
+                                </div>
+                            ) : (
+                                <FlipCard
+                                    front={
+                                        <FlashcardSideContent
+                                            blocks={currentCard.frontBlocks}
+                                            textFallback={currentCard.front}
+                                            isEditing={isEditingInModal}
+                                            isScrollLocked={isScrollLocked}
+                                            className="p-4"
+                                        />
+                                    }
+                                    back={
+                                        <FlashcardSideContent
+                                            blocks={currentCard.backBlocks}
+                                            textFallback={currentCard.back}
+                                            isEditing={isEditingInModal}
+                                            isScrollLocked={isScrollLocked}
+                                            className="p-4"
+                                        />
+                                    }
+                                    color={item.color}
+                                    isFlipped={isFlipped}
+                                    borderColor={borderColor}
+                                    borderWidth={borderWidth}
+                                />
+                            )}
                             {/* Stack Tab 1 (directly below main card) - hidden during flip */}
                             <div
                                 className="absolute left-1 right-1 rounded-b-md transition-opacity duration-200"

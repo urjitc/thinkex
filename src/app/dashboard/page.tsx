@@ -35,6 +35,7 @@ import { AnonymousSessionHandler, SidebarCoordinator } from "@/components/layout
 import { PdfEngineWrapper } from "@/components/pdf/PdfEngineWrapper";
 import WorkspaceSettingsModal from "@/components/workspace/WorkspaceSettingsModal";
 import ShareWorkspaceDialog from "@/components/workspace/ShareWorkspaceDialog";
+import { RealtimeProvider } from "@/contexts/RealtimeContext";
 // Main dashboard content component
 interface DashboardContentProps {
   currentWorkspace: WorkspaceWithState | null;
@@ -343,8 +344,8 @@ function DashboardContent({
 
   const handleShowHistory = useCallback(() => {
     posthog.capture("version-history-viewed", { workspace_id: currentWorkspaceId });
-    setShowVersionHistory(true);
-  }, [posthog, currentWorkspaceId, setShowVersionHistory]);
+    setShowWorkspaceShare(true); // Open share dialog instead of dedicated history modal
+  }, [posthog, currentWorkspaceId]);
 
 
   return (
@@ -370,14 +371,7 @@ function DashboardContent({
               titleInputRef={titleInputRef}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
-              isSaving={isSaving}
-              lastSavedAt={lastSavedAt}
-              hasUnsavedChanges={hasUnsavedChanges}
-              onManualSave={() => {
-                void manualSave();
-              }}
               currentWorkspaceId={currentWorkspaceId}
-              onShowHistory={handleShowHistory}
               isDesktop={isDesktop}
               isChatExpanded={isChatExpanded}
               setIsChatExpanded={setIsChatExpanded}
@@ -479,6 +473,10 @@ function DashboardContent({
         workspace={currentWorkspace}
         open={showWorkspaceShare}
         onOpenChange={setShowWorkspaceShare}
+        showHistoryTab={true}
+        events={eventLog?.events || []}
+        currentVersion={version}
+        onRevertToVersion={revertToVersion}
       />
     </PdfEngineWrapper>
   );
@@ -539,11 +537,13 @@ export function DashboardPage() {
   }, [currentWorkspaceId, clearPlayingYouTubeCards]);
 
   return (
-    <DashboardContent
-      currentWorkspace={currentWorkspace}
-      loadingWorkspaces={loadingWorkspaces}
-      loadingCurrentWorkspace={loadingCurrentWorkspace}
-    />
+    <RealtimeProvider workspaceId={currentWorkspaceId}>
+      <DashboardContent
+        currentWorkspace={currentWorkspace}
+        loadingWorkspaces={loadingWorkspaces}
+        loadingCurrentWorkspace={loadingCurrentWorkspace}
+      />
+    </RealtimeProvider>
   );
 }
 

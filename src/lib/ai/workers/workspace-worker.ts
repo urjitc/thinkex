@@ -1,7 +1,8 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db, workspaces } from "@/lib/db/client";
-import { eq, sql } from "drizzle-orm";
+import { workspaceCollaborators } from "@/lib/db/schema";
+import { eq, sql, and } from "drizzle-orm";
 import { createEvent } from "@/lib/workspace/events";
 import { generateItemId } from "@/lib/workspace-state/item-helpers";
 import { getRandomCardColor } from "@/lib/workspace-state/colors";
@@ -88,6 +89,12 @@ export async function workspaceWorker(
             prompt: string;
             interactionId: string;
         };
+        // Optional: sources from web search or deep research
+        sources?: Array<{
+            title: string;
+            url: string;
+            favicon?: string;
+        }>;
         folderId?: string;
     }
 ): Promise<{ success: boolean; message: string; itemId?: string; cardsAdded?: number; cardCount?: number; event?: WorkspaceEvent; version?: number }> {
@@ -108,7 +115,7 @@ export async function workspaceWorker(
             }
             const userId = session.user.id;
 
-            // Verify workspace access - ownership only (sharing is fork-based)
+            // Verify workspace access - owner OR editor collaborator
             const workspace = await db
                 .select({ userId: workspaces.userId })
                 .from(workspaces)
@@ -119,9 +126,25 @@ export async function workspaceWorker(
                 throw new Error("Workspace not found");
             }
 
-            // Enforce strict ownership (sharing is fork-based)
-            if (workspace[0].userId !== userId) {
-                throw new Error("Access denied");
+            // Check if user is owner
+            const isOwner = workspace[0].userId === userId;
+
+            // If not owner, check if user is an editor collaborator
+            if (!isOwner) {
+                const [collaborator] = await db
+                    .select({ permissionLevel: workspaceCollaborators.permissionLevel })
+                    .from(workspaceCollaborators)
+                    .where(
+                        and(
+                            eq(workspaceCollaborators.workspaceId, params.workspaceId),
+                            eq(workspaceCollaborators.userId, userId)
+                        )
+                    )
+                    .limit(1);
+
+                if (!collaborator || collaborator.permissionLevel !== 'editor') {
+                    throw new Error("Access denied - editor permission required");
+                }
             }
 
 
@@ -213,6 +236,15 @@ export async function workspaceWorker(
                             status: "researching",
                             thoughts: [],
                         };
+                    }
+
+                    // If sources are provided, attach them
+                    if (params.sources && params.sources.length > 0) {
+                        itemData.sources = params.sources;
+                        logger.debug("📚 [WORKSPACE-WORKER] Attaching sources to note:", {
+                            count: params.sources.length,
+                            sources: params.sources,
+                        });
                     }
                 }
 
@@ -375,6 +407,18 @@ export async function workspaceWorker(
                         } as NoteData;
                     }
 
+                    // Update sources if provided
+                    if (params.sources !== undefined) {
+                        if (!changes.data) {
+                            changes.data = {} as NoteData;
+                        }
+                        (changes.data as NoteData).sources = params.sources;
+                        logger.debug("📚 [UPDATE-NOTE] Updating sources:", {
+                            count: params.sources.length,
+                            sources: params.sources,
+                        });
+                    }
+
                     // If no changes, return early
                     if (Object.keys(changes).length === 0) {
                         logger.warn("⚠️ [UPDATE-NOTE] No changes detected, returning early");
@@ -491,7 +535,14 @@ export async function workspaceWorker(
                     cards: [...existingCards, ...newCards],
                 };
 
-                const changes = { data: updatedData };
+                const changes: any = { data: updatedData };
+
+                // Handle title update if provided
+                if (params.title) {
+                    logger.debug("🎴 [UPDATE-FLASHCARD] Updating title:", params.title);
+                    changes.name = params.title;
+                }
+
                 const event = createEvent("ITEM_UPDATED", { id: params.itemId, changes, source: 'agent' }, userId);
 
                 const currentVersionResult = await db.execute(sql`
@@ -527,13 +578,14 @@ export async function workspaceWorker(
                     itemId: params.itemId,
                     cardsAdded: newCards.length,
                     totalCards: updatedData.cards.length,
+                    newTitle: params.title
                 });
 
                 return {
                     success: true,
                     itemId: params.itemId,
                     cardsAdded: newCards.length,
-                    message: `Added ${newCards.length} card${newCards.length !== 1 ? 's' : ''} to flashcard deck`,
+                    message: `Added ${newCards.length} card${newCards.length !== 1 ? 's' : ''} to flashcard deck${params.title ? ` and renamed to "${params.title}"` : ''}`,
                     event,
                     version: appendResult.version,
                 };
@@ -577,7 +629,14 @@ export async function workspaceWorker(
                     questions: [...existingQuestions, ...questionsToAdd],
                 };
 
-                const changes = { data: updatedData };
+                const changes: any = { data: updatedData };
+
+                // Handle title update if provided
+                if (params.title) {
+                    logger.debug("🎯 [UPDATE-QUIZ] Updating title:", params.title);
+                    changes.name = params.title;
+                }
+
                 const event = createEvent("ITEM_UPDATED", { id: params.itemId, changes, source: 'agent' }, userId);
 
                 logger.debug("📝 [UPDATE-QUIZ-DB] Created event:", {

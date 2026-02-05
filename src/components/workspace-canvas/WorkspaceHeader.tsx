@@ -1,9 +1,11 @@
+"use client";
+
 import type React from "react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, X, ChevronRight, ChevronDown, FolderOpen, ChevronLeft, Plus, Upload, FileText, Folder as FolderIcon, Settings, Share2, Play, MoreHorizontal, Globe, Brain, Maximize, File } from "lucide-react";
+import { Search, X, ChevronRight, ChevronDown, FolderOpen, ChevronLeft, Plus, Upload, FileText, Folder as FolderIcon, Settings, Share2, Play, MoreHorizontal, Globe, Brain, Maximize, File, Newspaper } from "lucide-react";
 import { LuBook } from "react-icons/lu";
 import { PiCardsThreeBold } from "react-icons/pi";
 import { cn } from "@/lib/utils";
@@ -46,6 +48,9 @@ import type { CardType, Item } from "@/lib/workspace-state/types";
 import { getFolderPath } from "@/lib/workspace-state/search";
 import { useMemo } from "react";
 import { CreateYouTubeDialog } from "@/components/modals/CreateYouTubeDialog";
+import { CreateWebsiteDialog } from "@/components/modals/CreateWebsiteDialog";
+import { useQueryClient } from "@tanstack/react-query";
+import { CollaboratorAvatars } from "@/components/workspace/CollaboratorAvatars";
 interface WorkspaceHeaderProps {
   titleInputRef: React.RefObject<HTMLInputElement | null>;
   searchQuery: string;
@@ -135,6 +140,7 @@ export default function WorkspaceHeader({
   const [renamingTarget, setRenamingTarget] = useState<{ id: string, type: 'folder' | 'item' } | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [showYouTubeDialog, setShowYouTubeDialog] = useState(false);
+  const [showWebsiteDialog, setShowWebsiteDialog] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
@@ -148,6 +154,9 @@ export default function WorkspaceHeader({
   // Assistant API for Deep Research action
   const aui = useAui();
   const setSelectedActions = useUIStore((state) => state.setSelectedActions);
+
+  // React Query client for cache invalidation
+  const queryClient = useQueryClient();
 
   // Consistent breadcrumb item styling
   const breadcrumbItemClass = "flex items-center gap-1.5 min-w-0 rounded transition-colors hover:bg-sidebar-accent cursor-pointer px-2 py-1.5 -mx-2 -my-1.5";
@@ -766,16 +775,22 @@ export default function WorkspaceHeader({
         ) : (
           // Default Mode: Standard Workspace Controls
           <div className="flex items-center gap-2 pointer-events-auto">
-            {/* Save Indicator - hidden in compact mode */}
-            {!isCompactMode && (
-              <WorkspaceSaveIndicator
-                isSaving={isSaving || false}
-                lastSavedAt={lastSavedAt || null}
-                hasUnsavedChanges={hasUnsavedChanges}
-                onManualSave={onManualSave}
-                currentWorkspaceId={currentWorkspaceId}
-                onShowHistory={onShowHistory}
-              />
+            {/* Collaborator Avatars - show who's in the workspace */}
+            <CollaboratorAvatars />
+
+            {/* Share Button - hidden in compact mode */}
+            {!isCompactMode && onOpenShare && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onOpenShare}
+                className="h-8 px-2 text-muted-foreground hover:text-foreground font-normal relative"
+              >
+                Share
+                <span className="ml-1.5 bg-red-600 text-white text-[9px] px-1.5 py-0.5 rounded-full font-semibold">
+                  NEW
+                </span>
+              </Button>
             )}
 
             {/* Search Input */}
@@ -945,6 +960,16 @@ export default function WorkspaceHeader({
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
+                      setShowWebsiteDialog(true);
+                      setIsNewMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <Newspaper className="size-4" />
+                    Website
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
                       toast.success("Deep Research action selected");
                       setSelectedActions(["deep-research"]);
                       aui?.composer().setText("I want to do research on ");
@@ -1027,9 +1052,27 @@ export default function WorkspaceHeader({
         onOpenChange={setShowYouTubeDialog}
         onCreate={handleYouTubeCreate}
       />
+      {/* Website Dialog */}
+      {currentWorkspaceId && (
+        <CreateWebsiteDialog
+          open={showWebsiteDialog}
+          onOpenChange={setShowWebsiteDialog}
+          workspaceId={currentWorkspaceId}
+          folderId={activeFolderId || undefined}
+          onNoteCreated={(noteId) => {
+            // Invalidate workspace events cache to trigger refetch
+            void queryClient.invalidateQueries({
+              queryKey: ["workspace", currentWorkspaceId, "events"],
+            });
+            // Open the new note in the modal
+            if (setOpenModalItemId) {
+              setOpenModalItemId(noteId);
+            }
+          }}
+        />
+      )}
     </div >
   );
 }
-
 
 

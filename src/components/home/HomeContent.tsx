@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, createContext, useContext } from "react";
+import Image from "next/image";
 import { HomePromptInput } from "./HomePromptInput";
 import { DynamicTagline } from "./DynamicTagline";
 import { WorkspaceGrid } from "./WorkspaceGrid";
@@ -10,8 +11,13 @@ import { HeroGlow } from "./HeroGlow";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FolderPlus } from "lucide-react";
+import { FolderPlus, Github } from "lucide-react";
 import { useCreateWorkspace } from "@/hooks/workspace/use-create-workspace";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 // Context for section visibility - allows child components to know when to focus
 const SectionVisibilityContext = createContext<{
@@ -129,6 +135,44 @@ export function HomeContent() {
           <div className="w-full max-w-[760px] relative">
             {/* Hero Glow Effect */}
             <HeroGlow />
+
+            {/* Social proof */}
+            <div className="mb-6 flex flex-wrap items-center justify-center gap-3 text-xs sm:text-sm relative z-10">
+              <HoverCard openDelay={200}>
+                <HoverCardTrigger asChild>
+                  <div className="flex items-center gap-2 px-2.5 py-1 rounded-md text-gray-100 cursor-pointer">
+                    <div className="flex -space-x-2">
+                      {[
+                        "bg-gradient-to-br from-blue-400 to-blue-600",
+                        "bg-gradient-to-br from-emerald-400 to-emerald-600",
+                        "bg-gradient-to-br from-amber-400 to-amber-600",
+                        "bg-gradient-to-br from-rose-400 to-rose-600",
+                      ].map((gradient, i) => (
+                        <div
+                          key={gradient}
+                          className={`w-6 h-6 rounded-full ${gradient} flex items-center justify-center text-white text-[10px] font-medium shadow-sm`}
+                        >
+                          {["T", "J", "A", "M"][i]}
+                        </div>
+                      ))}
+                    </div>
+                    <span className="text-xs sm:text-sm font-normal">200+ weekly active users</span>
+                  </div>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-[350px] sm:w-[450px] p-0 overflow-hidden border-none shadow-xl" sideOffset={10}>
+                  <iframe
+                    width="100%"
+                    height="400"
+                    frameBorder="0"
+                    allowFullScreen
+                    src="https://us.posthog.com/embedded/wNOXac2TxOxawVOVKHkUGxe1BA1sJQ"
+                    key="4"
+                    sandbox="allow-scripts allow-same-origin allow-popups"
+                    className="bg-background"
+                  />
+                </HoverCardContent>
+              </HoverCard>
+            </div>
 
             {/* Dynamic tagline with mask wipe animation */}
             <div className="mb-6 relative z-10">

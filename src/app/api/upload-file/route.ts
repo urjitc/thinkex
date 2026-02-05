@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     // File type validation can be done client-side if needed
 
     // Validate file size (10MB limit)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 50 * 1024 * 1024; // 50MB
     if (file.size > maxSize) {
       return NextResponse.json(
         { error: "File size exceeds 10MB limit" },

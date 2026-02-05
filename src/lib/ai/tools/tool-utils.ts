@@ -24,23 +24,24 @@ export async function loadStateForTool(
 /**
  * Fuzzy match an item by name within a list of items
  * Tries: exact match -> contains match -> reverse contains match
+ * If itemType is provided, only matches items of that type
  */
 export function fuzzyMatchItem(
     items: Item[],
     searchName: string,
-    itemType: Item["type"]
+    itemType?: Item["type"]
 ): Item | undefined {
     const normalizedSearch = searchName.toLowerCase().trim();
-    const filteredItems = items.filter(item => item.type === itemType);
+    const filteredItems = itemType ? items.filter(item => item.type === itemType) : items;
 
     // 1. Exact match
     let matched = filteredItems.find(item => item.name.toLowerCase().trim() === normalizedSearch);
-    
+
     // 2. Contains match (item name contains search)
     if (!matched) {
         matched = filteredItems.find(item => item.name.toLowerCase().includes(normalizedSearch));
     }
-    
+
     // 3. Reverse contains match (search contains item name)
     if (!matched) {
         matched = filteredItems.find(item => normalizedSearch.includes(item.name.toLowerCase().trim()));

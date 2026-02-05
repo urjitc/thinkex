@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { zodSchema } from "ai";
+import { tool, zodSchema } from "ai";
 import { logger } from "@/lib/utils/logger";
 import { quizWorker, workspaceWorker } from "@/lib/ai/workers";
 import type { WorkspaceToolContext } from "./workspace-tools";
@@ -15,32 +15,18 @@ import { loadStateForTool, fuzzyMatchItem, getAvailableItemsList } from "./tool-
  * Create the createQuiz tool
  */
 export function createQuizTool(ctx: WorkspaceToolContext) {
-    return {
+    return tool({
         description: "Create an interactive quiz. Extract topic from user message. Use selected cards as context if available.",
-        // Simplified schema to be more robust during streaming
-        // Avoid complex nullable types that can cause parsing issues during streaming
         inputSchema: zodSchema(
             z.object({
-                topic: z.string().describe("The topic for the quiz - REQUIRED: extract from user's message"),
+                topic: z.string().optional().describe("The topic for the quiz - extract from user's message"),
                 contextContent: z.string().optional().describe("Content from selected cards in system context if available"),
                 sourceCardIds: z.array(z.string()).optional().describe("IDs of source cards"),
                 sourceCardNames: z.array(z.string()).optional().describe("Names of source cards"),
             })
         ),
-        execute: async (args: unknown) => {
-            // Validate args using simplified schema to be more robust during streaming
-            const createQuizSchema = z.object({
-                topic: z.string().optional(),
-                contextContent: z.string().optional(),
-                sourceCardIds: z.array(z.string()).optional(),
-                sourceCardNames: z.array(z.string()).optional(),
-            });
-
-            const parsedArgs = createQuizSchema.parse(args);
-            const topic = parsedArgs.topic;
-            const contextContent = parsedArgs.contextContent;
-            const sourceCardIds = parsedArgs.sourceCardIds;
-            const sourceCardNames = parsedArgs.sourceCardNames;
+        execute: async (input: { topic?: string; contextContent?: string; sourceCardIds?: string[]; sourceCardNames?: string[] }) => {
+            const { topic, contextContent, sourceCardIds, sourceCardNames } = input;
             logger.debug("🎯 [CREATE-QUIZ] Tool execution started:", { topic, hasContext: !!contextContent });
 
             if (!ctx.workspaceId) {
@@ -117,17 +103,15 @@ export function createQuizTool(ctx: WorkspaceToolContext) {
                 };
             }
         },
-    };
+    });
 }
 
 /**
  * Create the updateQuiz tool
  */
 export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
-    return {
+    return tool({
         description: "Update quiz title and/or add more questions. Can use new topic, selected cards, or general knowledge.",
-        // Simplified schema to be more robust during streaming
-        // Avoid complex nullable types that can cause parsing issues during streaming
         inputSchema: zodSchema(
             z.object({
                 quizName: z.string().describe("The name of the quiz to update (will be matched using fuzzy search)"),
@@ -138,21 +122,8 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
                 sourceCardNames: z.array(z.string()).optional().describe("Names of source cards"),
             })
         ),
-        execute: async (args: unknown) => {
-            // Validate args using simplified schema to be more robust during streaming
-            const updateQuizSchema = z.object({
-                quizName: z.string(),
-                title: z.string().optional(),
-                topic: z.string().optional(),
-                contextContent: z.string().optional(),
-                sourceCardIds: z.array(z.string()).optional(),
-                sourceCardNames: z.array(z.string()).optional(),
-            });
-
-            const parsedArgs = updateQuizSchema.parse(args);
-            const quizName = parsedArgs.quizName;
-            const title = parsedArgs.title;
-            const explicitTopic = parsedArgs.topic;
+        execute: async (input: { quizName: string; title?: string; topic?: string; contextContent?: string; sourceCardIds?: string[]; sourceCardNames?: string[] }) => {
+            const { quizName, title, topic: explicitTopic, contextContent, sourceCardIds, sourceCardNames } = input;
 
             logger.debug("🎯 [UPDATE-QUIZ] Tool execution started:", { quizName, explicitTopic, title });
 
@@ -203,19 +174,9 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
                     matchedId: quizId,
                 });
 
-                // Handle title update if provided
+                // Title update is now handled in the main workspaceWorker("updateQuiz") call below
                 if (title) {
-                    const titleUpdateResult = await workspaceWorker("update", {
-                        workspaceId: ctx.workspaceId,
-                        itemId: quizId,
-                        title: title,
-                    });
-
-                    if (!titleUpdateResult.success) {
-                        return titleUpdateResult;
-                    }
-
-                    logger.debug("🎯 [UPDATE-QUIZ] Title updated successfully:", { newTitle: title });
+                    logger.debug("🎯 [UPDATE-QUIZ] Will update title to:", title);
                 }
 
                 const currentQuizData = quizItem.data as QuizData;
@@ -256,9 +217,6 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
                 }
 
                 // Use context/topic provided by LLM, or default to quiz name for continuation
-                const contextContent = parsedArgs?.contextContent;
-                const sourceCardIds = parsedArgs?.sourceCardIds;
-                const sourceCardNames = parsedArgs?.sourceCardNames;
                 const topic = explicitTopic || quizItem.name;
                 const isBlankQuiz = existingQuestions.length === 0;
 
@@ -298,11 +256,12 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
                     sourceCardNames
                 });
 
-                // Update the quiz with new questions
+                // Update the quiz with new questions and optional title rename
                 const workerResult = await workspaceWorker("updateQuiz", {
                     workspaceId: ctx.workspaceId,
                     itemId: quizId,
                     itemType: "quiz",
+                    title: title, // Pass title to rename
                     questionsToAdd: quizResult.questions,
                 });
 
@@ -330,5 +289,5 @@ export function createUpdateQuizTool(ctx: WorkspaceToolContext) {
                 };
             }
         },
-    };
+    });
 }

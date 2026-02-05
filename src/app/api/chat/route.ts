@@ -1,5 +1,5 @@
-import { google } from "@ai-sdk/google";
-import { streamText, convertToModelMessages, stepCountIs, tool, zodSchema, wrapLanguageModel } from "ai";
+import { gateway } from "ai";
+import { streamText, convertToModelMessages, stepCountIs, wrapLanguageModel, tool } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { PostHog } from "posthog-node";
 import { withTracing } from "@posthog/ai";
@@ -8,6 +8,7 @@ import { logger } from "@/lib/utils/logger";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createChatTools } from "@/lib/ai/tools";
+import type { GatewayProviderOptions } from "@ai-sdk/gateway";
 
 // Regex patterns as constants (compiled once, reused for all requests)
 const URL_CONTEXT_REGEX = /\[URL_CONTEXT:(.+?)\]/g;
@@ -104,6 +105,59 @@ function getSelectedCardsContext(body: any): string {
   return body.selectedCardsContext || "";
 }
 
+// Regex to detect createFrom auto-generated prompts
+const CREATE_FROM_REGEX = /^Update the preexisting contents of this workspace to be about (.+)\. Only add one quality YouTube video\.$/;
+
+/**
+ * Detect if the first user message is a createFrom auto-generated prompt
+ * and return additional system instructions for better workspace curation
+ */
+function getCreateFromSystemPrompt(messages: any[]): string | null {
+  // Find the first user message
+  const firstUserMessage = messages.find((m) => m.role === "user");
+  if (!firstUserMessage) return null;
+
+  // Extract text content from the message
+  let textContent = "";
+  if (typeof firstUserMessage.content === "string") {
+    textContent = firstUserMessage.content;
+  } else if (Array.isArray(firstUserMessage.content)) {
+    const textPart = firstUserMessage.content.find((p: any) => p.type === "text");
+    if (textPart?.text) textContent = textPart.text;
+  }
+
+  // Check if it matches the createFrom pattern
+  const match = textContent.match(CREATE_FROM_REGEX);
+  if (!match) return null;
+
+  const topic = match[1];
+
+  return `
+CREATE-FROM WORKSPACE INITIALIZATION MODE:
+This is an automatic workspace initialization request. The user wants to transform this workspace into a curated learning/research space about: "${topic}"
+
+CRITICAL INSTRUCTIONS FOR WORKSPACE CURATION:
+1. **For each of the existing workspace items** update the title and content to be about the topic:
+   - Use \`updateNote\` tool for notes
+   - Use \`updateFlashcards\` tool for flashcard sets
+   - Use \`updateQuiz\` tool for quizzes
+2. **Be thorough but focused** - Provide a solid foundation for understanding the topic without being overwhelming.
+3. **Do NOT ask the user questions** - This is an automated initialization, proceed directly with updating the workspace.
+
+QUALITY GUIDELINES FOR CONTENT:
+- Start with a clear introduction/overview of the topic
+- Include key concepts, definitions, or components
+- Add practical examples or use cases if relevant
+- For flashcards: create exactly 5 meaningful question/answer pairs covering key concepts
+- For quizzes: create challenging but fair questions that test understanding
+
+QUALITY GUIDELINES FOR THE YOUTUBE VIDEO:
+- Search with specific, relevant terms for the topic
+- Prefer videos that are educational/explanatory
+- Look for high view counts and reputable channels as quality signals
+`;
+}
+
 /**
  * Build the enhanced system prompt with guidelines and detection hints
  * Uses array join for better performance than string concatenation
@@ -114,37 +168,24 @@ function buildSystemPrompt(baseSystem: string, fileUrls: string[], urlContextUrl
   // Add web search decision-making guidelines
   parts.push(`
 
+WEB SEARCH GUIDELINES:
+Use webSearch when: temporal cues ("today", "latest", "current"), real-time data (scores, stocks, weather), fact verification, niche/recent info.
+Use internal knowledge for: creative writing, coding, general concepts, summarizing provided content.
+If uncertain about accuracy, prefer to search.
 
-WEB SEARCH DECISION GUIDELINES:
-You have access to the webSearch tool. Use the following guidelines to decide when to search vs use internal knowledge:
+YOUTUBE: If user says "add a video" without a topic, infer from workspace context. Don't ask - just search.
 
-WHEN TO USE INTERNAL KNOWLEDGE (do NOT search):
-- Creative Writing: Writing stories, poems, scripts, or creative content
-- Coding & Logic: Explaining programming concepts, writing code, or solving math problems
-- General Concepts: Explaining historical events, scientific principles, or established theories
-- Analysis & Synthesis: Summarizing provided text, changing tone of drafts, or reorganizing content
+SOURCE EXTRACTION (CRITICAL):
+When creating/updating notes with research:
+1. Call webSearch first
+2. Extract sources from groundingMetadata.groundingChunks[].web.{uri, title}
+3. Pass sources to createNote/updateNote - NEVER put citations in note content itself
 
-WHEN TO USE WEB SEARCH:
-- Temporal Cues: User mentions "today", "yesterday", "latest", "current", "recent", or specific dates
-- Breaking News: Anything that happened after your training cutoff
-- Real-Time Data: Sports scores, stock prices, weather, currency exchange rates
-- Fact Verification: When asked for specific statistics, citations, or recent studies
-- Niche Information: Details about small local businesses, new software versions, or very specific current events
+Rules:
+- Use chunk.web.uri exactly as provided (even redirect URLs)
+- Never make up or hallucinate URLs
+- Include article dates in responses when available`);
 
-COMBINED APPROACH (search + internal knowledge):
-When a query requires both current data AND conceptual explanation, do both:
-1. Search for the real-time/factual component
-2. Use internal knowledge for the conceptual/explanatory component  
-3. Synthesize into a cohesive answer
-
-YOUTUBE SEARCH GUIDANCE:
-If the user asks to "add a youtube video" or "search for a video" but does not provide a specific topic (e.g., "add a video for this workspace"), you MUST inference a relevant search query based on the current workspace context, selected cards, or recent conversation history. Do NOT ask the user for a topic if meaningful context is available. Use the 'searchYoutube' tool directly with your inferred query.
-
-CONFIDENCE THRESHOLD:
-If you are uncertain about a fact's accuracy or currency, prefer to search rather than risk providing outdated information.
-
-CITATION REQUIREMENT:
-When using search results (grounding), you must include the date of each article/source if available.`);
 
   // Add file detection hint if file URLs are present
   if (fileUrls.length > 0) {
@@ -163,16 +204,10 @@ export async function POST(req: Request) {
   let workspaceId: string | null = null;
   let activeFolderId: string | undefined;
 
-  // Check for API key early
-  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    return new Response(JSON.stringify({
-      error: "API key not defined",
-      message: "GOOGLE_GENERATIVE_AI_API_KEY is not configured. Please set it in your environment variables.",
-      code: "API_KEY_MISSING",
-    }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+  // Check for API key early (Standardizing on Google Key for now if not using OIDC)
+  // With Gateway, you can check for other keys too, or rely on Gateway's auth
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY && !process.env.AI_GATEWAY_API_KEY) {
+    // Optional: make this check more robust or permissive if using OIDC
   }
 
   try {
@@ -209,8 +244,26 @@ export async function POST(req: Request) {
     // Get pre-formatted selected cards context from client (no DB fetch needed)
     const selectedCardsContext = getSelectedCardsContext(body);
 
+    // Get model ID and ensure it has the correct prefix for Gateway
+    let modelId = body.modelId || "gemini-3-flash-preview";
+
+    // Auto-prefix with google/ if it looks like a gemini model and lacks prefix
+    // This allows existing client code to work without changes
+    if (modelId.startsWith("gemini-") && !modelId.startsWith("google/")) {
+      modelId = `google/${modelId}`;
+    }
+
     // Build system prompt with all context parts (using array join for efficiency)
-    const systemPromptParts: string[] = [buildSystemPrompt(system, fileUrls, urlContextUrls)];
+    // Note: The base `system` from client already includes AI assistant identity from formatWorkspaceContext
+    const systemPromptParts: string[] = [
+      buildSystemPrompt(system, fileUrls, urlContextUrls)
+    ];
+
+    // Inject createFrom workspace initialization prompt if detected
+    const createFromPrompt = getCreateFromSystemPrompt(cleanedMessages);
+    if (createFromPrompt) {
+      systemPromptParts.push(`\n\n${createFromPrompt}`);
+    }
 
     // Inject selected cards context if available
     if (selectedCardsContext) {
@@ -228,16 +281,15 @@ export async function POST(req: Request) {
 
     const finalSystemPrompt = systemPromptParts.join('');
 
-    // Get model
-    const modelId = body.modelId || "gemini-flash-lite-latest";
     // Initialize PostHog client
     const posthogClient = new PostHog(process.env.POSTHOG_API_KEY || "disabled", {
       host: process.env.POSTHOG_HOST || "https://us.i.posthog.com",
       disabled: !process.env.POSTHOG_API_KEY,
     });
 
+    // Use AI Gateway
     const model = wrapLanguageModel({
-      model: withTracing(google(modelId), posthogClient, {
+      model: withTracing(gateway(modelId) as any, posthogClient, {
         posthogDistinctId: userId || "anonymous",
         posthogProperties: {
           workspaceId,
@@ -259,24 +311,41 @@ export async function POST(req: Request) {
     // Stream the response
     logger.debug("🔍 [CHAT-API] Final cleanedMessages before streamText:", {
       count: cleanedMessages.length,
+      modelId
     });
 
-    // Prepare provider options
-    let providerOptions: any = {
-      google: {
-        grounding: {
-          googleSearchRetrieval: {
-            dynamicRetrievalConfig: {
-              mode: 'MODE_DYNAMIC',
-            },
+    // Configure Google Thinking capabilities
+    const googleConfig: any = {
+      grounding: {
+        googleSearchRetrieval: {
+          dynamicRetrievalConfig: {
+            mode: 'MODE_DYNAMIC',
           },
         },
       },
+      thinkingConfig: {
+        includeThoughts: false,
+      },
+    };
+
+    // Explicitly disable thinking tokens for Gemini 2.5
+    if (modelId.includes("gemini-2.5")) {
+      googleConfig.thinkingConfig.thinkingBudget = 0;
+    }
+
+    // Prepare provider options
+    // The Gateway passes these through to the specific provider
+    let providerOptions: any = {
+      gateway: {
+        // Example: route to google if you want to enforce it, though prefix handles it
+        // order: ['google'], 
+      } satisfies GatewayProviderOptions,
+      google: googleConfig,
     };
 
     const result = streamText({
       model: model,
-      temperature: 0,
+      temperature: 1.0,
       system: finalSystemPrompt,
       messages: cleanedMessages,
       stopWhen: stepCountIs(25),
@@ -289,12 +358,7 @@ export async function POST(req: Request) {
           totalTokens: usage?.totalTokens,
           cachedInputTokens: usage?.cachedInputTokens, // Standard property
           reasoningTokens: usage?.reasoningTokens,
-          // Extended properties (Google provider specific)
-          inputTokenDetails: (usage as any)?.inputTokenDetails ? {
-            cacheReadTokens: (usage as any).inputTokenDetails?.cacheReadTokens,
-            cacheWriteTokens: (usage as any).inputTokenDetails?.cacheWriteTokens,
-            noCacheTokens: (usage as any).inputTokenDetails?.noCacheTokens,
-          } : undefined,
+          // Note: Extended provider-specific properties might not be available consistently via Gateway
           finishReason,
         };
 
@@ -314,12 +378,6 @@ export async function POST(req: Request) {
             cachedInputTokens: usage?.cachedInputTokens, // Standard property
             reasoningTokens: usage?.reasoningTokens,
             finishReason,
-            // Extended properties (Google provider specific)
-            inputTokenDetails: (usage as any)?.inputTokenDetails ? {
-              cacheReadTokens: (usage as any).inputTokenDetails?.cacheReadTokens,
-              cacheWriteTokens: (usage as any).inputTokenDetails?.cacheWriteTokens,
-              noCacheTokens: (usage as any).inputTokenDetails?.noCacheTokens,
-            } : undefined,
           };
 
           logger.debug(`📊 [CHAT-API] Step Usage (${stepType || 'unknown'}):`, stepUsageInfo);

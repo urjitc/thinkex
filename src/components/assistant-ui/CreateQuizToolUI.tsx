@@ -219,7 +219,7 @@ export const CreateQuizToolUI = makeAssistantToolUI<CreateQuizArgs, QuizResult>(
         ) {
             content = (
                 <ToolUIErrorShell
-                    label="Failed to create quiz"
+                    label="Trying to create quiz"
                     message={parsed && !parsed.success ? parsed.message : undefined}
                 />
             );

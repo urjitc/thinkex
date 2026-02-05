@@ -28,6 +28,7 @@
   "packageManager": "pnpm@10.14.0",
   "dependencies": {
     "@ai-sdk/devtools": "^0.0.9",
+    "@ai-sdk/gateway": "^3.0.32",
     "@ai-sdk/google": "^3.0.13",
     "@assistant-ui/react": "^0.12.3",
     "@assistant-ui/react-ai-sdk": "^1.3.3",
@@ -38,7 +39,6 @@
     "@blocknote/react": "^0.46.2",
     "@blocknote/server-util": "^0.46.2",
     "@blocknote/shadcn": "^0.46.2",
-    "@daveyplate/better-auth-ui": "^3.3.11",
     "@dnd-kit/react": "^0.1.21",
     "@embedpdf/core": "^2.1.1",
     "@embedpdf/engines": "^2.1.1",
@@ -111,6 +111,7 @@
     "postgres": "^3.4.7",
     "posthog-js": "^1.335.5",
     "posthog-node": "^5.21.1",
+    "radix-ui": "^1.4.3",
     "react": "19.2.1",
     "react-color": "^2.19.3",
     "react-dom": "19.2.1",
@@ -133,7 +134,8 @@
     "tailwind-merge": "^3.4.0",
     "tw-shimmer": "^0.4.3",
     "zod": "^4.3.4",
-    "zustand": "^5.0.9"
+    "zustand": "^5.0.9",
+    "resend": "^4.1.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",

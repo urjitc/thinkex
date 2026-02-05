@@ -118,14 +118,14 @@ export const AddYoutubeVideoToolUI = makeAssistantToolUI<AddYoutubeVideoArgs, Wo
     } else if (status.type === "complete" && parsed && !parsed.success) {
       content = (
         <ToolUIErrorShell
-          label="Failed to add YouTube video"
+          label="Trying to add YouTube video"
           message={parsed.message}
         />
       );
     } else if (status.type === "incomplete" && status.reason === "error") {
       content = (
         <ToolUIErrorShell
-          label="Failed to add YouTube video"
+          label="Trying to add YouTube video"
           message={parsed?.message}
         />
       );
