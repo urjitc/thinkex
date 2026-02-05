@@ -14,7 +14,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
-import { workspaceCollaborators, workspaces, user } from "@/lib/db/schema";
+import { workspaceCollaborators, workspaces, user, workspaceInvites } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import {
     verifyWorkspaceAccess,
@@ -130,7 +130,7 @@ async function handlePOST(
         .where(
             and(
                 eq(workspaceCollaborators.workspaceId, workspaceId),
-                eq(workspaceCollaborators.userId, invitedUser.id)
+                eq(workspaceCollaborators.userId, invitedUser?.id || "non-existent") // non-existent won't match
             )
         )
         .limit(1);
@@ -142,15 +142,7 @@ async function handlePOST(
         );
     }
 
-    // Can't invite yourself
-    if (invitedUser.id === currentUser.userId) {
-        return NextResponse.json(
-            { message: "You can't invite yourself" },
-            { status: 400 }
-        );
-    }
-
-    // Get workspace to check if invitee is the owner and get slug for url
+    // Get workspace details for email and token generation
     const [ws] = await db
         .select({
             userId: workspaces.userId,
@@ -161,31 +153,100 @@ async function handlePOST(
         .where(eq(workspaces.id, workspaceId))
         .limit(1);
 
-    if (ws && invitedUser.id === ws.userId) {
-        return NextResponse.json(
-            { message: "Cannot invite workspace owner as collaborator" },
-            { status: 400 }
-        );
+    // If user exists, add as collaborator directly
+    if (invitedUser) {
+        // Can't invite yourself
+        if (invitedUser.id === currentUser.userId) {
+            return NextResponse.json(
+                { message: "You can't invite yourself" },
+                { status: 400 }
+            );
+        }
+
+        if (ws && invitedUser.id === ws.userId) {
+            return NextResponse.json(
+                { message: "Cannot invite workspace owner as collaborator" },
+                { status: 400 }
+            );
+        }
+
+        // Add collaborator
+        const [newCollaborator] = await db
+            .insert(workspaceCollaborators)
+            .values({
+                workspaceId,
+                userId: invitedUser.id,
+                permissionLevel: permissionLevel === "viewer" ? "viewer" : "editor",
+            })
+            .returning();
+
+        // Send standard invitation email
+        try {
+            // Use slug if available, otherwise fallback to id
+            const identifier = ws.slug || workspaceId;
+            const workspaceUrl = `https://thinkex.app/workspace/${identifier}`;
+            const { data, error } = await resend.emails.send({
+                from: 'ThinkEx <hello@thinkex.app>',
+                to: [email],
+                subject: `You've been invited to collaborate on ${ws.name || 'a workspace'}`,
+                react: InviteEmailTemplate({
+                    inviterName: currentUser.name || 'A user',
+                    workspaceName: ws.name || 'Workspace',
+                    workspaceUrl,
+                }),
+            });
+            if (error) console.error("Failed to send invitation email:", error);
+        } catch (emailError) {
+            console.error("Error sending invitation email:", emailError);
+        }
+
+        return NextResponse.json({ collaborator: newCollaborator }, { status: 201 });
     }
 
-    // Add collaborator
-    const [newCollaborator] = await db
-        .insert(workspaceCollaborators)
-        .values({
-            workspaceId,
-            userId: invitedUser.id,
-            permissionLevel: permissionLevel === "viewer" ? "viewer" : "editor",
-        })
-        .returning();
+    // User does NOT exist - Create Pending Invite
 
-    // Send invitation email
+    // Import nanoid dynamically or use a simple random string generator since nanoid might be ESM only
+    // Simple secure random token generator
+    const generateToken = () => {
+        const array = new Uint8Array(24);
+        crypto.getRandomValues(array);
+        return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    };
+
+    const token = generateToken();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
+
+
+    // Implementation for Pending Invite
+    // 1. Delete existing invite to replace it
+    await db
+        .delete(workspaceInvites)
+        .where(
+            and(
+                eq(workspaceInvites.workspaceId, workspaceId),
+                eq(workspaceInvites.email, email.trim().toLowerCase())
+            )
+        );
+
+    // 2. Create new invite
+    await db.insert(workspaceInvites).values({
+        workspaceId,
+        email: email.trim().toLowerCase(),
+        token,
+        inviterId: currentUser.userId,
+        permissionLevel: permissionLevel === "viewer" ? "viewer" : "editor",
+        expiresAt: expiresAt.toISOString(),
+    });
+
+    // 3. Send Invite Email
     try {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://thinkex.app';
-        // Use slug if available, otherwise fallback to id (though slug should always be present for access)
         const identifier = ws.slug || workspaceId;
-        const workspaceUrl = `https://thinkex.app/workspace/${identifier}`;
-        const { data, error } = await resend.emails.send({
-            from: 'ThinkEx <hello@thinkex.app>', // Update this with your verified domain if available
+        // Append ?invite=token to the URL
+        const workspaceUrl = `https://thinkex.app/workspace/${identifier}?invite=${token}`;
+
+        await resend.emails.send({
+            from: 'ThinkEx <hello@thinkex.app>',
             to: [email],
             subject: `You've been invited to collaborate on ${ws.name || 'a workspace'}`,
             react: InviteEmailTemplate({
@@ -194,15 +255,19 @@ async function handlePOST(
                 workspaceUrl,
             }),
         });
-
-        if (error) {
-            console.error("Failed to send invitation email:", error);
-        }
     } catch (emailError) {
-        console.error("Error sending invitation email:", emailError);
+        console.error("Error sending pending invitation email:", emailError);
+        // We still return success as the invite was created
     }
 
-    return NextResponse.json({ collaborator: newCollaborator }, { status: 201 });
+    return NextResponse.json(
+        {
+            message: "Invitation sent to new user",
+            pending: true,
+            email
+        },
+        { status: 201 }
+    );
 }
 
 export const GET = withErrorHandling(handleGET, "GET /api/workspaces/[id]/collaborators");

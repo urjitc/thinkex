@@ -36,6 +36,9 @@ import { PdfEngineWrapper } from "@/components/pdf/PdfEngineWrapper";
 import WorkspaceSettingsModal from "@/components/workspace/WorkspaceSettingsModal";
 import ShareWorkspaceDialog from "@/components/workspace/ShareWorkspaceDialog";
 import { RealtimeProvider } from "@/contexts/RealtimeContext";
+import { toast } from "sonner";
+import { InviteLandingPage } from "@/components/workspace/InviteLandingPage";
+
 // Main dashboard content component
 interface DashboardContentProps {
   currentWorkspace: WorkspaceWithState | null;
@@ -487,6 +490,44 @@ function DashboardContent({
 // Main page component
 export function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get('invite');
+  const { data: session, isPending: isSessionLoading } = useSession();
+
+  // Handle invitation auto-claiming
+  useEffect(() => {
+    async function claimInvite() {
+      if (!inviteToken || !session?.user || isSessionLoading) return;
+
+      try {
+        const res = await fetch('/api/invites/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: inviteToken })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          toast.success('Invitation accepted!');
+          // Remove query param
+          const newParams = new URLSearchParams(searchParams.toString());
+          newParams.delete('invite');
+          router.replace(`/workspace/${data.workspaceSlug || ''}?${newParams.toString()}`);
+          // Force reload to get permission updates
+          window.location.reload();
+        } else {
+          toast.error(data.message || data.error || 'Failed to accept invitation');
+        }
+      } catch (e) {
+        console.error(e);
+        toast.error('Failed to accept invitation');
+      }
+    }
+
+    claimInvite();
+  }, [inviteToken, session, isSessionLoading, router, searchParams]);
+
   // Get workspace context - currentWorkspace is loaded directly by slug (fast path)
   const {
     currentSlug,
@@ -535,6 +576,11 @@ export function DashboardPage() {
   useEffect(() => {
     clearPlayingYouTubeCards();
   }, [currentWorkspaceId, clearPlayingYouTubeCards]);
+
+  // Show InviteLandingPage if we have a token and NO session (and not loading)
+  if (inviteToken && !isSessionLoading && !session) {
+    return <InviteLandingPage token={inviteToken} />;
+  }
 
   return (
     <RealtimeProvider workspaceId={currentWorkspaceId}>
