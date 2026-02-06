@@ -4,7 +4,7 @@ import { useCallback, useState, useEffect, useMemo, useRef } from "react";
 import type { Item, ItemData, QuizData, QuizQuestion, QuizSessionData } from "@/lib/workspace-state/types";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, XCircle, Lightbulb, ChevronLeft, ChevronRight, RotateCcw, Trophy } from "lucide-react";
-import { MarkdownText } from "@/components/assistant-ui/markdown-text";
+import { StreamdownMarkdown } from "@/components/ui/streamdown-markdown";
 import { toast } from "sonner";
 
 interface QuizContentProps {
@@ -348,9 +348,9 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
             )}>
                 <div className="mb-6">
                     <div className="text-sm text-white prose prose-invert prose-sm max-w-none">
-                        <MarkdownText className="text-sm text-white prose prose-invert prose-sm max-w-none">
+                        <StreamdownMarkdown className="text-sm text-white prose prose-invert prose-sm max-w-none">
                             {currentQuestion.questionText}
-                        </MarkdownText>
+                        </StreamdownMarkdown>
                     </div>
                 </div>
 
@@ -387,11 +387,11 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
                                     )}>
                                         {String.fromCharCode(65 + index)}
                                     </span>
-                                    <div className="text-sm text-white/90 flex-1 prose prose-invert prose-sm max-w-none">
-                                        <MarkdownText>
-                                            {option}
-                                        </MarkdownText>
-                                    </div>
+                        <div className="text-sm text-white/90 flex-1 prose prose-invert prose-sm max-w-none">
+                            <StreamdownMarkdown>
+                                {option}
+                            </StreamdownMarkdown>
+                        </div>
                                     {showCorrectness && isCorrect && <CheckCircle2 className="w-5 h-5 text-green-400" />}
                                     {showCorrectness && isSelected && !isCorrect && <XCircle className="w-5 h-5 text-red-400" />}
                                 </div>
@@ -454,9 +454,9 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
                             )}
                         </div>
                         <div className="text-sm text-white/80 prose prose-invert prose-sm max-w-none">
-                            <MarkdownText>
+                            <StreamdownMarkdown>
                                 {currentQuestion.explanation}
-                            </MarkdownText>
+                            </StreamdownMarkdown>
                         </div>
                     </div>
                 )}
