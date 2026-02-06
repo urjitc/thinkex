@@ -6,6 +6,53 @@ import { logger } from "@/lib/utils/logger";
 /**
  * Create the processUrls tool for analyzing web pages
  */
+// Helper to extract text from HTML using Cheerio
+async function extractTextFromUrl(url: string): Promise<string> {
+    const { load } = await import("cheerio");
+
+    // Use a browser-like User-Agent to bypass basic bot blockers
+    const response = await fetch(url, {
+        headers: {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+    }
+
+    const html = await response.text();
+    const $ = load(html);
+
+    // Remove scripts, styles, and other non-content elements
+    $('script').remove();
+    $('style').remove();
+    $('nav').remove();
+    $('footer').remove();
+    $('iframe').remove();
+    $('noscript').remove();
+
+    // specific cleanup for documentation sites often helps
+    $('.navigation').remove();
+    $('.sidebar').remove();
+
+    // Extract text from body
+    // collapsing whitespace to single spaces
+    const text = $('body').text().replace(/\s+/g, ' ').trim();
+
+    // If body text is too short, it might be a JS-only site or failed extraction
+    if (text.length < 50) {
+        throw new Error("Extracted text is too short, possibly a JavaScript-required site");
+    }
+
+    return text.substring(0, 20000); // Limit context window usage
+}
+
+/**
+ * Create the processUrls tool for analyzing web pages
+ */
 export function createProcessUrlsTool() {
     return tool({
         description: "Analyze web pages using Google's URL Context API. Extracts content, key information, and metadata from regular web URLs (http/https). Use this for web pages, articles, documentation, and other web content. For files (PDFs, images, documents) or videos, use the processFiles tool instead.",
@@ -62,10 +109,6 @@ export function createProcessUrlsTool() {
             try {
                 // Process multiple URLs in parallel using separate generateText calls
                 const urlProcessingPromises = urlList.map(async (url: string) => {
-                    const tools: any = {
-                        url_context: google.tools.urlContext({}),
-                    };
-
                     const promptText = `Analyze the content from the following URL:
 ${url}
 
@@ -77,7 +120,24 @@ Please provide:
 
 Provide a clear, accurate answer based on the URL content.`;
 
+                    // Helper to run the analysis on simple text content
+                    // Used for fallback when the main tool fails
+                    const analyzeTextContent = async (textInfo: string, isFallback = false) => {
+                        const { text } = await generateText({
+                            model: google("gemini-2.5-flash"),
+                            prompt: isFallback
+                                ? `Analyze the following extracted text from ${url}:\n\n${textInfo}\n\n${promptText}`
+                                : promptText,
+                        });
+                        return text;
+                    };
+
                     try {
+                        // PRIMARY ATTEMPT: Google URL Context Tool
+                        const tools: any = {
+                            url_context: google.tools.urlContext({}),
+                        };
+
                         const { text, sources, providerMetadata } = await generateText({
                             model: google("gemini-2.5-flash"),
                             tools,
@@ -86,6 +146,20 @@ Provide a clear, accurate answer based on the URL content.`;
 
                         const urlMetadata = providerMetadata?.urlContext?.urlMetadata || null;
                         const groundingChunks = providerMetadata?.urlContext?.groundingChunks || null;
+
+                        // Check for refusal/failure in the generated text
+                        const isRefusal = text.includes("unable to access") ||
+                            text.includes("cannot access the content") ||
+                            text.includes("I cannot provide an analysis");
+
+                        // Check if we actually retrieved anything
+                        const hasSuccessfulRetrieval = Array.isArray(urlMetadata) &&
+                            urlMetadata.some((m: any) => m.urlRetrievalStatus === "SUCCESS" || !m.urlRetrievalStatus);
+
+                        // If the model refused and we didn't get successful retrieval metadata, treat as failure
+                        if (isRefusal && !hasSuccessfulRetrieval) {
+                            throw new Error("Model refused or failed to access content (soft failure detected)");
+                        }
 
                         return {
                             url,
@@ -98,19 +172,38 @@ Provide a clear, accurate answer based on the URL content.`;
                             },
                         };
                     } catch (urlError) {
-                        logger.error(`🔗 [URL_TOOL] Error processing URL ${url}:`, {
-                            error: urlError instanceof Error ? urlError.message : String(urlError),
-                        });
-                        return {
-                            url,
-                            success: false,
-                            text: `Error processing ${url}: ${urlError instanceof Error ? urlError.message : String(urlError)}`,
-                            metadata: {
-                                urlMetadata: null,
-                                groundingChunks: null,
-                                sources: null,
-                            },
-                        };
+                        const errorMessage = urlError instanceof Error ? urlError.message : String(urlError);
+                        logger.warn(`⚠️ [URL_TOOL] Primary method failed for ${url}, attempting fallback. Error: ${errorMessage}`);
+
+                        // FALLBACK ATTEMPT: Manual Fetch + Cheerio
+                        try {
+                            const extractedText = await extractTextFromUrl(url);
+                            const analysis = await analyzeTextContent(extractedText, true);
+
+                            return {
+                                url,
+                                success: true,
+                                text: analysis + "\n\n*(Note: Content accessed via fallback method due to site restrictions)*",
+                                metadata: {
+                                    urlMetadata: null, // Metadata not available in fallback
+                                    groundingChunks: null,
+                                    sources: [{ uri: url, title: "Extracted Content" }],
+                                },
+                            };
+                        } catch (fallbackError) {
+                            logger.error(`❌ [URL_TOOL] Fallback also failed for ${url}:`, fallbackError);
+
+                            return {
+                                url,
+                                success: false,
+                                text: `Error processing ${url} (Standard & Fallback failed): ${errorMessage}`,
+                                metadata: {
+                                    urlMetadata: null,
+                                    groundingChunks: null,
+                                    sources: null,
+                                },
+                            };
+                        }
                     }
                 });
 
