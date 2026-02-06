@@ -107,10 +107,34 @@ export function createProcessUrlsTool() {
             }
 
             try {
-                // Process multiple URLs in parallel using separate generateText calls
-                const urlProcessingPromises = urlList.map(async (url: string) => {
+                // Dynamically import UrlProcessor to avoid circular dependencies if any
+                const { UrlProcessor } = await import("@/lib/ai/utils/url-processor");
+
+                // Process URLs using the shared utility (handles fallback logic)
+                const processingResults = await UrlProcessor.processUrls(urlList);
+
+                // Filter successful results
+                const successfulResults = processingResults.filter(r => r.success);
+                const failedResults = processingResults.filter(r => !r.success);
+
+                if (failedResults.length > 0) {
+                    logger.warn(`🔗 [URL_TOOL] ${failedResults.length} URL(s) failed to process:`, failedResults.map(r => r.url));
+                }
+
+                if (successfulResults.length === 0) {
+                    return {
+                        text: `Failed to process any of the provided URLs. Errors: ${failedResults.map(r => `${r.url}: ${r.error}`).join('; ')}`,
+                        metadata: { urlMetadata: null, groundingChunks: null, sources: null }
+                    };
+                }
+
+                // Analyze each result with the LLM
+                const analysisPromises = successfulResults.map(async (result) => {
                     const promptText = `Analyze the content from the following URL:
-${url}
+${result.url}
+
+Content:
+${result.content}
 
 Please provide:
 - What this URL/page is about
@@ -120,135 +144,51 @@ Please provide:
 
 Provide a clear, accurate answer based on the URL content.`;
 
-                    // Helper to run the analysis on simple text content
-                    // Used for fallback when the main tool fails
-                    const analyzeTextContent = async (textInfo: string, isFallback = false) => {
-                        const { text } = await generateText({
-                            model: google("gemini-2.5-flash"),
-                            prompt: isFallback
-                                ? `Analyze the following extracted text from ${url}:\n\n${textInfo}\n\n${promptText}`
-                                : promptText,
-                        });
-                        return text;
+                    const { text } = await generateText({
+                        model: google("gemini-2.5-flash"),
+                        prompt: promptText,
+                    });
+
+                    return {
+                        url: result.url,
+                        title: result.title,
+                        text: text,
+                        source: result.url
                     };
-
-                    try {
-                        // PRIMARY ATTEMPT: Google URL Context Tool
-                        const tools: any = {
-                            url_context: google.tools.urlContext({}),
-                        };
-
-                        const { text, sources, providerMetadata } = await generateText({
-                            model: google("gemini-2.5-flash"),
-                            tools,
-                            prompt: promptText,
-                        });
-
-                        const urlMetadata = providerMetadata?.urlContext?.urlMetadata || null;
-                        const groundingChunks = providerMetadata?.urlContext?.groundingChunks || null;
-
-                        // Check for refusal/failure in the generated text
-                        const isRefusal = text.includes("unable to access") ||
-                            text.includes("cannot access the content") ||
-                            text.includes("I cannot provide an analysis");
-
-                        // Check if we actually retrieved anything
-                        const hasSuccessfulRetrieval = Array.isArray(urlMetadata) &&
-                            urlMetadata.some((m: any) => m.urlRetrievalStatus === "SUCCESS" || !m.urlRetrievalStatus);
-
-                        // If the model refused and we didn't get successful retrieval metadata, treat as failure
-                        if (isRefusal && !hasSuccessfulRetrieval) {
-                            throw new Error("Model refused or failed to access content (soft failure detected)");
-                        }
-
-                        return {
-                            url,
-                            success: true,
-                            text,
-                            metadata: {
-                                urlMetadata: Array.isArray(urlMetadata) ? (urlMetadata as Array<{ retrievedUrl: string; urlRetrievalStatus: string }>) : null,
-                                groundingChunks: Array.isArray(groundingChunks) ? (groundingChunks as Array<any>) : null,
-                                sources: Array.isArray(sources) ? (sources as Array<any>) : null,
-                            },
-                        };
-                    } catch (urlError) {
-                        const errorMessage = urlError instanceof Error ? urlError.message : String(urlError);
-                        logger.warn(`⚠️ [URL_TOOL] Primary method failed for ${url}, attempting fallback. Error: ${errorMessage}`);
-
-                        // FALLBACK ATTEMPT: Manual Fetch + Cheerio
-                        try {
-                            const extractedText = await extractTextFromUrl(url);
-                            const analysis = await analyzeTextContent(extractedText, true);
-
-                            return {
-                                url,
-                                success: true,
-                                text: analysis + "\n\n*(Note: Content accessed via fallback method due to site restrictions)*",
-                                metadata: {
-                                    urlMetadata: null, // Metadata not available in fallback
-                                    groundingChunks: null,
-                                    sources: [{ uri: url, title: "Extracted Content" }],
-                                },
-                            };
-                        } catch (fallbackError) {
-                            logger.error(`❌ [URL_TOOL] Fallback also failed for ${url}:`, fallbackError);
-
-                            return {
-                                url,
-                                success: false,
-                                text: `Error processing ${url} (Standard & Fallback failed): ${errorMessage}`,
-                                metadata: {
-                                    urlMetadata: null,
-                                    groundingChunks: null,
-                                    sources: null,
-                                },
-                            };
-                        }
-                    }
                 });
 
-                // Execute all URL processing in parallel
-                const results = await Promise.all(urlProcessingPromises);
+                const analyses = await Promise.all(analysisPromises);
 
-                // Aggregate results
-                const successfulResults = results.filter(r => r.success);
-                const failedResults = results.filter(r => !r.success);
-
-                // Combine text from all successful results
-                const combinedText = results
-                    .map(r => `**${r.url}**\n\n${r.text}`)
+                // Combine text from all analyses
+                const combinedText = analyses
+                    .map(a => `**${a.title}** (${a.url})\n\n${a.text}`)
                     .join('\n\n---\n\n');
 
-                // Combine metadata from all results
-                const allUrlMetadata = results
-                    .flatMap(r => r.metadata.urlMetadata || [])
-                    .filter((m): m is { retrievedUrl: string; urlRetrievalStatus: string } => m !== null);
-                const allGroundingChunks = results
-                    .flatMap(r => r.metadata.groundingChunks || [])
-                    .filter((c): c is any => c !== null);
-                const allSources = results
-                    .flatMap(r => r.metadata.sources || [])
-                    .filter((s): s is any => s !== null);
-
                 if (failedResults.length > 0) {
-                    logger.warn(`🔗 [URL_TOOL] ${failedResults.length} URL(s) failed to process:`, failedResults.map(r => r.url));
+                    const failureText = `\n\n*(Note: Failed to access ${failedResults.length} URLs: ${failedResults.map(r => r.url).join(', ')})*`;
+                    return {
+                        text: combinedText + failureText,
+                        metadata: {
+                            urlMetadata: null,
+                            groundingChunks: null,
+                            sources: analyses.map(a => ({ uri: a.url, title: a.title }))
+                        }
+                    };
                 }
 
                 return {
                     text: combinedText,
                     metadata: {
-                        urlMetadata: allUrlMetadata.length > 0 ? allUrlMetadata : null,
-                        groundingChunks: allGroundingChunks.length > 0 ? allGroundingChunks : null,
-                        sources: allSources.length > 0 ? allSources : null,
+                        urlMetadata: null,
+                        groundingChunks: null,
+                        sources: analyses.map(a => ({ uri: a.url, title: a.title }))
                     },
                 };
+
             } catch (error) {
                 logger.error("🔗 [URL_TOOL] Error processing web URLs:", {
                     error: error instanceof Error ? error.message : String(error),
-                    errorType: error instanceof Error ? error.constructor.name : typeof error,
-                    errorStack: error instanceof Error ? error.stack : undefined,
                     urls: urlList,
-                    fullError: error,
                 });
                 return {
                     text: `Error processing web URLs: ${error instanceof Error ? error.message : String(error)}`,
