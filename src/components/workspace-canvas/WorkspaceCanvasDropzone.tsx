@@ -5,10 +5,11 @@ import { useWorkspaceStore } from "@/lib/stores/workspace-store";
 import { useWorkspaceState } from "@/hooks/workspace/use-workspace-state";
 import { useWorkspaceOperations } from "@/hooks/workspace/use-workspace-operations";
 import { FileText } from "lucide-react";
-import { useCallback, useState, useRef } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import type { PdfData, ImageData } from "@/lib/workspace-state/types";
 import { getBestFrameForRatio, type GridFrame } from "@/lib/workspace-state/aspect-ratios";
+import { useReactiveNavigation } from "@/hooks/ui/use-reactive-navigation";
 
 interface WorkspaceCanvasDropzoneProps {
   children: React.ReactNode;
@@ -23,6 +24,9 @@ export function WorkspaceCanvasDropzone({ children }: WorkspaceCanvasDropzonePro
   const { state: workspaceState } = useWorkspaceState(currentWorkspaceId);
   const operations = useWorkspaceOperations(currentWorkspaceId, workspaceState);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Use reactive navigation hook for auto-scroll/selection
+  const { handleCreatedItems } = useReactiveNavigation(workspaceState);
 
   // Track files currently being processed to prevent duplicates
   const processingFilesRef = useRef<Set<string>>(new Set());
@@ -182,7 +186,9 @@ export function WorkspaceCanvasDropzone({ children }: WorkspaceCanvasDropzonePro
               };
             });
 
-            operations.createItems(pdfCardDefinitions);
+            const pdfCreatedIds = operations.createItems(pdfCardDefinitions);
+            // Use shared hook to handle navigation/selection for PDFs
+            handleCreatedItems(pdfCreatedIds);
           }
 
           // Create image cards with aspect ratio detection
@@ -273,7 +279,9 @@ export function WorkspaceCanvasDropzone({ children }: WorkspaceCanvasDropzonePro
             const imageCardDefinitions = await Promise.all(imageDefinitionsPromises);
 
             // @ts-ignore - We are passing extra 'initialLayout' that we'll handle in createItems
-            operations.createItems(imageCardDefinitions);
+            const imageCreatedIds = operations.createItems(imageCardDefinitions);
+            // Use shared hook to handle navigation/selection for images
+            handleCreatedItems(imageCreatedIds);
           }
 
           // Show success toast
@@ -305,7 +313,7 @@ export function WorkspaceCanvasDropzone({ children }: WorkspaceCanvasDropzonePro
         isProcessingRef.current = false;
       }
     },
-    [currentWorkspaceId, operations]
+    [currentWorkspaceId, operations, handleCreatedItems]
   );
 
   // Clear processing state when drag ends (user drags away or cancels)
