@@ -17,10 +17,15 @@ interface WorkspaceRuntimeProviderProps {
 
 import { useShallow } from "zustand/react/shallow";
 
+import { ImageSearchToolUI } from "@/components/assistant-ui/ImageSearchToolUI";
+import { AddImageToolUI } from "@/components/assistant-ui/AddImageToolUI";
+
 export function WorkspaceRuntimeProvider({
   workspaceId,
   children
 }: WorkspaceRuntimeProviderProps) {
+  // ... existing hooks
+
 
   const selectedModelId = useUIStore((state) => state.selectedModelId);
   const activeFolderId = useUIStore((state) => state.activeFolderId);
@@ -155,6 +160,8 @@ export function WorkspaceRuntimeProvider({
     <AssistantRuntimeProvider runtime={runtime}>
       <AssistantAvailableProvider>
         {children}
+        <ImageSearchToolUI />
+        <AddImageToolUI />
       </AssistantAvailableProvider>
     </AssistantRuntimeProvider>
   );

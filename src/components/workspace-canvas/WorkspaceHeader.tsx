@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, X, ChevronRight, ChevronDown, FolderOpen, ChevronLeft, Plus, Upload, FileText, Folder as FolderIcon, Settings, Share2, Play, MoreHorizontal, Globe, Brain, Maximize, File, Newspaper } from "lucide-react";
+import { Search, X, ChevronRight, ChevronDown, FolderOpen, ChevronLeft, Plus, Upload, FileText, Folder as FolderIcon, Settings, Share2, Play, MoreHorizontal, Globe, Brain, Maximize, File, Newspaper, ImageIcon } from "lucide-react";
 import { LuBook } from "react-icons/lu";
 import { PiCardsThreeBold } from "react-icons/pi";
 import { cn } from "@/lib/utils";
@@ -51,6 +51,8 @@ import { CreateYouTubeDialog } from "@/components/modals/CreateYouTubeDialog";
 import { CreateWebsiteDialog } from "@/components/modals/CreateWebsiteDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { CollaboratorAvatars } from "@/components/workspace/CollaboratorAvatars";
+import { CreateImageDialog } from "@/components/modals/CreateImageDialog";
+import { getBestFrameForRatio } from "@/lib/workspace-state/aspect-ratios";
 interface WorkspaceHeaderProps {
   titleInputRef: React.RefObject<HTMLInputElement | null>;
   searchQuery: string;
@@ -72,7 +74,7 @@ interface WorkspaceHeaderProps {
   workspaceIcon?: string | null;
   workspaceColor?: string | null;
   // New button props
-  addItem?: (type: CardType, name?: string, initialData?: Partial<Item['data']>) => string;
+  addItem?: (type: CardType, name?: string, initialData?: Partial<Item['data']>, initialLayout?: any) => string;
   onPDFUpload?: (files: File[]) => Promise<void>;
 
   setOpenModalItemId?: (id: string | null) => void;
@@ -141,6 +143,7 @@ export default function WorkspaceHeader({
   const [renameValue, setRenameValue] = useState("");
   const [showYouTubeDialog, setShowYouTubeDialog] = useState(false);
   const [showWebsiteDialog, setShowWebsiteDialog] = useState(false);
+  const [showImageDialog, setShowImageDialog] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
@@ -383,6 +386,38 @@ export default function WorkspaceHeader({
     if (addItem) {
       addItem("youtube", name, { url, thumbnail });
     }
+    setIsNewMenuOpen(false);
+  }, [addItem]);
+
+  const handleImageCreate = useCallback(async (url: string, name: string) => {
+    if (!addItem) return;
+
+    // Attempt to load image to get dimensions for adaptive layout
+    let initialLayout = undefined;
+    try {
+      const img = new window.Image();
+      const dimensionsPromise = new Promise<{ width: number, height: number }>((resolve, reject) => {
+        img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = reject;
+        // Handle duplicate image load
+        if (img.complete) {
+          resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        }
+        img.src = url;
+      });
+
+      // Timeout after 2 seconds to avoid hanging
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject("Timeout"), 2000));
+
+      const { width, height } = await Promise.race([dimensionsPromise, timeoutPromise]) as { width: number, height: number };
+      const bestFrame = getBestFrameForRatio(width, height);
+      initialLayout = { w: bestFrame.w, h: bestFrame.h };
+    } catch (e) {
+      console.warn("Could not detect image dimensions, using defaults", e);
+    }
+
+    addItem('image', name, { url, altText: name }, initialLayout);
+    toast.success("Image added to workspace");
     setIsNewMenuOpen(false);
   }, [addItem]);
 
@@ -970,6 +1005,16 @@ export default function WorkspaceHeader({
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
+                      setShowImageDialog(true);
+                      setIsNewMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <ImageIcon className="size-4" />
+                    Image
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
                       toast.success("Deep Research action selected");
                       setSelectedActions(["deep-research"]);
                       aui?.composer().setText("I want to do research on ");
@@ -1053,25 +1098,33 @@ export default function WorkspaceHeader({
         onCreate={handleYouTubeCreate}
       />
       {/* Website Dialog */}
-      {currentWorkspaceId && (
-        <CreateWebsiteDialog
-          open={showWebsiteDialog}
-          onOpenChange={setShowWebsiteDialog}
-          workspaceId={currentWorkspaceId}
-          folderId={activeFolderId || undefined}
-          onNoteCreated={(noteId) => {
-            // Invalidate workspace events cache to trigger refetch
-            void queryClient.invalidateQueries({
-              queryKey: ["workspace", currentWorkspaceId, "events"],
-            });
-            // Open the new note in the modal
-            if (setOpenModalItemId) {
-              setOpenModalItemId(noteId);
-            }
-          }}
-        />
-      )}
-    </div >
+      {
+        currentWorkspaceId && (
+          <CreateWebsiteDialog
+            open={showWebsiteDialog}
+            onOpenChange={setShowWebsiteDialog}
+            workspaceId={currentWorkspaceId}
+            folderId={activeFolderId || undefined}
+            onNoteCreated={(noteId) => {
+              // Invalidate workspace events cache to trigger refetch
+              void queryClient.invalidateQueries({
+                queryKey: ["workspace", currentWorkspaceId, "events"],
+              });
+              // Open the new note in the modal
+              if (setOpenModalItemId) {
+                setOpenModalItemId(noteId);
+              }
+            }}
+          />
+        )
+      }
+      {/* Image Dialog */}
+      <CreateImageDialog
+        open={showImageDialog}
+        onOpenChange={setShowImageDialog}
+        onCreate={handleImageCreate}
+      />
+    </div>
   );
 }
 

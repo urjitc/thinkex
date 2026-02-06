@@ -43,6 +43,9 @@ import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import type { WorkspaceWithState } from "@/lib/workspace-state/types";
 import { useAui } from "@assistant-ui/react";
 import { focusComposerInput } from "@/lib/utils/composer-utils";
+import { CreateImageDialog } from "@/components/modals/CreateImageDialog";
+import { ImageIcon } from "lucide-react";
+import { getBestFrameForRatio } from "@/lib/workspace-state/aspect-ratios";
 
 interface WorkspaceSectionProps {
   // Loading states
@@ -186,6 +189,7 @@ export function WorkspaceSection({
 
   // Workspace settings and share modal state
   const [showYouTubeDialog, setShowYouTubeDialog] = useState(false);
+  const [showImageDialog, setShowImageDialog] = useState(false);
 
   // Get workspace data from context
   const { workspaces } = useWorkspaceContext();
@@ -199,6 +203,88 @@ export function WorkspaceSection({
       addItem("youtube", name, { url, thumbnail });
     }
   }, [addItem]);
+
+  const handleImageCreate = useCallback(async (url: string, name: string) => {
+    if (!operations) return;
+
+    // Attempt to load image to get dimensions for adaptive layout
+    let initialLayout = undefined;
+    try {
+      const img = new Image();
+      const dimensionsPromise = new Promise<{ width: number, height: number }>((resolve, reject) => {
+        img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = reject;
+        // Handle duplicate image load
+        if (img.complete) {
+          resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        }
+        img.src = url;
+      });
+
+      // Timeout after 2 seconds to avoid hanging
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject("Timeout"), 2000));
+
+      const { width, height } = await Promise.race([dimensionsPromise, timeoutPromise]) as { width: number, height: number };
+      const bestFrame = getBestFrameForRatio(width, height);
+      initialLayout = { w: bestFrame.w, h: bestFrame.h };
+    } catch (e) {
+      console.warn("Could not detect image dimensions, using defaults", e);
+    }
+
+    operations.createItems([{
+      type: 'image',
+      name,
+      initialData: { url, altText: name },
+      initialLayout
+    }]);
+
+    toast.success("Image added to workspace");
+  }, [operations]);
+
+  // Handle smart image selection from menu
+  const handleImageMenuItemClick = useCallback(async () => {
+    try {
+      // Check for clipboard permissions/content
+      const clipboardItems = await navigator.clipboard.read();
+      let imageBlob: Blob | null = null;
+
+      for (const item of clipboardItems) {
+        const imageType = item.types.find(t => t.startsWith('image/'));
+        if (imageType) {
+          imageBlob = await item.getType(imageType);
+          break;
+        }
+      }
+
+      if (imageBlob) {
+        // Found an image! Upload it directly.
+        const toastId = toast.loading("Pasting image from clipboard...");
+
+        const formData = new FormData();
+        formData.append('file', imageBlob, "pasted-image.png"); // Default name
+
+        const response = await fetch('/api/upload-file', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) throw new Error("Upload failed");
+
+        const data = await response.json();
+        toast.dismiss(toastId);
+
+        // Create the card using the new URL
+        await handleImageCreate(data.url, "Pasted Image");
+        return;
+      }
+    } catch (e) {
+      // Fallback to dialog if clipboard access fails or no image found
+      console.debug("Clipboard read failed or empty, falling back to dialog", e);
+    }
+
+    // If no image found or error, open the manual dialog
+    setShowImageDialog(true);
+  }, [handleImageCreate]);
 
   // Handle delete request (from button or keyboard)
   const handleDeleteRequest = () => {
@@ -555,6 +641,13 @@ export function WorkspaceSection({
               YouTube
             </ContextMenuItem>
             <ContextMenuItem
+              onSelect={handleImageMenuItemClick}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <ImageIcon className="size-4" />
+              Image
+            </ContextMenuItem>
+            <ContextMenuItem
               onSelect={() => {
                 toast.success("Deep Research action selected");
                 setSelectedActions(["deep-research"]);
@@ -624,6 +717,13 @@ export function WorkspaceSection({
         open={showYouTubeDialog}
         onOpenChange={setShowYouTubeDialog}
         onCreate={handleYouTubeCreate}
+      />
+
+      {/* Image Dialog */}
+      <CreateImageDialog
+        open={showImageDialog}
+        onOpenChange={setShowImageDialog}
+        onCreate={handleImageCreate}
       />
     </div>
   );

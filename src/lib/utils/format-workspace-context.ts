@@ -1,4 +1,4 @@
-import type { AgentState, Item, NoteData, PdfData, FlashcardData, FlashcardItem, YouTubeData, QuizData, QuizQuestion } from "@/lib/workspace-state/types";
+import type { AgentState, Item, NoteData, PdfData, FlashcardData, FlashcardItem, YouTubeData, QuizData, QuizQuestion, ImageData } from "@/lib/workspace-state/types";
 import { serializeBlockNote } from "./serialize-blocknote";
 import { type Block } from "@/components/editor/BlockNoteEditor";
 
@@ -65,6 +65,9 @@ function formatItem(item: Item, index: number): string {
         case "flashcard":
             lines.push(...formatFlashcardDetails(item.data as FlashcardData));
             break;
+        case "image":
+            lines.push(...formatImageDetails(item.data as ImageData));
+            break;
     }
 
     return lines.join("\n");
@@ -92,6 +95,15 @@ function formatPdfDetails(data: PdfData): string[] {
 function formatFlashcardDetails(data: FlashcardData): string[] {
     const cardCount = data.cards?.length || (data.front || data.back ? 1 : 0);
     return [`   - Deck contains ${cardCount} card${cardCount !== 1 ? 's' : ''}`];
+}
+
+/**
+ * Formats Image-specific details
+ */
+function formatImageDetails(data: ImageData): string[] {
+    const details = [];
+    if (data.altText) details.push(`Alt: ${data.altText}`);
+    return details.length > 0 ? [`   - ${details.join(", ")}`] : [];
 }
 
 /**
@@ -212,6 +224,14 @@ function extractRichContent(item: Item): RichContent {
         }
     }
 
+    // For Image cards, include the URL
+    if (item.type === "image") {
+        const imageData = item.data as ImageData;
+        if (imageData.url) {
+            richContent.images.push(imageData.url);
+        }
+    }
+
     return richContent;
 }
 
@@ -328,6 +348,9 @@ function formatSelectedCardFull(item: Item, index: number): string {
         case "quiz":
             lines.push(...formatQuizDetailsFull(item.data as QuizData));
             break;
+        case "image":
+            lines.push(...formatImageDetailsFull(item.data as ImageData));
+            break;
     }
 
     lines.push(`</card>`);
@@ -391,6 +414,27 @@ function formatYouTubeDetailsFull(data: YouTubeData): string[] {
 
     if (data.url) {
         lines.push(`   - URL: ${data.url}`);
+    }
+
+    return lines;
+}
+
+/**
+ * Formats Image details with FULL content
+ */
+function formatImageDetailsFull(data: ImageData): string[] {
+    const lines: string[] = [];
+
+    if (data.url) {
+        lines.push(`   - URL: ${data.url}`);
+    }
+
+    if (data.altText) {
+        lines.push(`   - Alt Text: ${data.altText}`);
+    }
+
+    if (data.caption) {
+        lines.push(`   - Caption: ${data.caption}`);
     }
 
     return lines;

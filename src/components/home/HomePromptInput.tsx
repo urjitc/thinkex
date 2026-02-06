@@ -64,6 +64,8 @@ const PLACEHOLDER_OPTIONS = [
   "physics kinematics problems",
 ];
 
+const baseText = "Create a workspace on ";
+
 interface HomePromptInputProps {
   shouldFocus?: boolean;
 }
