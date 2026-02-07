@@ -288,6 +288,18 @@
   color: hsl(var(--foreground)) !important;
 }
 
+/* Improve BlockNote placeholder text visibility in light mode */
+.bn-block-content[data-is-empty-and-focused="true"] .bn-inline-content::before {
+  color: hsl(var(--muted-foreground)) !important;
+  opacity: 0.8 !important;
+}
+
+/* Ensure placeholder is visible in light mode */
+.bn-block-content[data-is-empty="true"] .bn-inline-content::before {
+  color: hsl(var(--muted-foreground)) !important;
+  opacity: 0.6 !important;
+}
+
 /* Ensure BlockNote slash menu and dropdowns are theme-aware */
 .bn-suggestion-menu,
 .bn-dropdown-menu {
