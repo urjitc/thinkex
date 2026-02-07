@@ -73,7 +73,13 @@ export function useFolderUrl() {
   // (from user clicking a folder, opening a note, etc.), push a new URL
   useEffect(() => {
     // Skip if this change came from a URL sync (avoid circular loop)
-    if (isSyncingFromUrl.current) return;
+    if (isSyncingFromUrl.current) {
+      // Still update lastPushedState so it doesn't go stale — otherwise
+      // re-clicking the same folder/item after browser-back won't push a new URL
+      // because the check below would see the old (pre-back) state as matching.
+      lastPushedState.current = { folder: activeFolderId, item: openPanelId };
+      return;
+    }
 
     // Skip if we already pushed this exact state (avoid duplicate history entries)
     if (
