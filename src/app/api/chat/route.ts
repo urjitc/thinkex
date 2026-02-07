@@ -332,7 +332,7 @@ export async function POST(req: Request) {
 
     const result = streamText({
       model: model,
-      temperature: 1.0,
+      temperature: 0.2,
       system: finalSystemPrompt,
       messages: cleanedMessages,
       stopWhen: stepCountIs(25),
