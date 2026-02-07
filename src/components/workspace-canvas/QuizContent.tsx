@@ -453,7 +453,7 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
                                 </>
                             )}
                         </div>
-                        <div className="text-sm text-foreground/80 prose prose-invert prose-sm max-w-none dark:text-white/80">
+                        <div className="text-sm text-foreground prose prose-sm max-w-none">
                             <StreamdownMarkdown>
                                 {currentQuestion.explanation}
                             </StreamdownMarkdown>
