@@ -46,14 +46,19 @@ class GoogleContextStrategy implements ScrapingStrategy {
     try {
       logger.debug(`🌐 [Scraper:Google] Trying URL Context for: ${url}`);
 
-      const result = await generateText({
-        model: google("gemini-2.5-flash"),
-        tools: {
-          urlContext: google.tools.urlContext({}) as any,
-        },
-        // @ts-ignore
-        maxSteps: 2,
-        prompt: `Please read the content of the following URL: ${url}
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+      try {
+        const result = await generateText({
+          model: google("gemini-2.5-flash"),
+          tools: {
+            urlContext: google.tools.urlContext({}) as any,
+          },
+          // @ts-ignore - maxToolRoundtrips is valid but missing from current type defs
+          maxToolRoundtrips: 2,
+          prompt: `Please read the content of the following URL: ${url}
         
         If you can assume the content, extract the main title and the full text content of the page.
         Do not summarize wildly, just provide the content as accurately as possible.
@@ -61,59 +66,71 @@ class GoogleContextStrategy implements ScrapingStrategy {
         Return the result in this format:
         Title: [Title]
         Content: [Content]`,
-      });
+          abortSignal: controller.signal,
+        });
 
-      const { text } = result;
+        clearTimeout(timeoutId);
 
-      // --- DEBUG LOGGING ---
-      logger.debug(`🔍 [Scraper:Google] Response received:`, {
-        textLength: text?.length || 0,
-        textPreview: text?.substring(0, 200) || '(empty)',
-        hasText: !!text,
-      });
+        const { text } = result;
 
-      // --- SIMPLIFED VALIDATION ---
+        // --- DEBUG LOGGING ---
+        logger.debug(`🔍 [Scraper:Google] Response received:`, {
+          textLength: text?.length || 0,
+          textPreview: text?.substring(0, 200) || '(empty)',
+          hasText: !!text,
+        });
 
-      // --- SIMPLIFED VALIDATION ---
+        // --- SIMPLIFED VALIDATION ---
 
-      // 1. Check if we actually got text back
-      if (!text || text.trim().length === 0) {
-        logger.warn(`⚠️ [Scraper:Google] No text returned.`);
-        return null; // Fallback to Firecrawl
+        // --- SIMPLIFED VALIDATION ---
+
+        // 1. Check if we actually got text back
+        if (!text || text.trim().length === 0) {
+          logger.warn(`⚠️ [Scraper:Google] No text returned.`);
+          return null; // Fallback to Firecrawl
+        }
+
+        // 2. Check for common "Access Denied" or "Unable to read" phrases from LLM
+        const lowerText = text.toLowerCase();
+        if (
+          lowerText.includes("i cannot access") ||
+          lowerText.includes("i am unable to read") ||
+          lowerText.includes("access is denied") ||
+          lowerText.includes("403 forbidden")
+        ) {
+          logger.warn(`⚠️ [Scraper:Google] LLM reported access failure.`);
+          return null; // Fallback to Firecrawl
+        }
+
+        // If we passed checks, we assume success.
+        // Try to parse title/content if possible, or just use whole text.
+        const titleMatch = text.match(/Title:\s*(.*?)(\n|$)/);
+        const contentMatch = text.match(/Content:\s*([\s\S]*)/);
+
+        let title = url;
+        let content = text;
+
+        if (titleMatch && contentMatch) {
+          title = titleMatch[1].trim();
+          content = contentMatch[1].trim();
+        }
+
+        return {
+          url,
+          title,
+          content,
+          success: true,
+          source: "google-context",
+        };
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+
+        if (error.name === 'AbortError') {
+          logger.warn(`⏱️ [Scraper:Google] Timeout after 15s for ${url}`);
+          return null;
+        }
+        throw error; // Re-throw non-timeout errors
       }
-
-      // 2. Check for common "Access Denied" or "Unable to read" phrases from LLM
-      const lowerText = text.toLowerCase();
-      if (
-        lowerText.includes("i cannot access") ||
-        lowerText.includes("i am unable to read") ||
-        lowerText.includes("access is denied") ||
-        lowerText.includes("403 forbidden")
-      ) {
-        logger.warn(`⚠️ [Scraper:Google] LLM reported access failure.`);
-        return null; // Fallback to Firecrawl
-      }
-
-      // If we passed checks, we assume success.
-      // Try to parse title/content if possible, or just use whole text.
-      const titleMatch = text.match(/Title:\s*(.*?)(\n|$)/);
-      const contentMatch = text.match(/Content:\s*([\s\S]*)/);
-
-      let title = url;
-      let content = text;
-
-      if (titleMatch && contentMatch) {
-        title = titleMatch[1].trim();
-        content = contentMatch[1].trim();
-      }
-
-      return {
-        url,
-        title,
-        content,
-        success: true,
-        source: "google-context",
-      };
 
     } catch (error) {
       logger.error(`❌ [Scraper:Google] Exception caught for ${url}:`, {
@@ -190,8 +207,8 @@ class GoogleGroundingStrategy implements ScrapingStrategy {
         tools: {
           googleSearch: google.tools.googleSearch({}),
         },
-        // @ts-ignore
-        maxSteps: 2,
+        // @ts-ignore - maxToolRoundtrips is valid but missing from current type defs
+        maxToolRoundtrips: 2,
         prompt: `Find information about this specific URL: ${url}
         
         Provide a detailed summary of the content found on this page. 
@@ -283,9 +300,27 @@ export class UrlProcessor {
   }
 
   /**
-   * Process multiple URLs in parallel
+   * Process multiple URLs in parallel with graceful partial failure handling
    */
   static async processUrls(urls: string[]): Promise<UrlContent[]> {
-    return Promise.all(urls.map(url => this.processUrl(url)));
+    const results = await Promise.allSettled(
+      urls.map(url => this.processUrl(url))
+    );
+
+    return results.map((result, index) => {
+      if (result.status === 'fulfilled') {
+        return result.value;
+      } else {
+        // Log the error but return a failed UrlContent object
+        logger.error(`❌ [UrlProcessor] Failed to process URL ${urls[index]}:`, result.reason);
+        return {
+          url: urls[index],
+          title: urls[index],
+          content: '',
+          success: false,
+          error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+        };
+      }
+    });
   }
 }
