@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, X, ChevronRight, ChevronDown, FolderOpen, ChevronLeft, Plus, Upload, FileText, Folder as FolderIcon, Settings, Share2, Play, MoreHorizontal, Globe, Brain, Maximize, File, Newspaper, ImageIcon } from "lucide-react";
+import { Search, X, ChevronRight, ChevronDown, FolderOpen, Plus, Upload, FileText, Folder as FolderIcon, Settings, Share2, Play, MoreHorizontal, Globe, Brain, Maximize, File, Newspaper, ImageIcon } from "lucide-react";
 import { LuBook } from "react-icons/lu";
 import { PiCardsThreeBold } from "react-icons/pi";
 import { cn } from "@/lib/utils";
@@ -318,15 +318,6 @@ export default function WorkspaceHeader({
     setIsSearchExpanded(true);
   };
 
-  // Navigation history
-  const folderHistoryBack = useUIStore((state) => state.folderHistoryBack);
-  const folderHistoryForward = useUIStore((state) => state.folderHistoryForward);
-  const navigateFolderBack = useUIStore((state) => state.navigateFolderBack);
-  const navigateFolderForward = useUIStore((state) => state.navigateFolderForward);
-
-  const canNavigateBack = folderHistoryBack.length > 0;
-  const canNavigateForward = folderHistoryForward.length > 0;
-
   // Handle PDF upload
   const handlePDFUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -461,36 +452,6 @@ export default function WorkspaceHeader({
               Toggle Sidebar <kbd className="ml-1 pointer-events-none inline-flex h-5 select-none items-center gap-1 font-mono text-sm font-medium text-muted-foreground opacity-100">{formatKeyboardShortcut('S', true)}</kbd>
             </TooltipContent>
           </Tooltip>
-
-          {/* Navigation Arrows */}
-          <div className="flex items-center gap-0.5">
-            <button
-              onClick={navigateFolderBack}
-              disabled={!canNavigateBack}
-              className={cn(
-                "h-7 w-6 flex items-center justify-center rounded-md transition-colors",
-                canNavigateBack
-                  ? "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent cursor-pointer"
-                  : "text-sidebar-foreground/30 cursor-not-allowed"
-              )}
-              aria-label="Navigate back"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={navigateFolderForward}
-              disabled={!canNavigateForward}
-              className={cn(
-                "h-7 w-6 flex items-center justify-center rounded-md transition-colors",
-                canNavigateForward
-                  ? "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent cursor-pointer"
-                  : "text-sidebar-foreground/30 cursor-not-allowed"
-              )}
-              aria-label="Navigate forward"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
 
           {/* Breadcrumbs */}
           <nav className="flex items-center gap-1.5 text-xs text-sidebar-foreground/70 min-w-0">
