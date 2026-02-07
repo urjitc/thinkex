@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -48,6 +49,7 @@ export default function WorkspaceSettingsModal({
   onUpdate,
 }: WorkspaceSettingsModalProps) {
   const { deleteWorkspace, updateWorkspaceLocal } = useWorkspaceContext();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<CardColor | null>(null);
@@ -100,6 +102,8 @@ export default function WorkspaceSettingsModal({
         throw new Error(data.error || "Failed to update workspace");
       }
 
+      const updatedWorkspace = await response.json();
+
       // Update the TanStack Query cache with the new values
       updateWorkspaceLocal(workspace.id, {
         name: name.trim(),
@@ -111,6 +115,23 @@ export default function WorkspaceSettingsModal({
       onOpenChange(false);
       if (onUpdate) {
         onUpdate();
+      }
+
+      // Check if slug changed and redirect if needed
+      if (updatedWorkspace.workspace?.slug && workspace.slug !== updatedWorkspace.workspace.slug) {
+        const newSlug = updatedWorkspace.workspace.slug;
+        // Check if we're currently on a slug-based URL that needs updating
+        const currentPath = window.location.pathname;
+        const isWorkspaceRoute = currentPath.startsWith('/workspace/');
+        
+        if (isWorkspaceRoute) {
+          // Redirect to the new slug-based URL
+          router.push(`/workspace/${newSlug}`);
+          toast.info("Redirecting to new workspace URL...");
+        } else {
+          // If not on workspace route, just show success
+          toast.success("Workspace URL updated - it will be reflected when you navigate to the workspace");
+        }
       }
     } catch (err) {
       console.error("Error updating workspace:", err);
