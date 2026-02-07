@@ -40,6 +40,7 @@ import { toast } from "sonner";
 
 import { InviteGuard } from "@/components/workspace/InviteGuard";
 import { useReactiveNavigation } from "@/hooks/ui/use-reactive-navigation";
+import { useFolderUrl } from "@/hooks/ui/use-folder-url";
 
 // Main dashboard content component
 interface DashboardContentProps {
@@ -545,11 +546,10 @@ function DashboardView() {
     setSearchQuery('');
   }, [currentWorkspaceId, setSearchQuery]);
 
-  // Reset active folder when workspace changes
-  const clearActiveFolder = useUIStore((state) => state.clearActiveFolder);
-  useEffect(() => {
-    clearActiveFolder();
-  }, [currentWorkspaceId, clearActiveFolder]);
+  // Sync active folder with URL query param (?folder=<id>)
+  // This replaces the old clearActiveFolder on workspace change
+  // and enables browser-native back/forward for folder navigation
+  useFolderUrl();
 
   // Clear playing YouTube videos when workspace changes
   const clearPlayingYouTubeCards = useUIStore((state) => state.clearPlayingYouTubeCards);
