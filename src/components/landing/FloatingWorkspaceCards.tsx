@@ -8,7 +8,7 @@ import { useTheme } from "next-themes";
 // Base cards for landing page
 const BASE_CARDS: FloatingCardData[] = [
     // Column 1ish - The Origins of Light at top for visibility
-    { type: 'youtube', youtubeUrl: 'https://www.youtube.com/watch?v=aXRTczANuIs', thumbnailUrl: 'https://img.youtube.com/vi/aXRTczANuIs/sddefault.jpg' }, // The Origins of Light
+    { type: 'youtube', youtubeUrl: 'https://youtu.be/tGVnBAHLApA', thumbnailUrl: 'https://img.youtube.com/vi/tGVnBAHLApA/sddefault.jpg' }, // New video
     { type: 'note', title: 'Product Vision 2025', color: '#3B82F6' },
     { type: 'note', title: 'Tech Stack Decision Log', color: '#E11D48' },
     { type: 'flashcard', content: 'What is the primary function of the hippocampus?', color: '#EF4444' },
