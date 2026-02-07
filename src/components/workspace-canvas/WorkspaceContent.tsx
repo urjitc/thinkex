@@ -179,7 +179,7 @@ export default function WorkspaceContent({
       }
 
       const MAX_FILES = 5;
-      const MAX_FILE_SIZE_MB = 10;
+      const MAX_FILE_SIZE_MB = 50;
       const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
       // Check file count limit
@@ -226,13 +226,17 @@ export default function WorkspaceContent({
         return;
       }
 
-      // Add all valid files to composer
-      for (const file of validFiles) {
+      // Use existing upload handler from parent component
+      if (onPDFUpload) {
         try {
-          await aui.composer().addAttachment(file);
+          await onPDFUpload(validFiles);
         } catch (error) {
-          console.error("Failed to add attachment:", error);
+          console.error("Failed to upload PDFs:", error);
+          toast.error("Failed to upload PDFs");
         }
+      } else {
+        console.error("onPDFUpload handler not available");
+        toast.error("PDF upload not available");
       }
 
       // Reset input
@@ -240,7 +244,7 @@ export default function WorkspaceContent({
         fileInputRef.current.value = "";
       }
     },
-    [aui]
+    [onPDFUpload]
   );
 
   // Handle drag start
