@@ -4,10 +4,7 @@ import { useCallback, useState, useEffect, useMemo, useRef } from "react";
 import type { Item, ItemData, QuizData, QuizQuestion, QuizSessionData } from "@/lib/workspace-state/types";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, XCircle, Lightbulb, ChevronLeft, ChevronRight, RotateCcw, Trophy } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import "katex/dist/katex.min.css";
+import { StreamdownMarkdown } from "@/components/ui/streamdown-markdown";
 import { toast } from "sonner";
 
 interface QuizContentProps {
@@ -178,6 +175,15 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
         }
     };
 
+    // Arrow navigation - only moves between questions, never shows results
+    const handleArrowNext = () => {
+        if (currentIndex < totalQuestions - 1) {
+            const nextIndex = currentIndex + 1;
+            setCurrentIndex(nextIndex);
+            persistSession({ currentIndex: nextIndex });
+        }
+    };
+
     const handlePrevious = () => {
         if (currentIndex > 0) {
             const prevIndex = currentIndex - 1;
@@ -342,9 +348,9 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
             )}>
                 <div className="mb-6">
                     <div className="text-sm text-white prose prose-invert prose-sm max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                        <StreamdownMarkdown className="text-sm text-white prose prose-invert prose-sm max-w-none">
                             {currentQuestion.questionText}
-                        </ReactMarkdown>
+                        </StreamdownMarkdown>
                     </div>
                 </div>
 
@@ -381,11 +387,11 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
                                     )}>
                                         {String.fromCharCode(65 + index)}
                                     </span>
-                                    <div className="text-sm text-white/90 flex-1 prose prose-invert prose-sm max-w-none">
-                                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                                            {option}
-                                        </ReactMarkdown>
-                                    </div>
+                        <div className="text-sm text-white/90 flex-1 prose prose-invert prose-sm max-w-none">
+                            <StreamdownMarkdown>
+                                {option}
+                            </StreamdownMarkdown>
+                        </div>
                                     {showCorrectness && isCorrect && <CheckCircle2 className="w-5 h-5 text-green-400" />}
                                     {showCorrectness && isSelected && !isCorrect && <XCircle className="w-5 h-5 text-red-400" />}
                                 </div>
@@ -448,9 +454,9 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
                             )}
                         </div>
                         <div className="text-sm text-white/80 prose prose-invert prose-sm max-w-none">
-                            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                            <StreamdownMarkdown>
                                 {currentQuestion.explanation}
-                            </ReactMarkdown>
+                            </StreamdownMarkdown>
                         </div>
                     </div>
                 )}
@@ -464,9 +470,10 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
                         <button
                             onMouseDown={preventFocusSteal}
                             onClick={handleRestart}
-                            className="flex items-center justify-center w-8 h-8 rounded-lg text-sm text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                         >
                             <RotateCcw className="w-4 h-4 rotate-180" />
+                            <span>Restart</span>
                         </button>
                     </div>
 
@@ -490,11 +497,11 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
                         </span>
                         <button
                             onMouseDown={preventFocusSteal}
-                            onClick={isSubmitted ? handleNext : undefined}
-                            disabled={!isSubmitted}
+                            onClick={handleArrowNext}
+                            disabled={currentIndex >= totalQuestions - 1}
                             className={cn(
                                 "flex items-center justify-center w-8 h-8 rounded-lg text-sm transition-colors cursor-pointer",
-                                !isSubmitted
+                                currentIndex >= totalQuestions - 1
                                     ? "text-white/30 cursor-not-allowed"
                                     : "text-white/70 hover:text-white hover:bg-white/10"
                             )}
@@ -503,9 +510,9 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
                         </button>
                     </div>
 
-                    {/* Right: Check */}
+                    {/* Right: Check/Next Button */}
                     <div className="flex-1 flex items-center justify-end">
-                        {!isSubmitted && (
+                        {!isSubmitted ? (
                             <button
                                 onMouseDown={preventFocusSteal}
                                 onClick={handleSubmit}
@@ -518,6 +525,14 @@ export function QuizContent({ item, onUpdateData, isScrollLocked = false }: Quiz
                                 )}
                             >
                                 Check
+                            </button>
+                        ) : (
+                            <button
+                                onMouseDown={preventFocusSteal}
+                                onClick={handleNext}
+                                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer bg-blue-500 hover:bg-blue-600 text-white"
+                            >
+                                {currentIndex < totalQuestions - 1 ? "Next" : "Finish"}
                             </button>
                         )}
                     </div>

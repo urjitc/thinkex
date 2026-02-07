@@ -39,6 +39,8 @@ import { RealtimeProvider } from "@/contexts/RealtimeContext";
 import { toast } from "sonner";
 
 import { InviteGuard } from "@/components/workspace/InviteGuard";
+import { useReactiveNavigation } from "@/hooks/ui/use-reactive-navigation";
+import { useFolderUrl } from "@/hooks/ui/use-folder-url";
 
 // Main dashboard content component
 interface DashboardContentProps {
@@ -297,6 +299,9 @@ function DashboardContent({
   // Text selection handlers - delegate to agent for intelligent processing
   const { handleCreateInstantNote, handleCreateCardFromSelections } = useTextSelectionAgent(operations);
 
+  // Handle reactive navigation for new items
+  const { handleCreatedItems } = useReactiveNavigation(state);
+
   const handleWorkspacePdfUpload = useCallback(
     async (files: File[]) => {
       if (!currentWorkspaceId) {
@@ -341,9 +346,11 @@ function DashboardContent({
         };
       });
 
-      operations.createItems(pdfCardDefinitions);
+      // Create all PDF cards and navigate to the first one
+      const createdIds = operations.createItems(pdfCardDefinitions);
+      handleCreatedItems(createdIds);
     },
-    [operations, currentWorkspaceId]
+    [operations, currentWorkspaceId, handleCreatedItems]
   );
 
   const handleShowHistory = useCallback(() => {
@@ -384,6 +391,7 @@ function DashboardContent({
               workspaceColor={currentWorkspaceColor}
               addItem={operations.createItem}
               onPDFUpload={handleWorkspacePdfUpload}
+              onItemCreated={handleCreatedItems}
               setOpenModalItemId={setOpenModalItemId}
               items={state.items || []}
               onRenameFolder={(folderId, newName) => {
@@ -538,11 +546,10 @@ function DashboardView() {
     setSearchQuery('');
   }, [currentWorkspaceId, setSearchQuery]);
 
-  // Reset active folder when workspace changes
-  const clearActiveFolder = useUIStore((state) => state.clearActiveFolder);
-  useEffect(() => {
-    clearActiveFolder();
-  }, [currentWorkspaceId, clearActiveFolder]);
+  // Sync active folder with URL query param (?folder=<id>)
+  // This replaces the old clearActiveFolder on workspace change
+  // and enables browser-native back/forward for folder navigation
+  useFolderUrl();
 
   // Clear playing YouTube videos when workspace changes
   const clearPlayingYouTubeCards = useUIStore((state) => state.clearPlayingYouTubeCards);
