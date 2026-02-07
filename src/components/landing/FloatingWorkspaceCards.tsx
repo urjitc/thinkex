@@ -27,7 +27,7 @@ const BASE_CARDS: FloatingCardData[] = [
 
     // Column 4ish
     { type: 'youtube', youtubeUrl: 'https://www.youtube.com/watch?v=WUvTyaaNkzM', thumbnailUrl: 'https://img.youtube.com/vi/WUvTyaaNkzM/sddefault.jpg' },
-    { type: 'folder', title: 'Archive 2024', itemCount: 156, color: '#64748B' },
+    { type: 'folder', title: 'Archive 2024', itemCount: 156, color: '#6366F1' },
     { type: 'pdf', title: 'User_Interview_Script_v2.pdf', color: '#6366F1' },
     { type: 'folder', title: 'Neurology Resources', itemCount: 18, color: '#8B5CF6' },
 ];
@@ -58,7 +58,7 @@ const EXTRA_CARDS: FloatingCardData[] = [
     { type: 'note', title: 'Backend Architecture', color: '#8B5CF6' },
     { type: 'folder', title: 'UI Components', itemCount: 45, color: '#EF4444' },
     { type: 'flashcard', content: 'Explain event bubbling vs capturing', color: '#F97316' },
-    { type: 'pdf', title: 'Security_Audit_Report.pdf', color: '#64748B' },
+    { type: 'pdf', title: 'Security_Audit_Report.pdf', color: '#6366F1' },
     { type: 'note', title: 'Database Schema', color: '#14B8A6' },
     { type: 'folder', title: 'Test Suites', itemCount: 78, color: '#A855F7' },
     { type: 'quiz', title: 'React Hooks', content: 'When should you use useMemo?', color: '#3B82F6' },
