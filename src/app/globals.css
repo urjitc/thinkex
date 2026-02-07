@@ -1171,6 +1171,35 @@ body.marquee-selecting iframe {
   overflow-y: auto;
 }
 
+/* Word breaking with character fallback for workspace card item headers only */
+.workspace-card-text {
+  /* Try to break at word boundaries first */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  /* Fallback to character breaking if needed */
+  word-break: break-word;
+  /* Ensure text doesn't overflow container */
+  hyphens: auto;
+  /* Prevent orphaned characters at line start */
+  text-indent: 0;
+  hanging-punctuation: allow-last;
+}
+
+/* More aggressive breaking for very long unbreakable content */
+.workspace-card-text.break-all {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+/* Apply to card headers specifically */
+.workspace-card-header .workspace-card-text {
+  /* Headers should prefer word breaks but can fall back */
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-width: 0; /* Allow shrinking */
+  max-width: 100%; /* Don't overflow parent */
+}
+
 /* Dark theme styling for react-color SwatchesPicker */
 .color-picker-wrapper .swatches-picker {
   background: transparent !important;
