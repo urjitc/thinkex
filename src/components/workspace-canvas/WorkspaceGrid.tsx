@@ -762,10 +762,6 @@ export function WorkspaceGrid({
         .react-grid-item.react-grid-placeholder {
           transition: transform 100ms ease-out !important;
         }
-        /* Hide resize handles when YouTube video is playing */
-        .react-grid-item:has([data-youtube-playing="true"]) .react-resizable-handle {
-          display: none !important;
-        }
       `}</style>
       {mounted && (
         <ResponsiveGridLayout
