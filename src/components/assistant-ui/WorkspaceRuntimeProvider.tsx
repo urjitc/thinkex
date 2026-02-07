@@ -9,6 +9,7 @@ import { useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useWorkspaceState } from "@/hooks/workspace/use-workspace-state";
 import { formatSelectedCardsContext } from "@/lib/utils/format-workspace-context";
+import { SupabaseAttachmentAdapter } from "@/lib/attachments/supabase-attachment-adapter";
 
 interface WorkspaceRuntimeProviderProps {
   workspaceId: string;
@@ -153,6 +154,9 @@ export function WorkspaceRuntimeProvider({
       });
       return transport;
     }, [workspaceId, selectedModelId, activeFolderId, selectedCardsContext, replySelections, selectedActions]),
+    adapters: {
+      attachments: new SupabaseAttachmentAdapter(),
+    },
     onError: handleChatError,
   });
 
