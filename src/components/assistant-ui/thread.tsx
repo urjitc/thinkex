@@ -547,6 +547,84 @@ const Composer: FC<ComposerProps> = ({ items }) => {
     }
   };
 
+  /**
+   * Process PDF attachments in the background without blocking message sending
+   */
+  const processPdfAttachmentsInBackground = async (
+    pdfAttachments: any[],
+    workspaceId: string,
+    operations: any,
+    queryClient: any
+  ) => {
+    try {
+      // Upload all PDFs
+      const uploadPromises = pdfAttachments.map(async (attachment) => {
+        const file = attachment.file;
+        if (!file) return null;
+
+        // Upload file to Supabase
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadResponse = await fetch('/api/upload-file', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error(`Failed to upload PDF: ${uploadResponse.statusText}`);
+        }
+
+        const { url: fileUrl, filename } = await uploadResponse.json();
+
+        return {
+          fileUrl,
+          filename: filename || file.name,
+          fileSize: file.size,
+          name: file.name.replace(/\.pdf$/i, ''),
+        };
+      });
+
+      const uploadResults = await Promise.all(uploadPromises);
+
+      // Filter out any null results (files that couldn't be processed)
+      const validResults = uploadResults.filter((result): result is NonNullable<typeof result> => result !== null);
+
+      if (validResults.length > 0) {
+        // Collect all PDF card data and create in a single batch event
+        const pdfCardDefinitions = validResults.map((result) => {
+          const pdfData: Partial<PdfData> = {
+            fileUrl: result.fileUrl,
+            filename: result.filename,
+            fileSize: result.fileSize,
+          };
+
+          return {
+            type: 'pdf' as const,
+            name: result.name,
+            initialData: pdfData,
+          };
+        });
+
+        // Create all PDF cards atomically in a single event
+        operations.createItems(pdfCardDefinitions);
+
+        // Debounced refetch of workspace events
+        setTimeout(() => {
+          queryClient.refetchQueries({
+            queryKey: ["workspace", workspaceId, "events"],
+          });
+        }, 100);
+
+        // Show success toast
+        toast.success(`${validResults.length} PDF card${validResults.length === 1 ? '' : 's'} created`);
+      }
+    } catch (error) {
+      console.error('Error creating PDF cards in background:', error);
+      toast.error('Failed to create PDF cards');
+    }
+  };
+
   return (
     <ComposerPrimitive.Root
       className="aui-composer-root relative flex w-full flex-col rounded-lg border border-sidebar-border bg-sidebar-accent px-1 pt-1 shadow-[0_9px_9px_0px_rgba(0,0,0,0.01),0_2px_5px_0px_rgba(0,0,0,0.06)] dark:border-sidebar-border/15"
@@ -572,84 +650,15 @@ const Composer: FC<ComposerProps> = ({ items }) => {
           return;
         }
 
-        // Detect PDF attachments and create cards before sending message
+        // Detect PDF attachments for background processing
         const pdfAttachments = attachments.filter((att) => {
           const file = att.file;
           return file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
         });
 
+        // Process PDFs in background - don't block message sending
         if (pdfAttachments.length > 0 && currentWorkspaceId) {
-          try {
-            // Upload all PDFs first (can still use Promise.all for uploads)
-            const uploadPromises = pdfAttachments.map(async (attachment) => {
-              const file = attachment.file;
-              if (!file) return null;
-
-              // Upload file to Supabase
-              const formData = new FormData();
-              formData.append('file', file);
-
-              const uploadResponse = await fetch('/api/upload-file', {
-                method: 'POST',
-                body: formData,
-              });
-
-              if (!uploadResponse.ok) {
-                throw new Error(`Failed to upload PDF: ${uploadResponse.statusText}`);
-              }
-
-              const { url: fileUrl, filename } = await uploadResponse.json();
-
-              return {
-                fileUrl,
-                filename: filename || file.name,
-                fileSize: file.size,
-                name: file.name.replace(/\.pdf$/i, ''),
-              };
-            });
-
-            const uploadResults = await Promise.all(uploadPromises);
-
-            // Filter out any null results (files that couldn't be processed)
-            const validResults = uploadResults.filter((result): result is NonNullable<typeof result> => result !== null);
-
-            if (validResults.length > 0) {
-              // Collect all PDF card data and create in a single batch event
-              const pdfCardDefinitions = validResults.map((result) => {
-                const pdfData: Partial<PdfData> = {
-                  fileUrl: result.fileUrl,
-                  filename: result.filename,
-                  fileSize: result.fileSize,
-                };
-
-                return {
-                  type: 'pdf' as const,
-                  name: result.name,
-                  initialData: pdfData,
-                };
-              });
-
-              // Create all PDF cards atomically in a single event
-              operations.createItems(pdfCardDefinitions);
-
-              // Debounced refetch of workspace events (same pattern as CreateNoteToolUI)
-              if (refetchTimeoutRef.current) {
-                clearTimeout(refetchTimeoutRef.current);
-              }
-
-              refetchTimeoutRef.current = setTimeout(() => {
-                if (currentWorkspaceId) {
-                  queryClient.refetchQueries({
-                    queryKey: ["workspace", currentWorkspaceId, "events"],
-                  });
-                }
-                refetchTimeoutRef.current = null;
-              }, 100);
-            }
-          } catch (error) {
-            console.error('Error creating PDF cards:', error);
-            toast.error('Failed to create PDF cards');
-          }
+          processPdfAttachmentsInBackground(pdfAttachments, currentWorkspaceId, operations, queryClient);
         }
 
         // Get selected cards for context
