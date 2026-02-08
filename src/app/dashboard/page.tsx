@@ -466,17 +466,17 @@ function DashboardContent({
         modalManager={modalManagerElement}
         maximizedItemId={maximizedItemId}
       />
-      {instructionModal.open && instructionModal.mode && (
-        <WorkspaceInstructionModal
-          mode={instructionModal.mode}
-          open={instructionModal.open}
-          canClose={instructionModal.canClose}
-          showFallback={instructionModal.showFallback}
-          onRequestClose={instructionModal.close}
-          onFallbackContinue={instructionModal.continueFromFallback}
-          useStaticFallback={true}
-        />
-      )}
+      <WorkspaceInstructionModal
+        mode={instructionModal.mode ?? "first-open"}
+        open={instructionModal.open}
+        canClose={instructionModal.canClose}
+        showFallback={instructionModal.showFallback}
+        isGenerating={instructionModal.isGenerating}
+        onRequestClose={instructionModal.close}
+        onFallbackContinue={instructionModal.continueFromFallback}
+        onUserInteracted={instructionModal.markInteracted}
+        useStaticFallback={true}
+      />
 
       <WorkspaceSettingsModal
         workspace={currentWorkspace}

@@ -24,8 +24,10 @@ interface UseWorkspaceInstructionModalResult {
   mode: WorkspaceInstructionMode | null;
   canClose: boolean;
   showFallback: boolean;
+  isGenerating: boolean;
   close: () => void;
   continueFromFallback: () => void;
+  markInteracted: () => void;
 }
 
 const FIRST_OPEN_UNLOCK_MS = 7000;
@@ -46,10 +48,12 @@ export function useWorkspaceInstructionModal({
   const [mode, setMode] = useState<WorkspaceInstructionMode | null>(null);
   const [canClose, setCanClose] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
+  const [generationComplete, setGenerationComplete] = useState(false);
 
   const startTimeRef = useRef<number | null>(null);
   const shownSignatureRef = useRef<string | null>(null);
   const seenRunningInCurrentAutogenRef = useRef(false);
+  const userInteractedRef = useRef(false);
   const dismissedAutogenSignaturesRef = useRef<Set<string>>(new Set());
 
   const safeUserId = userId ?? "anonymous";
@@ -99,7 +103,9 @@ export function useWorkspaceInstructionModal({
       setMode(null);
       setCanClose(false);
       setShowFallback(false);
+      setGenerationComplete(false);
       seenRunningInCurrentAutogenRef.current = false;
+      userInteractedRef.current = false;
       startTimeRef.current = null;
       shownSignatureRef.current = null;
     },
@@ -112,9 +118,13 @@ export function useWorkspaceInstructionModal({
   }, [canClose, closeInternal, mode, open]);
 
   const continueFromFallback = useCallback(() => {
-    if (!open || mode !== "autogen" || !showFallback) return;
+    if (!open || mode !== "autogen") return;
     closeInternal("fallback_continue");
-  }, [closeInternal, mode, open, showFallback]);
+  }, [closeInternal, mode, open]);
+
+  const markInteracted = useCallback(() => {
+    userInteractedRef.current = true;
+  }, []);
 
   useEffect(() => {
     if (!workspaceId) {
@@ -191,15 +201,11 @@ export function useWorkspaceInstructionModal({
       return;
     }
 
-    if (open && mode === "first-open") {
-      setOpen(false);
-      setMode(null);
-      setCanClose(false);
-      setShowFallback(false);
-      startTimeRef.current = null;
-      shownSignatureRef.current = null;
-    }
-  }, [autogenSignature, firstOpenStorageKey, isAutogenRoute, mode, newWorkspaceStorageKeys, open, workspaceId]);
+    // "first-open" modal only closes via explicit user action (Close button).
+    // No catch-all auto-close needed — workspaceId change is handled by the
+    // guard at the top of this effect, and autogen has its own close logic.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autogenSignature, firstOpenStorageKey, isAutogenRoute, newWorkspaceStorageKeys, workspaceId]);
 
   useEffect(() => {
     if (!open || !mode) return;
@@ -252,16 +258,24 @@ export function useWorkspaceInstructionModal({
     }
 
     if (assistantIsRunning === false && seenRunningInCurrentAutogenRef.current) {
-      closeInternal("autogen_complete");
+      if (userInteractedRef.current) {
+        setGenerationComplete(true);
+      } else {
+        closeInternal("autogen_complete");
+      }
     }
   }, [assistantIsRunning, closeInternal, mode, open]);
+
+  const isGenerating = open && mode === "autogen" && !generationComplete;
 
   return {
     open,
     mode,
     canClose,
     showFallback,
+    isGenerating,
     close,
     continueFromFallback,
+    markInteracted,
   };
 }
