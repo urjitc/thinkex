@@ -46,7 +46,7 @@ export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
               field1: "",
             },
             color: sampleColors[0],
-            layout: { x: 0, y: 0, w: 4, h: 9 },
+            layout: { x: 2, y: 5, w: 1, h: 4 },
           },
           {
             id: "sample-quiz-1",
@@ -57,7 +57,7 @@ export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
               questions: []
             },
             color: sampleColors[1],
-            layout: { x: 0, y: 9, w: 2, h: 13 },
+            layout: { x: 0, y: 0, w: 2, h: 13 },
           },
           {
             id: "sample-flashcard-1",
@@ -68,7 +68,7 @@ export const WORKSPACE_TEMPLATES: TemplateDefinition[] = [
               cards: []
             },
             color: sampleColors[2],
-            layout: { x: 2, y: 9, w: 2, h: 9 },
+            layout: { x: 2, y: 0, w: 2, h: 5 },
           }
         ],
         globalTitle: "",
