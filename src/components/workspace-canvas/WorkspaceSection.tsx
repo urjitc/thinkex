@@ -14,6 +14,8 @@ import { useSession } from "@/lib/auth-client";
 import { LoginGate } from "@/components/workspace/LoginGate";
 import { AccessDenied } from "@/components/workspace/AccessDenied";
 import { uploadFileDirect } from "@/lib/uploads/client-upload";
+import { filterPasswordProtectedPdfs } from "@/lib/uploads/pdf-validation";
+import { emitPasswordProtectedPdf } from "@/components/modals/PasswordProtectedPdfDialog";
 
 import MoveToDialog from "@/components/modals/MoveToDialog";
 import {
@@ -410,8 +412,17 @@ export function WorkspaceSection({
       throw new Error('Workspace operations not available');
     }
 
+    // Reject password-protected PDFs
+    const { valid: unprotectedFiles, rejected: protectedNames } = await filterPasswordProtectedPdfs(files);
+    if (protectedNames.length > 0) {
+      emitPasswordProtectedPdf(protectedNames);
+    }
+    if (unprotectedFiles.length === 0) {
+      return;
+    }
+
     // Upload all PDFs first
-    const uploadPromises = files.map(async (file) => {
+    const uploadPromises = unprotectedFiles.map(async (file) => {
       const { url: fileUrl, filename } = await uploadFileDirect(file);
 
       return {

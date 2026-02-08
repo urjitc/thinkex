@@ -11,6 +11,8 @@ import type { PdfData, ImageData } from "@/lib/workspace-state/types";
 import { getBestFrameForRatio, type GridFrame } from "@/lib/workspace-state/aspect-ratios";
 import { useReactiveNavigation } from "@/hooks/ui/use-reactive-navigation";
 import { uploadFileDirect } from "@/lib/uploads/client-upload";
+import { filterPasswordProtectedPdfs } from "@/lib/uploads/pdf-validation";
+import { emitPasswordProtectedPdf } from "@/components/modals/PasswordProtectedPdfDialog";
 
 interface WorkspaceCanvasDropzoneProps {
   children: React.ReactNode;
@@ -106,11 +108,31 @@ export function WorkspaceCanvasDropzone({ children }: WorkspaceCanvasDropzonePro
         return;
       }
 
+      // Reject password-protected PDFs
+      const pdfFiles = validFiles.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+      const nonPdfFiles = validFiles.filter(f => f.type !== 'application/pdf' && !f.name.toLowerCase().endsWith('.pdf'));
+      let allowedPdfs = pdfFiles;
+      if (pdfFiles.length > 0) {
+        const { valid, rejected } = await filterPasswordProtectedPdfs(pdfFiles);
+        if (rejected.length > 0) {
+          emitPasswordProtectedPdf(rejected);
+          rejected.forEach(name => {
+            const file = pdfFiles.find(f => f.name === name);
+            if (file) processingFilesRef.current.delete(getFileKey(file));
+          });
+        }
+        allowedPdfs = valid;
+      }
+      const filteredFiles = [...nonPdfFiles, ...allowedPdfs];
+      if (filteredFiles.length === 0) {
+        return;
+      }
+
       isProcessingRef.current = true;
 
       // Show loading toast
       const loadingToastId = toast.loading(
-        `Uploading ${validFiles.length} file${validFiles.length > 1 ? 's' : ''}...`,
+        `Uploading ${filteredFiles.length} file${filteredFiles.length > 1 ? 's' : ''}...`,
         {
           style: { color: '#fff' },
         }
@@ -118,7 +140,7 @@ export function WorkspaceCanvasDropzone({ children }: WorkspaceCanvasDropzonePro
 
       try {
         // Upload all files in parallel
-        const uploadPromises = validFiles.map(async (file) => {
+        const uploadPromises = filteredFiles.map(async (file) => {
           try {
             const { url, filename } = await uploadFileToStorage(file);
             return {
@@ -150,7 +172,7 @@ export function WorkspaceCanvasDropzone({ children }: WorkspaceCanvasDropzonePro
           const imageResults: typeof validResults = [];
 
           validResults.forEach((result, index) => {
-            const file = validFiles[index];
+            const file = filteredFiles[index];
             if (file.type === 'application/pdf') {
               pdfResults.push(result);
             } else {
@@ -283,7 +305,7 @@ export function WorkspaceCanvasDropzone({ children }: WorkspaceCanvasDropzonePro
         }
 
         // Show error if some files failed to upload
-        const failedCount = validFiles.length - validResults.length;
+        const failedCount = filteredFiles.length - validResults.length;
         if (failedCount > 0) {
           toast.error(`Failed to upload ${failedCount} file${failedCount > 1 ? 's' : ''}`, {
             style: { color: '#fff' },
@@ -294,7 +316,7 @@ export function WorkspaceCanvasDropzone({ children }: WorkspaceCanvasDropzonePro
         // Dismiss loading toast if it's still showing (in case of unexpected errors)
         toast.dismiss(loadingToastId);
         // Clear processing state immediately after all operations complete
-        validFiles.forEach((file) => {
+        filteredFiles.forEach((file) => {
           const fileKey = getFileKey(file);
           processingFilesRef.current.delete(fileKey);
         });

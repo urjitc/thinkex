@@ -86,24 +86,18 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
     noClick: true, // Don't open file dialog on click (only on drag)
     onDrop: async (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
-        // Auto-populate input based on total uploads
-        const totalPdfs = uploadedFiles.length + acceptedFiles.length;
-        // const totalImages = uploadedImages.length;
-        // if (totalImages > 0) {
-        //   const parts = [];
-        //   parts.push(totalPdfs === 1 ? 'this pdf' : 'these pdfs');
-        //   parts.push(totalImages === 1 ? 'this image' : 'these images');
-        //   setValue(parts.join(' and '));
-        // } else 
-        if (totalPdfs === 1) {
-          setValue("this pdf");
-        } else {
-          setValue("these pdfs");
-        }
-
         try {
-          await uploadFiles(acceptedFiles);
-          toast.success(`Uploaded ${acceptedFiles.length} PDF${acceptedFiles.length > 1 ? 's' : ''}`);
+          const uploaded = await uploadFiles(acceptedFiles);
+          if (uploaded.length > 0) {
+            // Auto-populate input based on total uploads
+            const totalPdfs = uploadedFiles.length + uploaded.length;
+            if (totalPdfs === 1) {
+              setValue("this pdf");
+            } else {
+              setValue("these pdfs");
+            }
+            toast.success(`Uploaded ${uploaded.length} PDF${uploaded.length > 1 ? 's' : ''}`);
+          }
         } catch (error) {
           toast.error("Failed to upload PDFs");
         }

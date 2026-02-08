@@ -17,6 +17,8 @@ import { Loader2, UploadCloud } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { cn } from "@/lib/utils";
 import { uploadFileDirect } from "@/lib/uploads/client-upload";
+import { filterPasswordProtectedPdfs } from "@/lib/uploads/pdf-validation";
+import { emitPasswordProtectedPdf } from "@/components/modals/PasswordProtectedPdfDialog";
 
 interface UploadDialogProps {
     open: boolean;
@@ -104,16 +106,25 @@ export function UploadDialog({
             return;
         }
 
+        // Reject password-protected PDFs
+        const { valid: unprotectedPdfs, rejected: protectedNames } = await filterPasswordProtectedPdfs(pdfFiles);
+        if (protectedNames.length > 0) {
+            emitPasswordProtectedPdf(protectedNames);
+        }
+        if (unprotectedPdfs.length === 0) {
+            return;
+        }
+
         // Check individual file size limit (50MB per file)
         const maxIndividualSize = 50 * 1024 * 1024;
-        const oversizedFiles = pdfFiles.filter(file => file.size > maxIndividualSize);
+        const oversizedFiles = unprotectedPdfs.filter(file => file.size > maxIndividualSize);
         if (oversizedFiles.length > 0) {
             toast.error(`${oversizedFiles.length} file(s) exceed the 50MB individual limit`);
             return;
         }
 
         // Check combined size limit (100MB total)
-        const totalSize = pdfFiles.reduce((sum, file) => sum + file.size, 0);
+        const totalSize = unprotectedPdfs.reduce((sum, file) => sum + file.size, 0);
         const maxCombinedSize = 100 * 1024 * 1024;
         if (totalSize > maxCombinedSize) {
             const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(1);
@@ -123,8 +134,8 @@ export function UploadDialog({
 
         setIsUploading(true);
         try {
-            await onPDFUpload(pdfFiles);
-            toast.success(`${pdfFiles.length} PDF${pdfFiles.length > 1 ? 's' : ''} uploaded successfully`);
+            await onPDFUpload(unprotectedPdfs);
+            toast.success(`${unprotectedPdfs.length} PDF${unprotectedPdfs.length > 1 ? 's' : ''} uploaded successfully`);
             onOpenChange(false);
         } catch (error) {
             console.error('Error uploading PDFs:', error);

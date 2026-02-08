@@ -4,6 +4,8 @@ import type {
   CompleteAttachment,
 } from "@assistant-ui/react";
 import { uploadFileDirect } from "@/lib/uploads/client-upload";
+import { isPasswordProtectedPdf } from "@/lib/uploads/pdf-validation";
+import { emitPasswordProtectedPdf } from "@/components/modals/PasswordProtectedPdfDialog";
 
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB to match server limit
 
@@ -25,6 +27,14 @@ export class SupabaseAttachmentAdapter implements AttachmentAdapter {
     if (file.size > MAX_FILE_SIZE_BYTES) {
       throw new Error(
         `File size exceeds ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB limit`
+      );
+    }
+
+    // Reject password-protected PDFs
+    if (await isPasswordProtectedPdf(file)) {
+      emitPasswordProtectedPdf([file.name]);
+      throw new Error(
+        `"${file.name}" is password-protected. Password-protected PDFs are not supported.`
       );
     }
 

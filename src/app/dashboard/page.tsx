@@ -43,6 +43,8 @@ import { useWorkspaceInstructionModal } from "@/hooks/workspace/use-workspace-in
 import { InviteGuard } from "@/components/workspace/InviteGuard";
 import { useReactiveNavigation } from "@/hooks/ui/use-reactive-navigation";
 import { uploadFileDirect } from "@/lib/uploads/client-upload";
+import { filterPasswordProtectedPdfs } from "@/lib/uploads/pdf-validation";
+import { emitPasswordProtectedPdf } from "@/components/modals/PasswordProtectedPdfDialog";
 import { useFolderUrl } from "@/hooks/ui/use-folder-url";
 
 // Main dashboard content component
@@ -311,7 +313,16 @@ function DashboardContent({
         throw new Error("Workspace not available");
       }
 
-      const uploadPromises = files.map(async (file) => {
+      // Reject password-protected PDFs
+      const { valid: unprotectedFiles, rejected: protectedNames } = await filterPasswordProtectedPdfs(files);
+      if (protectedNames.length > 0) {
+        emitPasswordProtectedPdf(protectedNames);
+      }
+      if (unprotectedFiles.length === 0) {
+        return;
+      }
+
+      const uploadPromises = unprotectedFiles.map(async (file) => {
         const { url: fileUrl, filename } = await uploadFileDirect(file);
 
         return {

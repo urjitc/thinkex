@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import type { PdfData } from "@/lib/workspace-state/types";
 import { uploadFileDirect } from "@/lib/uploads/client-upload";
+import { filterPasswordProtectedPdfs } from "@/lib/uploads/pdf-validation";
+import { emitPasswordProtectedPdf } from "@/components/modals/PasswordProtectedPdfDialog";
 
 export interface UploadedPdfMetadata {
     fileUrl: string;
@@ -30,7 +32,17 @@ export function usePdfUpload() {
         setState((prev) => ({ ...prev, isUploading: true, error: null }));
 
         try {
-            const uploadPromises = files.map(async (file) => {
+            // Reject password-protected PDFs
+            const { valid: unprotectedFiles, rejected: protectedNames } = await filterPasswordProtectedPdfs(files);
+            if (protectedNames.length > 0) {
+                emitPasswordProtectedPdf(protectedNames);
+            }
+            if (unprotectedFiles.length === 0) {
+                setState((prev) => ({ ...prev, isUploading: false }));
+                return [];
+            }
+
+            const uploadPromises = unprotectedFiles.map(async (file) => {
                 const { url: fileUrl, filename } = await uploadFileDirect(file);
 
                 return {

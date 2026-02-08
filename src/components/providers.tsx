@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Toaster } from "@/components/ui/sonner";
 import { PostHogIdentify } from "./providers/PostHogIdentify";
+import { PasswordProtectedPdfDialog } from "@/components/modals/PasswordProtectedPdfDialog";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -11,6 +12,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <>
       <PostHogIdentify />
       {children}
+      <PasswordProtectedPdfDialog />
       <Toaster
         position="top-right"
         richColors
