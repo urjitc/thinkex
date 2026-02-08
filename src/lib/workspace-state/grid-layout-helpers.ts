@@ -7,12 +7,11 @@ import type { Item, CardType, LayoutPosition, ResponsiveLayouts } from "./types"
 export const DEFAULT_CARD_DIMENSIONS: Record<CardType, { w: number; h: number }> = {
   note: { w: 1, h: 4 },
   pdf: { w: 1, h: 4 },
-  image: { w: 1, h: 4 },
+  image: { w: 2, h: 6 },
   flashcard: { w: 2, h: 5 },
   folder: { w: 1, h: 4 },
   youtube: { w: 4, h: 10 },
   quiz: { w: 2, h: 13 },
-  image: { w: 4, h: 10 },
 };
 
 /**

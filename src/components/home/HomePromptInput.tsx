@@ -380,8 +380,8 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
                 key={file.fileUrl}
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-1.5",
-                  "bg-white/5 border border-white/10",
-                  "text-sm text-white/80"
+                  "bg-foreground/5 border border-foreground/10",
+                  "text-sm text-foreground/80"
                 )}
               >
                 <ImageIcon className="h-3.5 w-3.5 flex-shrink-0" />
@@ -392,7 +392,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
                     e.stopPropagation();
                     removeImage(file.fileUrl);
                   }}
-                  className="ml-1 hover:text-white transition-colors"
+                  className="ml-1 hover:text-foreground transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>

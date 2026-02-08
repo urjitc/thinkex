@@ -17,12 +17,18 @@ export function ImageCardContent({ item }: ImageCardContentProps) {
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
         >
-            <img
-                src={imageData.url || imageData.fileUrl}
-                alt={imageData.altText || item.name || imageData.filename || "Image"}
-                className="w-full h-full object-contain rounded-lg"
-                loading="lazy"
-            />
+            {(imageData.url || imageData.fileUrl) ? (
+                <img
+                    src={imageData.url || imageData.fileUrl}
+                    alt={imageData.altText || item.name || imageData.filename || "Image"}
+                    className="w-full h-full object-contain rounded-lg"
+                    loading="lazy"
+                />
+            ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                    No image available
+                </div>
+            )}
 
             {/* Optional: Caption overlay on hover */}
             {imageData.caption && isHovering && (
