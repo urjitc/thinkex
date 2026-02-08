@@ -1,4 +1,4 @@
-import type { AgentState, Item, NoteData, PdfData, FlashcardData, FlashcardItem, YouTubeData, QuizData, QuizQuestion } from "@/lib/workspace-state/types";
+import type { AgentState, Item, NoteData, PdfData, ImageData, FlashcardData, FlashcardItem, YouTubeData, QuizData, QuizQuestion } from "@/lib/workspace-state/types";
 import { serializeBlockNote } from "./serialize-blocknote";
 import { type Block } from "@/components/editor/BlockNoteEditor";
 
@@ -62,6 +62,9 @@ function formatItem(item: Item, index: number): string {
         case "pdf":
             lines.push(...formatPdfDetails(item.data as PdfData));
             break;
+        case "image":
+            lines.push(...formatImageDetails(item.data as ImageData));
+            break;
         case "flashcard":
             lines.push(...formatFlashcardDetails(item.data as FlashcardData));
             break;
@@ -83,6 +86,16 @@ function formatNoteDetails(data: NoteData): string[] {
  */
 function formatPdfDetails(data: PdfData): string[] {
     // No URLs or file details - return empty
+    return [];
+}
+
+/**
+ * Formats Image-specific details (summary)
+ */
+function formatImageDetails(data: ImageData): string[] {
+    if (data.filename) {
+        return [`   - Image: ${data.filename}`];
+    }
     return [];
 }
 
@@ -212,6 +225,14 @@ function extractRichContent(item: Item): RichContent {
         }
     }
 
+    // For image cards, include the image URL
+    if (item.type === "image") {
+        const imageData = item.data as ImageData;
+        if (imageData.fileUrl) {
+            richContent.images.push(imageData.fileUrl);
+        }
+    }
+
     return richContent;
 }
 
@@ -319,6 +340,9 @@ function formatSelectedCardFull(item: Item, index: number): string {
         case "pdf":
             lines.push(...formatPdfDetailsFull(item.data as PdfData));
             break;
+        case "image":
+            lines.push(...formatImageDetailsFull(item.data as ImageData));
+            break;
         case "flashcard":
             lines.push(...formatFlashcardDetailsFull(item.data as FlashcardData));
             break;
@@ -373,6 +397,28 @@ function formatPdfDetailsFull(data: PdfData): string[] {
     if (data.fileUrl) {
         lines.push(`   - URL: ${data.fileUrl}`);
 
+    }
+
+    if (data.fileSize) {
+        const sizeMB = (data.fileSize / (1024 * 1024)).toFixed(2);
+        lines.push(`   - Size: ${sizeMB} MB`);
+    }
+
+    return lines;
+}
+
+/**
+ * Formats Image details with FULL content
+ */
+function formatImageDetailsFull(data: ImageData): string[] {
+    const lines: string[] = [];
+
+    if (data.filename) {
+        lines.push(`   - Filename: ${data.filename}`);
+    }
+
+    if (data.fileUrl) {
+        lines.push(`   - URL: ${data.fileUrl}`);
     }
 
     if (data.fileSize) {

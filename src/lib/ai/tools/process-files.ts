@@ -7,7 +7,7 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { loadStateForTool, fuzzyMatchItem } from "./tool-utils";
 import type { WorkspaceToolContext } from "./workspace-tools";
-import type { PdfData } from "@/lib/workspace-state/types";
+import type { PdfData, ImageData } from "@/lib/workspace-state/types";
 
 type FileInfo = { fileUrl: string; filename: string; mediaType: string };
 
@@ -253,6 +253,14 @@ export function createProcessFilesTool(ctx?: WorkspaceToolContext) {
                                         if (pdfData.fileUrl) {
                                             urlList.push(pdfData.fileUrl);
                                             logger.debug(`📁 [FILE_TOOL] Resolved file name "${name}" to URL: ${pdfData.fileUrl}`);
+                                        } else {
+                                            notFoundData.push(`Item "${name}" found but has no file URL.`);
+                                        }
+                                    } else if (matchedItem.type === 'image') {
+                                        const imageData = matchedItem.data as ImageData;
+                                        if (imageData.fileUrl) {
+                                            urlList.push(imageData.fileUrl);
+                                            logger.debug(`📁 [FILE_TOOL] Resolved image name "${name}" to URL: ${imageData.fileUrl}`);
                                         } else {
                                             notFoundData.push(`Item "${name}" found but has no file URL.`);
                                         }

@@ -8,6 +8,7 @@ import { useWorkspaceContextProvider } from "@/hooks/ai/use-workspace-context-pr
 import { useBlockNoteSelectionContextProvider } from "@/hooks/ai/use-blocknote-selection-context-provider";
 import AppChatHeader from "@/components/chat/AppChatHeader";
 import { cn } from "@/lib/utils";
+import type { Item } from "@/lib/workspace-state/types";
 import AssistantTextSelectionManager from "@/components/assistant-ui/AssistantTextSelectionManager";
 import { useUIStore, selectSelectedCardIdsArray } from "@/lib/stores/ui-store";
 import { useShallow } from "zustand/react/shallow";
@@ -90,6 +91,7 @@ function WorkspaceContextWrapper({
         workspaceId={workspaceId ?? null}
         isLoading={isLoading}
         setIsChatExpanded={setIsChatExpanded}
+        items={state?.items}
       />
       <WorkspaceContextWrapperContent
         workspaceId={workspaceId}
@@ -177,10 +179,12 @@ function GenerateStudyMaterialsHandler({
   workspaceId,
   isLoading,
   setIsChatExpanded,
+  items,
 }: {
   workspaceId: string | null;
   isLoading: boolean;
   setIsChatExpanded?: (expanded: boolean) => void;
+  items?: Item[];
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -195,8 +199,20 @@ function GenerateStudyMaterialsHandler({
 
     setIsChatExpanded?.(true);
 
-    const prompt = `First, process any PDF files in this workspace.
-    
+    const hasPdfs = items?.some((item) => item.type === "pdf");
+    const hasImages = items?.some((item) => item.type === "image");
+
+    let fileInstruction: string;
+    if (hasPdfs && hasImages) {
+      fileInstruction = "First, process any PDF files and images in this workspace.";
+    } else if (hasImages) {
+      fileInstruction = "First, process any images in this workspace.";
+    } else {
+      fileInstruction = "First, process any PDF files in this workspace.";
+    }
+
+    const prompt = `${fileInstruction}
+
 Then, using the content:
 1. Update the note with a comprehensive summary
 2. Update the quiz with 5-10 relevant questions
@@ -240,7 +256,7 @@ Then, using the content:
     ids.push(id);
 
     return () => clearAll();
-  }, [action, workspaceId, isLoading, aui, router, setIsChatExpanded]);
+  }, [action, workspaceId, isLoading, aui, router, setIsChatExpanded, items]);
 
   return null;
 }
