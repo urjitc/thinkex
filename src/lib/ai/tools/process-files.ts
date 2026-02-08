@@ -211,29 +211,19 @@ Provide a clear, comprehensive analysis of the video content.`;
  */
 export function createProcessFilesTool(ctx?: WorkspaceToolContext) {
     return tool({
-        description: "Process and analyze files including PDFs, images, documents, and videos. Handles local file URLs (/api/files/...), Supabase storage URLs (files uploaded to your workspace), and YouTube videos. Files are downloaded and analyzed directly by Gemini. You can provide custom instructions for what to extract or focus on. Use this for file URLs, video URLs, OR by providing the names of files/videos existing in the workspace (fuzzy matched).",
+        description: "Process and analyze files including PDFs, images, documents, and videos. Handles local file URLs (/api/files/...), Supabase storage URLs (files uploaded to your workspace), and YouTube videos. Files are downloaded and analyzed directly by Gemini. You can provide custom instructions for what to extract or focus on. Use this for file URLs, video URLs, OR by providing the names of files/videos existing in the workspace (fuzzy matched). If a PDF has cached content it will be returned automatically — set forceReprocess to true to bypass the cache and re-analyze with a custom instruction.",
         inputSchema: zodSchema(
             z.object({
-                jsonInput: z.string().describe("JSON string containing an object with 'urls' (array of file/video URLs), optional 'fileNames' (array of workspace item names to look up, e.g. 'Annual Report'), and optional 'instruction' (string for custom analysis). Example: '{\"urls\": [], \"fileNames\": [\"My PDF Report\"], \"instruction\": \"summarize key points\"}'"),
+                urls: z.array(z.string()).optional().describe("Array of file/video URLs to process (Supabase storage URLs, local /api/files/ URLs, or YouTube URLs)"),
+                fileNames: z.array(z.string()).optional().describe("Array of workspace item names to look up via fuzzy match (e.g. 'Annual Report')"),
+                instruction: z.string().optional().describe("Custom instruction for what to extract or focus on during analysis"),
+                forceReprocess: z.boolean().optional().describe("Set to true to bypass cached PDF content and re-analyze the file"),
             })
         ),
-        execute: async ({ jsonInput }) => {
-            let parsed;
-            try {
-                parsed = JSON.parse(jsonInput);
-            } catch (e) {
-                logger.error("❌ [FILE_TOOL] Failed to parse JSON input:", e);
-                return "Error: Input must be a valid JSON string.";
-            }
-
-            // Validate parsed JSON shape
-            if (typeof parsed !== 'object' || parsed === null) {
-                return "Error: Input must be a JSON object with 'urls' array.";
-            }
-
-            let urlList = parsed.urls || [];
-            const fileNames = parsed.fileNames || [];
-            const instruction = parsed.instruction;
+        execute: async ({ urls, fileNames: fileNamesInput, instruction, forceReprocess: forceReprocessInput }) => {
+            let urlList = urls || [];
+            const fileNames = fileNamesInput || [];
+            const forceReprocess = forceReprocessInput === true;
 
             // Track matched PDF items for auto-caching after extraction
             const matchedPdfItems: Map<string, Item> = new Map(); // fileUrl -> Item
@@ -256,8 +246,8 @@ export function createProcessFilesTool(ctx?: WorkspaceToolContext) {
                                     if (matchedItem.type === 'pdf') {
                                         const pdfData = matchedItem.data as PdfData;
 
-                                        // Check for cached text content first
-                                        if (pdfData.textContent) {
+                                        // Check for cached text content first (skip if forceReprocess)
+                                        if (pdfData.textContent && !forceReprocess) {
                                             logger.debug(`📁 [FILE_TOOL] Using cached text content for "${name}" (${pdfData.textContent.length} chars)`);
                                             cachedResults.push(`**${matchedItem.name}** (cached):\n\n${pdfData.textContent}`);
                                             continue; // Skip adding to urlList — no reprocessing needed
