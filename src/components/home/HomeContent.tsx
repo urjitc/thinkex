@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, createContext, useContext } from "react";
+import { useState, useRef, useEffect, useCallback, createContext, useContext } from "react";
 import Image from "next/image";
 import { HomePromptInput } from "./HomePromptInput";
 import { DynamicTagline } from "./DynamicTagline";
@@ -11,13 +11,15 @@ import { HeroGlow } from "./HeroGlow";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FolderPlus, Github } from "lucide-react";
+import { FolderPlus, ChevronDown } from "lucide-react";
 import { useCreateWorkspace } from "@/hooks/workspace/use-create-workspace";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { cn } from "@/lib/utils";
+import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 
 // Context for section visibility - allows child components to know when to focus
 const SectionVisibilityContext = createContext<{
@@ -33,8 +35,11 @@ export function HomeContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [heroVisible, setHeroVisible] = useState(true);
 
+  const { workspaces, loadingWorkspaces } = useWorkspaceContext();
+  const hasWorkspaces = !loadingWorkspaces && workspaces.length > 0;
   const createWorkspace = useCreateWorkspace();
   const [workspacesVisible, setWorkspacesVisible] = useState(false);
+  const [showScrollHint, setShowScrollHint] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const workspacesRef = useRef<HTMLDivElement>(null);
@@ -78,6 +83,33 @@ export function HomeContent() {
     observer.observe(workspacesEl);
 
     return () => observer.disconnect();
+  }, []);
+
+  // Mouse tracking for scroll hint pill
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    function handleMouseMove(e: MouseEvent) {
+      const rect = el.getBoundingClientRect();
+      const relativeY = e.clientY - rect.top;
+      setShowScrollHint(relativeY > rect.height * 0.8);
+    }
+
+    function handleMouseLeave() {
+      setShowScrollHint(false);
+    }
+
+    el.addEventListener("mousemove", handleMouseMove);
+    el.addEventListener("mouseleave", handleMouseLeave);
+    return () => {
+      el.removeEventListener("mousemove", handleMouseMove);
+      el.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
+
+  const scrollToWorkspaces = useCallback(() => {
+    workspacesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
   const handleCreateBlankWorkspace = () => {
@@ -129,6 +161,24 @@ export function HomeContent() {
             background: 'linear-gradient(to bottom, transparent 0%, hsl(var(--background)) 100%)',
           }}
         />
+
+        {/* Scroll hint arrow — appears when cursor enters bottom 20% */}
+        <div
+          className={cn(
+            "fixed bottom-8 left-1/2 -translate-x-1/2 z-[20] transition-all duration-300 ease-out",
+            showScrollHint && heroVisible && hasWorkspaces
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-2 pointer-events-none"
+          )}
+        >
+          <button
+            type="button"
+            onClick={scrollToWorkspaces}
+            className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground hover:text-foreground bg-sidebar border border-border transition-colors duration-200 cursor-pointer"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+        </div>
 
         {/* Hero Section - Reduced height so "Recent workspaces" text peeks at bottom */}
         <div ref={heroRef} className="relative z-10 h-[85vh] flex flex-col items-center justify-center text-center px-6">
