@@ -90,7 +90,7 @@ function htmlToMarkdown(element: Node): string {
         return `$$${children}$$\n\n`;
       }
       if (el.classList.contains('katex')) {
-        return `$${children}$`;
+        return `$$${children}$$`;
       }
       // Handle code blocks with syntax highlighting
       if (el.classList.contains('aui-shiki-base') || el.classList.contains('aui-md-pre')) {

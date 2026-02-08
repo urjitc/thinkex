@@ -158,9 +158,9 @@ export const InlineMath = createReactInlineContentSpec(
         }
       }
 
-      // Fallback: try to extract from text content (handles $...$ format)
+      // Fallback: try to extract from text content (handles $$...$$ format)
       const textContent = element.textContent || "";
-      const mathMatch = textContent.match(/\$([^$\n]+?)\$/);
+      const mathMatch = textContent.match(/\$\$([\s\S]*?)\$\$/);
       if (mathMatch) {
         return {
           latex: mathMatch[1].trim(),

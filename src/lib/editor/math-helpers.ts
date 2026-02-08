@@ -66,8 +66,7 @@ function processBlockForMath(block: MathBlock): MathBlock | MathBlock[] {
         }
 
         // Otherwise, process inline math within the paragraph content
-        const processedContent = processInlineMathInContent(block.content);
-        const contentChanged = JSON.stringify(processedContent) !== JSON.stringify(block.content);
+        const { content: processedContent, changed: contentChanged } = processInlineMathInContent(block.content);
 
         if (contentChanged) {
             return {
@@ -83,8 +82,7 @@ function processBlockForMath(block: MathBlock): MathBlock | MathBlock[] {
 
     // Process inline content (for headings, list items, etc.)
     if (block.content && Array.isArray(block.content) && block.type !== "paragraph") {
-        const processedContent = processInlineMathInContent(block.content);
-        const contentChanged = JSON.stringify(processedContent) !== JSON.stringify(block.content);
+        const { content: processedContent, changed: contentChanged } = processInlineMathInContent(block.content);
         if (contentChanged) {
             processedBlock = { ...processedBlock, content: processedContent };
         }
@@ -107,7 +105,7 @@ function processBlockForMath(block: MathBlock): MathBlock | MathBlock[] {
                 const processedCells = row.cells.map((cell: any) => {
                     if (!cell || !cell.content || !Array.isArray(cell.content)) return cell;
 
-                    const processedCellContent = processInlineMathInContent(cell.content);
+                    const { content: processedCellContent } = processInlineMathInContent(cell.content);
 
                     const fullyProcessedContent = processedCellContent.map((item: any) => {
                         if (item && typeof item === 'object' && 'type' in item && 'id' in item && item.children) {
@@ -170,6 +168,7 @@ function processChildBlocks(blocks: MathBlock[]): MathBlock[] {
 /**
  * Processes Streamdown math patterns ($$...$$) in inline content array.
  * Splits text items that contain math and converts them to inlineMath elements.
+ * Returns both the processed content and a flag indicating whether any changes were made.
  * 
  * Note: This is for inline math only - block math is handled at the block level.
  * 
@@ -183,8 +182,9 @@ function processChildBlocks(blocks: MathBlock[]): MathBlock[] {
  */
 function processInlineMathInContent(
     content: Array<{ type: string; text?: string;[key: string]: any }>
-): Array<any> {
+): { content: Array<any>; changed: boolean } {
     const processed: any[] = [];
+    let changed = false;
 
     for (const item of content) {
         if (item.type === "text" && item.text) {
@@ -242,6 +242,7 @@ function processInlineMathInContent(
 
             // If we found math, use processed parts; otherwise keep original item
             if (parts.length > 0) {
+                changed = true;
                 processed.push(...parts);
             } else {
                 processed.push(item);
@@ -252,5 +253,5 @@ function processInlineMathInContent(
         }
     }
 
-    return processed;
+    return { content: processed, changed };
 }
