@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useCreateWorkspaceFromPrompt } from "@/hooks/workspace/use-create-workspace";
 import { usePdfUpload } from "@/hooks/workspace/use-pdf-upload";
-import { useImageUpload } from "@/hooks/workspace/use-image-upload";
-import { ArrowUp, FileText, Loader2, Upload, X, Link as LinkIcon, ImageIcon } from "lucide-react";
+// import { useImageUpload } from "@/hooks/workspace/use-image-upload";
+import { ArrowUp, FileText, Loader2, Upload, X, Link as LinkIcon } from "lucide-react";
+// import { ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,8 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import type { PdfData, ImageData } from "@/lib/workspace-state/types";
+import type { PdfData } from "@/lib/workspace-state/types";
+// import type { ImageData } from "@/lib/workspace-state/types";
 
 const PLACEHOLDER_OPTIONS = [
   "help me study organic chemistry",
@@ -67,13 +69,13 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
 
   const createFromPrompt = useCreateWorkspaceFromPrompt();
   const { uploadFiles, uploadedFiles, isUploading, removeFile, clearFiles } = usePdfUpload();
-  const {
-    uploadFiles: uploadImages,
-    uploadedFiles: uploadedImages,
-    isUploading: isUploadingImages,
-    removeFile: removeImage,
-    clearFiles: clearImages,
-  } = useImageUpload();
+  // const {
+  //   uploadFiles: uploadImages,
+  //   uploadedFiles: uploadedImages,
+  //   isUploading: isUploadingImages,
+  //   removeFile: removeImage,
+  //   clearFiles: clearImages,
+  // } = useImageUpload();
 
   // Setup drop zone for PDF files
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
@@ -86,13 +88,14 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
       if (acceptedFiles.length > 0) {
         // Auto-populate input based on total uploads
         const totalPdfs = uploadedFiles.length + acceptedFiles.length;
-        const totalImages = uploadedImages.length;
-        if (totalImages > 0) {
-          const parts = [];
-          parts.push(totalPdfs === 1 ? 'this pdf' : 'these pdfs');
-          parts.push(totalImages === 1 ? 'this image' : 'these images');
-          setValue(parts.join(' and '));
-        } else if (totalPdfs === 1) {
+        // const totalImages = uploadedImages.length;
+        // if (totalImages > 0) {
+        //   const parts = [];
+        //   parts.push(totalPdfs === 1 ? 'this pdf' : 'these pdfs');
+        //   parts.push(totalImages === 1 ? 'this image' : 'these images');
+        //   setValue(parts.join(' and '));
+        // } else 
+        if (totalPdfs === 1) {
           setValue("this pdf");
         } else {
           setValue("these pdfs");
@@ -108,39 +111,39 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
     },
   });
 
-  // Setup file picker for images (button-click only, no drag)
-  const { open: openImagePicker, getInputProps: getImageInputProps } = useDropzone({
-    accept: {
-      'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'],
-    },
-    multiple: true,
-    noClick: true,
-    noDrag: true,
-    onDrop: async (acceptedFiles) => {
-      if (acceptedFiles.length > 0) {
-        // Auto-populate input based on total uploads
-        const totalImages = uploadedImages.length + acceptedFiles.length;
-        const totalPdfs = uploadedFiles.length;
-        if (totalPdfs > 0) {
-          const parts = [];
-          parts.push(totalPdfs === 1 ? 'this pdf' : 'these pdfs');
-          parts.push(totalImages === 1 ? 'this image' : 'these images');
-          setValue(parts.join(' and '));
-        } else if (totalImages === 1) {
-          setValue("this image");
-        } else {
-          setValue("these images");
-        }
+  // // Setup file picker for images (button-click only, no drag)
+  // const { open: openImagePicker, getInputProps: getImageInputProps } = useDropzone({
+  //   accept: {
+  //     'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'],
+  //   },
+  //   multiple: true,
+  //   noClick: true,
+  //   noDrag: true,
+  //   onDrop: async (acceptedFiles) => {
+  //     if (acceptedFiles.length > 0) {
+  //       // Auto-populate input based on total uploads
+  //       const totalImages = uploadedImages.length + acceptedFiles.length;
+  //       const totalPdfs = uploadedFiles.length;
+  //       if (totalPdfs > 0) {
+  //         const parts = [];
+  //         parts.push(totalPdfs === 1 ? 'this pdf' : 'these pdfs');
+  //         parts.push(totalImages === 1 ? 'this image' : 'these images');
+  //         setValue(parts.join(' and '));
+  //       } else if (totalImages === 1) {
+  //         setValue("this image");
+  //       } else {
+  //         setValue("these images");
+  //       }
 
-        try {
-          await uploadImages(acceptedFiles);
-          toast.success(`Uploaded ${acceptedFiles.length} image${acceptedFiles.length > 1 ? 's' : ''}`);
-        } catch (error) {
-          toast.error("Failed to upload images");
-        }
-      }
-    },
-  });
+  //       try {
+  //         await uploadImages(acceptedFiles);
+  //         toast.success(`Uploaded ${acceptedFiles.length} image${acceptedFiles.length > 1 ? 's' : ''}`);
+  //       } catch (error) {
+  //         toast.error("Failed to upload images");
+  //       }
+  //     }
+  //   },
+  // });
 
   // Shuffle options with random start for variety
   const shuffledOptions = useMemo(() => {
@@ -198,9 +201,9 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const prompt = value.trim();
-    if (!prompt || createFromPrompt.isLoading || isUploading || isUploadingImages) return;
+    if (!prompt || createFromPrompt.isLoading || isUploading) return;
 
-    const hasUploads = uploadedFiles.length > 0 || uploadedImages.length > 0;
+    const hasUploads = uploadedFiles.length > 0;
 
     // Construct initial state with file cards AND empty placeholder cards if files were uploaded
     let initialState = undefined;
@@ -223,25 +226,27 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
         } as PdfData,
       }));
 
-      const pdfEndY = uploadedFiles.length * fileHeight;
+      const totalUploadY = uploadedFiles.length * fileHeight;
 
-      // Create Image card items (stacked below PDFs)
-      const imageItems = uploadedImages.map((file, index) => ({
-        id: crypto.randomUUID(),
-        type: 'image' as const,
-        name: file.name,
-        subtitle: '',
-        color: '#8B5CF6' as const, // Violet for Images
-        layout: { x: 0, y: pdfEndY + index * fileHeight, w: 4, h: fileHeight },
-        lastSource: 'user' as const,
-        data: {
-          fileUrl: file.fileUrl,
-          filename: file.filename,
-          fileSize: file.fileSize,
-        } as ImageData,
-      }));
+      // const pdfEndY = uploadedFiles.length * fileHeight;
 
-      const totalUploadY = pdfEndY + uploadedImages.length * fileHeight;
+      // // Create Image card items (stacked below PDFs)
+      // const imageItems = uploadedImages.map((file, index) => ({
+      //   id: crypto.randomUUID(),
+      //   type: 'image' as const,
+      //   name: file.name,
+      //   subtitle: '',
+      //   color: '#8B5CF6' as const, // Violet for Images
+      //   layout: { x: 0, y: pdfEndY + index * fileHeight, w: 4, h: fileHeight },
+      //   lastSource: 'user' as const,
+      //   data: {
+      //     fileUrl: file.fileUrl,
+      //     filename: file.filename,
+      //     fileSize: file.fileSize,
+      //   } as ImageData,
+      // }));
+
+      // const totalUploadY = pdfEndY + uploadedImages.length * fileHeight;
 
       // Create empty placeholder cards with fixed layout and colors
       const emptyNote = {
@@ -277,7 +282,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
         data: { cards: [] },
       };
 
-      const allItems = [...pdfItems, ...imageItems, emptyNote, emptyQuiz, emptyFlashcard];
+      const allItems = [...pdfItems, emptyNote, emptyQuiz, emptyFlashcard];
 
       initialState = {
         workspaceId: '',
@@ -294,7 +299,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
       onSuccess: (workspace) => {
         typingKeyRef.current += 1;
         clearFiles();
-        clearImages();
+        // clearImages();
         const url = `/workspace/${workspace.slug}`;
         const params = new URLSearchParams();
 
@@ -331,7 +336,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
     <form onSubmit={handleSubmit} className="w-full max-w-[760px]">
       <div className="relative" {...getRootProps()}>
         <input {...getInputProps()} />
-        <input {...getImageInputProps()} />
+        {/* <input {...getImageInputProps()} /> */}
 
         {/* Drag overlay */}
         {isDragActive && (
@@ -372,8 +377,8 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
           </div>
         )}
 
-        {/* Uploaded images display */}
-        {uploadedImages.length > 0 && (
+        {/* // Uploaded images display */}
+        {/* uploadedImages.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-2">
             {uploadedImages.map((file) => (
               <div
@@ -399,7 +404,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
               </div>
             ))}
           </div>
-        )}
+        ) */}
 
         {/* Input container styled to look like one input */}
         <div
@@ -526,7 +531,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
               <LinkIcon className="h-3 w-3" />
               <span>Add URL</span>
             </button>
-            <button
+            {/* <button
               type="button"
               onClick={() => openImagePicker()}
               className={cn(
@@ -537,12 +542,12 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
             >
               <ImageIcon className="h-3 w-3" />
               <span>Add Image</span>
-            </button>
+            </button> */}
           </div>
 
           <button
             type="submit"
-            disabled={!value.trim() || createFromPrompt.isLoading || isUploading || isUploadingImages}
+            disabled={!value.trim() || createFromPrompt.isLoading || isUploading}
             onClick={(e) => e.stopPropagation()}
             className={cn(
               "absolute right-3 md:right-4 top-1/2 -translate-y-1/2",
@@ -555,7 +560,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
             )}
             aria-label="Submit prompt"
           >
-            {createFromPrompt.isLoading || isUploading || isUploadingImages ? (
+            {createFromPrompt.isLoading || isUploading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <ArrowUp className="h-5 w-5" />
