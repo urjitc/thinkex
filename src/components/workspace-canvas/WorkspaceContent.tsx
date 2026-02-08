@@ -1,6 +1,6 @@
 import ShikiHighlighter from "react-shiki/web";
 import { useMemo, useCallback, useRef, useState } from "react";
-import { Plus, Copy, Check, Download, Upload } from "lucide-react";
+import { Plus, Copy, Check, Download, Upload, FileText, SquarePen, Youtube } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import type { AgentState, Item, CardType } from "@/lib/workspace-state/types";
 import { filterItems } from "@/lib/workspace-state/search";
@@ -266,7 +266,7 @@ export default function WorkspaceContent({
       <div className={showJsonView ? "h-full w-full" : "flex-1 py-4 overflow-hidden"}>
         <div className={`${selectedCardIdsArray.length > 0 ? 'pb-20' : ''} size-full workspace-grid-container px-4 sm:px-6`}>
           <EmptyState className="w-full min-w-0 max-w-full">
-            <div className="mx-auto max-w-2xl w-full text-center px-4 sm:px-6 py-10 min-w-0">
+            <div className="mx-auto max-w-2xl w-full px-4 sm:px-6 py-10 min-w-0">
               {/* Hidden file input */}
               <input
                 ref={fileInputRef}
@@ -277,45 +277,81 @@ export default function WorkspaceContent({
                 accept="application/pdf,.pdf"
               />
 
-              {/* Drag and Drop Prompt */}
-              <div
-                onClick={handleFileUploadClick}
-                className="mb-8 p-8 rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/20 hover:border-solid hover:shadow-[inset_0_0_0_2px_hsl(var(--muted-foreground)/0.3)] hover:bg-muted/50 transition-all cursor-pointer group"
-              >
-                <Upload className="size-12 mx-auto mb-4 text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all duration-200" />
-                <h3 className="text-base font-medium text-foreground mb-2">
-                  {activeFolderId
-                    ? `This folder is empty`
-                    : "Drag and drop PDFs here"}
-                </h3>
-              </div>
-
-              {/* Divider */}
-              <div className="relative my-8">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border"></div>
+              {activeFolderId ? (
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-4">This folder is empty</p>
+                  <button
+                    onClick={() => {
+                      const itemId = addItem("note");
+                      if (itemId) {
+                        toast.success("New note created");
+                      }
+                    }}
+                    className="inline-flex items-center gap-2 px-6 py-3 text-base font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
+                  >
+                    <Plus className="size-5" />
+                    New Note
+                  </button>
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 py-1.5 bg-muted text-muted-foreground rounded-lg">or</span>
-                </div>
-              </div>
+              ) : (
+                <>
+                  {/* Three action cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                    <button
+                      onClick={handleFileUploadClick}
+                      className="flex flex-col items-center gap-3 p-6 rounded-xl border border-border bg-muted/20 hover:bg-muted/50 hover:border-muted-foreground/30 transition-all cursor-pointer group"
+                    >
+                      <FileText className="size-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Upload PDF</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Drop or browse for a file</p>
+                      </div>
+                    </button>
 
-              {/* Manual Note Creation */}
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">Create your first item to get started</p>
-                <button
-                  onClick={() => {
-                    const itemId = addItem("note");
-                    if (itemId) {
-                      toast.success("New note created");
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 px-6 py-3 text-base font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
-                >
-                  <Plus className="size-5" />
-                  New Note
-                </button>
-              </div>
+                    <button
+                      onClick={() => {
+                        const itemId = addItem("note");
+                        if (itemId) {
+                          toast.success("New note created");
+                        }
+                      }}
+                      className="flex flex-col items-center gap-3 p-6 rounded-xl border border-border bg-muted/20 hover:bg-muted/50 hover:border-muted-foreground/30 transition-all cursor-pointer group"
+                    >
+                      <SquarePen className="size-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">New Note</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Start writing</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        const itemId = addItem("youtube");
+                        if (itemId) {
+                          toast.success("YouTube card added");
+                        }
+                      }}
+                      className="flex flex-col items-center gap-3 p-6 rounded-xl border border-border bg-muted/20 hover:bg-muted/50 hover:border-muted-foreground/30 transition-all cursor-pointer group"
+                    >
+                      <Youtube className="size-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Add Video</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Paste a YouTube link</p>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Subtle drag-and-drop zone */}
+                  <div
+                    onClick={handleFileUploadClick}
+                    className="p-4 rounded-lg border border-dashed border-muted-foreground/20 bg-muted/10 hover:bg-muted/20 transition-all cursor-pointer text-center"
+                  >
+                    <p className="text-xs text-muted-foreground">
+                      or drag and drop PDFs anywhere on this workspace
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </EmptyState>
         </div>

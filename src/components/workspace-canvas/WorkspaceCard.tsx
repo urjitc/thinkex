@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { usePostHog } from 'posthog-js/react';
 import ItemHeader from "@/components/workspace-canvas/ItemHeader";
 import { getCardColorCSS, getCardAccentColor, getDistinctCardColor, SWATCHES_COLOR_GROUPS, type CardColor } from "@/lib/workspace-state/colors";
-import type { Item, NoteData, PdfData, FlashcardData, YouTubeData } from "@/lib/workspace-state/types";
+import type { Item, NoteData, PdfData, ImageData, FlashcardData, YouTubeData } from "@/lib/workspace-state/types";
 import { SwatchesPicker, ColorResult } from "react-color";
 import { plainTextToBlocks, type Block } from "@/components/editor/BlockNoteEditor";
 import { serializeBlockNote } from "@/lib/utils/serialize-blocknote";
@@ -793,9 +793,9 @@ function WorkspaceCard({
               )}
               {/* Subtle type label for narrow cards without preview */}
               {/* Subtle type label for narrow cards without preview */}
-              {(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview && (
+              {(item.type === 'note' || item.type === 'pdf' || item.type === 'image' || item.type === 'quiz') && !shouldShowPreview && (
                 <span className="text-[10px] uppercase tracking-wider text-white/40 mt-auto">
-                  {item.type === 'note' ? 'Note' : item.type === 'pdf' ? 'PDF' : 'Quiz'}
+                  {item.type === 'note' ? 'Note' : item.type === 'pdf' ? 'PDF' : item.type === 'image' ? 'Image' : 'Quiz'}
                 </span>
               )}
             </div>
@@ -829,6 +829,21 @@ function WorkspaceCard({
                   ) : (
                     <LazyAppPdfViewer pdfSrc={pdfData.fileUrl} />
                   )}
+                </div>
+              );
+            })()}
+
+            {/* Image Content - render image preview */}
+            {!isOpenInPanel && item.type === 'image' && shouldShowPreview && (() => {
+              const imageData = item.data as ImageData;
+              return (
+                <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden p-2">
+                  <img
+                    src={imageData.fileUrl}
+                    alt={item.name || imageData.filename || 'Image'}
+                    className="max-w-full max-h-full object-contain rounded"
+                    loading="lazy"
+                  />
                 </div>
               );
             })()}
@@ -1103,6 +1118,11 @@ export const WorkspaceCardMemoized = memo(WorkspaceCard, (prevProps, nextProps) 
     if (JSON.stringify(prevData) !== JSON.stringify(nextData)) return false;
   }
   if (prevProps.item.type === 'pdf' && nextProps.item.type === 'pdf') {
+    const prevData = prevProps.item.data;
+    const nextData = nextProps.item.data;
+    if (JSON.stringify(prevData) !== JSON.stringify(nextData)) return false;
+  }
+  if (prevProps.item.type === 'image' && nextProps.item.type === 'image') {
     const prevData = prevProps.item.data;
     const nextData = nextProps.item.data;
     if (JSON.stringify(prevData) !== JSON.stringify(nextData)) return false;

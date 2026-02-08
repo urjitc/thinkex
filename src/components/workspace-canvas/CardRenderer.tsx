@@ -1,7 +1,7 @@
 "use client";
 
 import { useUIStore } from "@/lib/stores/ui-store";
-import type { Item, ItemData, NoteData, PdfData, FlashcardData, YouTubeData } from "@/lib/workspace-state/types";
+import type { Item, ItemData, NoteData, PdfData, ImageData, FlashcardData, YouTubeData } from "@/lib/workspace-state/types";
 import { useMemo, useState } from "react";
 import { DynamicBlockNoteEditor } from "@/components/editor/DynamicBlockNoteEditor";
 import { plainTextToBlocks, type Block } from "@/components/editor/BlockNoteEditor";
@@ -87,6 +87,23 @@ export function CardRenderer(props: {
         <p className="text-xs text-muted-foreground/70 mt-2">
           Use the PDF viewer to read this document
         </p>
+      </div>
+    );
+  }
+
+  if (item.type === "image") {
+    const imageData = item.data as ImageData;
+    return (
+      <div className="flex-1 flex items-center justify-center p-4 min-h-0">
+        {imageData.fileUrl ? (
+          <img
+            src={imageData.fileUrl}
+            alt={item.name || imageData.filename || 'Image'}
+            className="max-w-full max-h-full object-contain rounded-md"
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">No image loaded</p>
+        )}
       </div>
     );
   }
