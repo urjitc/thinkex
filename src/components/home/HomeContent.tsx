@@ -73,6 +73,10 @@ export function HomeContent() {
     const handleScroll = () => {
       if (scrollRef.current) {
         setScrollY(scrollRef.current.scrollTop);
+        // Hide scroll hint as soon as user scrolls past the hero
+        if (scrollRef.current.scrollTop >= 100) {
+          setShowScrollHint(false);
+        }
       }
     };
 
