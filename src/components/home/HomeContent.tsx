@@ -199,7 +199,7 @@ export function HomeContent() {
           <button
             type="button"
             onClick={scrollToWorkspaces}
-            className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground hover:text-foreground bg-sidebar border border-border transition-colors duration-200 cursor-pointer"
+            className="flex items-center justify-center w-8 h-8 rounded-full text-background hover:text-background bg-foreground border border-border transition-colors duration-200 cursor-pointer"
           >
             <ChevronDown className="h-4 w-4" />
           </button>
