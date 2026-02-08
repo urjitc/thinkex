@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Move, SquarePen, FileSearch, Youtube, Share2, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useTheme } from "next-themes";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { WorkspaceInstructionMode } from "@/hooks/workspace/use-workspace-instruction-modal";
 
@@ -253,7 +252,7 @@ export function WorkspaceInstructionModal({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[90] flex items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-[2px] transition-opacity duration-300 ease-out",
+        "fixed inset-0 z-[90] flex items-center justify-center bg-black/25 dark:bg-black/40 px-4 py-6 backdrop-blur-[20px] transition-opacity duration-300 ease-out",
         isClosing ? "opacity-0" : "opacity-100"
       )}
       role="dialog"
@@ -264,14 +263,19 @@ export function WorkspaceInstructionModal({
       <div
         onClick={() => { pause(); onUserInteracted?.(); }}
         className={cn(
-          "w-full max-w-[1100px] rounded-[28px] border border-sidebar-border/70 bg-sidebar p-2 shadow-[0_28px_100px_rgba(0,0,0,0.35)] transition-all duration-300 ease-out",
+          "relative w-full max-w-[1100px] rounded-[28px] border border-white/[0.15] dark:border-white/[0.1] bg-white/60 dark:bg-white/[0.06] backdrop-blur-[24px] backdrop-saturate-[180%] p-2 shadow-[0_28px_80px_rgba(0,0,0,0.12),0_8px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.4)] dark:shadow-[0_28px_80px_rgba(0,0,0,0.5),0_8px_24px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-300 ease-out",
           isClosing ? "opacity-0 scale-[0.97]" : "opacity-100 scale-100"
         )}
       >
-        <div className="flex h-[620px] flex-col rounded-[24px] border border-sidebar-border bg-sidebar/95">
+        {/* Shimmer sweep — slow light traveling across the glass */}
+        <div className="pointer-events-none absolute inset-0 rounded-[28px] overflow-hidden z-[1]">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.07] to-transparent translate-x-[-100%] animate-[glass-shimmer_6s_ease-in-out_infinite]" />
+        </div>
+
+        <div className="relative z-[2] flex h-[620px] flex-col rounded-[24px] border border-white/[0.1] dark:border-white/[0.06] bg-transparent overflow-hidden">
           {/* Generation status banner (autogen only) */}
           {mode === "autogen" && (
-            <div className="flex items-center gap-2.5 rounded-t-[24px] border-b border-sidebar-border bg-primary/10 px-5 py-2.5">
+            <div className="flex items-center gap-2.5 rounded-t-[24px] border-b border-white/[0.1] dark:border-white/[0.06] bg-primary/[0.08] dark:bg-primary/[0.12] backdrop-blur-sm px-5 py-2.5">
               <div className={cn("h-2 w-2 rounded-full", !isGenerating ? "bg-green-500" : "bg-primary animate-pulse")} />
               <span className="text-sm font-medium text-primary">
                 {!isGenerating ? "Your workspace is ready" : "Generating your workspace..."}
@@ -280,15 +284,15 @@ export function WorkspaceInstructionModal({
           )}
 
           {/* Upper panel — video fills the space */}
-          <div className="relative min-h-0 flex-1 overflow-hidden rounded-t-[24px]">
-            <div className="absolute -left-20 -top-20 h-44 w-44 rounded-full bg-primary/10 blur-3xl" />
-            <div className="absolute -bottom-20 -right-20 h-52 w-52 rounded-full bg-accent/20 blur-3xl" />
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            <div className="absolute -left-20 -top-20 h-44 w-44 rounded-full bg-primary/15 blur-[80px]" />
+            <div className="absolute -bottom-20 -right-20 h-52 w-52 rounded-full bg-accent/25 blur-[80px]" />
 
             {/* Left chevron */}
             <button
               type="button"
               onClick={goPrev}
-              className="absolute left-3 top-1/2 z-10 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent/60 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+              className="absolute left-3 top-1/2 z-10 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/20 dark:border-white/[0.08] text-sidebar-foreground/80 hover:bg-white/30 dark:hover:bg-white/15 hover:text-sidebar-foreground shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.3)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] transition-all duration-200"
               aria-label="Previous step"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -298,7 +302,7 @@ export function WorkspaceInstructionModal({
             <button
               type="button"
               onClick={goNext}
-              className="absolute right-3 top-1/2 z-10 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent/60 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+              className="absolute right-3 top-1/2 z-10 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/20 dark:border-white/[0.08] text-sidebar-foreground/80 hover:bg-white/30 dark:hover:bg-white/15 hover:text-sidebar-foreground shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.3)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] transition-all duration-200"
               aria-label="Next step"
             >
               <ChevronRight className="h-4 w-4" />
@@ -319,7 +323,7 @@ export function WorkspaceInstructionModal({
                   videoSrc && videoLoaded ? "opacity-0" : "opacity-100"
                 )}
               >
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-primary/[0.08] dark:bg-primary/[0.12] backdrop-blur-sm border border-white/[0.12] dark:border-white/[0.06] text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]">
                   <Icon className="h-10 w-10" />
                 </div>
               </div>
@@ -348,7 +352,7 @@ export function WorkspaceInstructionModal({
           </div>
 
           {/* Lower panel — text, dots, action buttons */}
-          <div className="relative flex flex-col items-center gap-1 border-t border-sidebar-border bg-sidebar px-5 pb-4 pt-3 rounded-b-[24px]">
+          <div className="relative flex flex-col items-center gap-1 border-t border-white/[0.1] dark:border-white/[0.06] bg-white/40 dark:bg-white/[0.04] backdrop-blur-lg px-5 pb-4 pt-3 rounded-b-[24px]">
             {/* Text block — fades with the video */}
             <div
               className={cn(
@@ -359,7 +363,7 @@ export function WorkspaceInstructionModal({
             >
               {/* Variant badge */}
               {step.variant && (
-                <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                <span className="inline-flex items-center rounded-full bg-primary/[0.08] dark:bg-primary/[0.15] backdrop-blur-sm border border-white/[0.1] px-2.5 py-0.5 text-xs font-medium text-primary">
                   Method {step.variant.current} of {step.variant.total}
                 </span>
               )}
@@ -385,7 +389,7 @@ export function WorkspaceInstructionModal({
                   className={cn(
                     "h-2 rounded-full transition-all duration-300",
                     index === activeIndex
-                      ? "w-6 bg-primary"
+                      ? "w-6 bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]"
                       : "w-2 bg-sidebar-foreground/25 hover:bg-sidebar-foreground/40"
                   )}
                   aria-label={`Go to slide ${index + 1}${s.variant ? ` — ${s.label} method ${s.variant.current}` : ` — ${s.label}`}`}
@@ -395,15 +399,23 @@ export function WorkspaceInstructionModal({
 
             {/* CTA — vertically centered in bottom bar */}
             {mode === "first-open" && canClose && (
-              <Button type="button" size="sm" onClick={onRequestClose} className="absolute right-5 top-1/2 -translate-y-1/2">
-                <X className="mr-1 h-3.5 w-3.5" />
+              <button
+                type="button"
+                onClick={onRequestClose}
+                className="absolute right-5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium bg-white/25 dark:bg-white/10 backdrop-blur-md border border-white/20 dark:border-white/[0.08] text-sidebar-foreground hover:bg-white/35 dark:hover:bg-white/15 shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.3)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] transition-all duration-200"
+              >
+                <X className="h-3.5 w-3.5" />
                 Close
-              </Button>
+              </button>
             )}
             {mode === "autogen" && (!isGenerating || showFallback) && (
-              <Button type="button" size="sm" onClick={onFallbackContinue} className="absolute right-5 top-1/2 -translate-y-1/2">
+              <button
+                type="button"
+                onClick={onFallbackContinue}
+                className="absolute right-5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium bg-white/25 dark:bg-white/10 backdrop-blur-md border border-white/20 dark:border-white/[0.08] text-sidebar-foreground hover:bg-white/35 dark:hover:bg-white/15 shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.3)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] transition-all duration-200"
+              >
                 Continue to workspace
-              </Button>
+              </button>
             )}
           </div>
         </div>
