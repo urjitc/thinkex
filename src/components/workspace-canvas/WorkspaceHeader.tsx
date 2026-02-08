@@ -1003,10 +1003,6 @@ export default function WorkspaceHeader({
               void queryClient.invalidateQueries({
                 queryKey: ["workspace", currentWorkspaceId, "events"],
               });
-              // Open the new note in the modal
-              if (setOpenModalItemId) {
-                setOpenModalItemId(noteId);
-              }
             }}
           />
         )
