@@ -123,13 +123,19 @@ function CreateFromPromptHandler({
   const timeoutIdsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const createFrom = searchParams.get("createFrom");
+  const genTypes = searchParams.get("genTypes");
 
   useEffect(() => {
     if (!createFrom || !workspaceId || isLoading || hasAutoSentRef.current) return;
 
     setIsChatExpanded?.(true);
 
-    const wrapped = `Update the preexisting contents of this workspace to be about ${createFrom}. Only add one quality YouTube video.`;
+    // Build type-aware message: only mention YouTube if selected (or auto mode)
+    const types = genTypes ? genTypes.split(',').map(s => s.trim()).filter(Boolean) : null;
+    const includeYoutube = !types || types.includes('youtube');
+    const wrapped = includeYoutube
+      ? `Update the preexisting contents of this workspace to be about ${createFrom}. Only add one quality YouTube video.`
+      : `Update the preexisting contents of this workspace to be about ${createFrom}.`;
 
     let attempts = 0;
     const maxAttempts = 12;
@@ -152,6 +158,7 @@ function CreateFromPromptHandler({
           clearAll();
           const url = new URL(window.location.href);
           url.searchParams.delete("createFrom");
+          url.searchParams.delete("genTypes");
           router.replace(url.pathname + url.search);
           return;
         } catch {
@@ -168,7 +175,7 @@ function CreateFromPromptHandler({
     ids.push(id);
 
     return () => clearAll();
-  }, [createFrom, workspaceId, isLoading, aui, router, setIsChatExpanded]);
+  }, [createFrom, genTypes, workspaceId, isLoading, aui, router, setIsChatExpanded]);
 
   return null;
 }
@@ -189,19 +196,31 @@ function GenerateStudyMaterialsHandler({
   const timeoutIdsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const action = searchParams.get("action");
+  const genTypes = searchParams.get("genTypes");
 
   useEffect(() => {
     if (action !== "generate_study_materials" || !workspaceId || isLoading || hasAutoSentRef.current) return;
 
     setIsChatExpanded?.(true);
 
-    const prompt = `First, process any PDF files in this workspace.
-    
-Then, using the content:
-1. Update the note with a comprehensive summary
-2. Update the quiz with 5-10 relevant questions
-3. Update the flashcards with key terms and concepts
-4. Search and add one relevant YouTube video if possible`;
+    // Build type-aware prompt: only include steps for selected types
+    const types = genTypes ? new Set(genTypes.split(',').map(s => s.trim()).filter(Boolean)) : null;
+    const steps: string[] = [];
+    let n = 1;
+    if (!types || types.has('note'))      steps.push(`${n++}. Update the note with a comprehensive summary`);
+    if (!types || types.has('quiz'))      steps.push(`${n++}. Update the quiz with 5-10 relevant questions`);
+    if (!types || types.has('flashcard')) steps.push(`${n++}. Update the flashcards with key terms and concepts`);
+    if (!types || types.has('youtube'))   steps.push(`${n++}. Search and add one relevant YouTube video if possible`);
+
+    // If genTypes was set but contained no recognized values, fall back to all types
+    if (steps.length === 0) {
+      steps.push('1. Update the note with a comprehensive summary');
+      steps.push('2. Update the quiz with 5-10 relevant questions');
+      steps.push('3. Update the flashcards with key terms and concepts');
+      steps.push('4. Search and add one relevant YouTube video if possible');
+    }
+
+    const prompt = `First, process any PDF files in this workspace.\n\nThen, using the content:\n${steps.join('\n')}`;
 
     let attempts = 0;
     const maxAttempts = 12;
@@ -224,6 +243,7 @@ Then, using the content:
           clearAll();
           const url = new URL(window.location.href);
           url.searchParams.delete("action");
+          url.searchParams.delete("genTypes");
           router.replace(url.pathname + url.search);
           return;
         } catch {
@@ -240,7 +260,7 @@ Then, using the content:
     ids.push(id);
 
     return () => clearAll();
-  }, [action, workspaceId, isLoading, aui, router, setIsChatExpanded]);
+  }, [action, genTypes, workspaceId, isLoading, aui, router, setIsChatExpanded]);
 
   return null;
 }

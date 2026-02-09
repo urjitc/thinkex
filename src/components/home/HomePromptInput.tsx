@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useCreateWorkspaceFromPrompt } from "@/hooks/workspace/use-create-workspace";
 import type { UploadedPdfMetadata } from "@/hooks/workspace/use-pdf-upload";
 // import { useImageUpload } from "@/hooks/workspace/use-image-upload";
-import { ArrowUp, FileText, Loader2, X, Link as LinkIcon } from "lucide-react";
+import { ArrowUp, FileText, Loader2, X, Link as LinkIcon, SlidersHorizontal } from "lucide-react";
 // import { ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,97 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import type { PdfData } from "@/lib/workspace-state/types";
+import { defaultDataFor } from "@/lib/workspace-state/item-helpers";
+
+// --- Generation Settings ---
+type GenContentType = 'note' | 'quiz' | 'flashcard' | 'youtube';
+
+interface GenerationSettings {
+  auto: boolean;
+  types: GenContentType[];
+}
+
+const DEFAULT_GEN_SETTINGS: GenerationSettings = {
+  auto: true,
+  types: ['note', 'quiz', 'flashcard', 'youtube'],
+};
+
+const ALL_CONTENT_TYPES: { key: GenContentType; label: string }[] = [
+  { key: 'note', label: 'Notes' },
+  { key: 'quiz', label: 'Quizzes' },
+  { key: 'flashcard', label: 'Flashcards' },
+  { key: 'youtube', label: 'YouTube Videos' },
+];
+
+const VALID_GEN_TYPES = new Set<string>(ALL_CONTENT_TYPES.map(t => t.key));
+
+/**
+ * Build placeholder workspace items for selected content types.
+ */
+function buildPlaceholderItems(
+  effectiveTypes: Set<GenContentType>,
+  startY: number,
+  heights: { note: number; flashcard: number },
+): any[] {
+  const placeholders: any[] = [];
+  let currentY = startY;
+
+  if (effectiveTypes.has('note')) {
+    placeholders.push({
+      id: crypto.randomUUID(),
+      type: 'note',
+      name: 'Update me',
+      subtitle: '',
+      color: '#10B981',
+      layout: { x: 0, y: currentY, w: 4, h: heights.note },
+      data: { blockContent: [], field1: '' },
+    });
+    currentY += heights.note;
+  }
+
+  if (effectiveTypes.has('quiz')) {
+    placeholders.push({
+      id: crypto.randomUUID(),
+      type: 'quiz',
+      name: 'Update me',
+      subtitle: '',
+      color: '#F59E0B',
+      layout: { x: 0, y: currentY, w: 2, h: 13 },
+      data: { questions: [] },
+    });
+  }
+
+  if (effectiveTypes.has('flashcard')) {
+    placeholders.push({
+      id: crypto.randomUUID(),
+      type: 'flashcard',
+      name: 'Update me',
+      subtitle: '',
+      color: '#EC4899',
+      layout: { x: effectiveTypes.has('quiz') ? 2 : 0, y: currentY, w: 2, h: heights.flashcard },
+      data: defaultDataFor('flashcard'),
+    });
+  }
+
+  return placeholders;
+}
+
+function loadGenSettings(): GenerationSettings {
+  if (typeof window === 'undefined') return DEFAULT_GEN_SETTINGS;
+  try {
+    const stored = localStorage.getItem('thinkex-gen-settings');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        auto: typeof parsed.auto === 'boolean' ? parsed.auto : true,
+        types: Array.isArray(parsed.types) ? parsed.types.filter((t: string) => VALID_GEN_TYPES.has(t)) : DEFAULT_GEN_SETTINGS.types,
+      };
+    }
+  } catch {}
+  return DEFAULT_GEN_SETTINGS;
+}
 // import type { ImageData } from "@/lib/workspace-state/types";
 
 const PLACEHOLDER_OPTIONS = [
@@ -69,8 +159,26 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
   const [typedPrefix, setTypedPrefix] = useState("");
   const [isUrlDialogOpen, setIsUrlDialogOpen] = useState(false);
   const [urlInput, setUrlInput] = useState("");
+  const [genSettings, setGenSettings] = useState<GenerationSettings>(loadGenSettings);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingKeyRef = useRef(0);
+
+  // Persist generation settings to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('thinkex-gen-settings', JSON.stringify(genSettings));
+    } catch {}
+  }, [genSettings]);
+
+  const toggleGenType = (key: GenContentType) => {
+    setGenSettings(prev => {
+      const has = prev.types.includes(key);
+      return {
+        ...prev,
+        types: has ? prev.types.filter(t => t !== key) : [...prev.types, key],
+      };
+    });
+  };
 
   const createFromPrompt = useCreateWorkspaceFromPrompt();
   // const {
@@ -175,6 +283,15 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
 
     const hasUploads = uploadedFiles.length > 0;
 
+    // Determine effective content types based on settings
+    // If auto or no valid types selected, use all defaults
+    const effectiveTypes = new Set<GenContentType>(
+      !genSettings.auto && genSettings.types.length > 0
+        ? genSettings.types
+        : ['note', 'quiz', 'flashcard', 'youtube']
+    );
+    const isCustom = !genSettings.auto && genSettings.types.length > 0;
+
     // Construct initial state with file cards AND empty placeholder cards if files were uploaded
     let initialState = undefined;
     if (hasUploads) {
@@ -186,7 +303,7 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
         type: 'pdf' as const,
         name: file.name,
         subtitle: '',
-        color: '#6366F1' as const, // Indigo for PDFs
+        color: '#6366F1' as const,
         layout: { x: 0, y: index * fileHeight, w: 4, h: fileHeight },
         lastSource: 'user' as const,
         data: {
@@ -198,61 +315,11 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
 
       const totalUploadY = uploadedFiles.length * fileHeight;
 
-      // const pdfEndY = uploadedFiles.length * fileHeight;
+      // Build placeholder cards based on effective types, stacking layouts dynamically
+      const placeholders = buildPlaceholderItems(effectiveTypes, totalUploadY, { note: 13, flashcard: 8 })
+        .map(item => ({ ...item, lastSource: 'user' as const }));
 
-      // // Create Image card items (stacked below PDFs)
-      // const imageItems = uploadedImages.map((file, index) => ({
-      //   id: crypto.randomUUID(),
-      //   type: 'image' as const,
-      //   name: file.name,
-      //   subtitle: '',
-      //   color: '#8B5CF6' as const, // Violet for Images
-      //   layout: { x: 0, y: pdfEndY + index * fileHeight, w: 4, h: fileHeight },
-      //   lastSource: 'user' as const,
-      //   data: {
-      //     fileUrl: file.fileUrl,
-      //     filename: file.filename,
-      //     fileSize: file.fileSize,
-      //   } as ImageData,
-      // }));
-
-      // const totalUploadY = pdfEndY + uploadedImages.length * fileHeight;
-
-      // Create empty placeholder cards with fixed layout and colors
-      const emptyNote = {
-        id: crypto.randomUUID(),
-        type: 'note' as const,
-        name: 'Update me',
-        subtitle: '',
-        color: '#10B981' as const,
-        layout: { x: 0, y: totalUploadY, w: 4, h: 13 },
-        lastSource: 'user' as const,
-        data: { blockContent: [], field1: '' },
-      };
-
-      const emptyQuiz = {
-        id: crypto.randomUUID(),
-        type: 'quiz' as const,
-        name: 'Update me',
-        subtitle: '',
-        color: '#F59E0B' as const,
-        layout: { x: 0, y: totalUploadY + 13, w: 2, h: 13 },
-        lastSource: 'user' as const,
-        data: { questions: [] },
-      };
-
-      const emptyFlashcard = {
-        id: crypto.randomUUID(),
-        type: 'flashcard' as const,
-        name: 'Update me',
-        subtitle: '',
-        color: '#EC4899' as const,
-        layout: { x: 2, y: totalUploadY + 13, w: 2, h: 8 },
-        lastSource: 'user' as const,
-        data: { cards: [] },
-      };
-
-      const allItems = [...pdfItems, emptyNote, emptyQuiz, emptyFlashcard];
+      const allItems: any[] = [...pdfItems, ...placeholders];
 
       initialState = {
         workspaceId: '',
@@ -263,13 +330,34 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
       };
     }
 
+    // For no-uploads path with custom settings, build a custom initial state
+    // instead of using the getting_started template
+    let template: "blank" | "getting_started";
+    if (hasUploads) {
+      template = "blank";
+    } else if (isCustom) {
+      template = "blank";
+      const placeholders = buildPlaceholderItems(effectiveTypes, 0, { note: 9, flashcard: 9 });
+
+      if (placeholders.length > 0) {
+        initialState = {
+          workspaceId: '',
+          globalTitle: '',
+          globalDescription: '',
+          items: placeholders,
+          itemsCreated: placeholders.length,
+        };
+      }
+    } else {
+      template = "getting_started";
+    }
+
     createFromPrompt.mutate(prompt, {
-      template: hasUploads ? "blank" : "getting_started",
+      template,
       initialState,
       onSuccess: (workspace) => {
         typingKeyRef.current += 1;
         clearFiles();
-        // clearImages();
         const url = `/workspace/${workspace.slug}`;
         const params = new URLSearchParams();
 
@@ -277,6 +365,11 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
           params.set('action', 'generate_study_materials');
         } else {
           params.set('createFrom', prompt);
+        }
+
+        // Pass custom generation types so AssistantPanel builds the right prompt
+        if (isCustom) {
+          params.set('genTypes', Array.from(effectiveTypes).join(','));
         }
 
         router.push(`${url}?${params.toString()}`);
@@ -488,18 +581,97 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
               <LinkIcon className="h-3 w-3" />
               <span>Add URL</span>
             </button>
-            {/* <button
-              type="button"
-              onClick={() => openImagePicker()}
-              className={cn(
-                "flex items-center gap-1 px-1.5 py-0.5 rounded-md",
-                "text-[11px] text-sidebar-foreground/70",
-                "hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-              )}
-            >
-              <ImageIcon className="h-3 w-3" />
-              <span>Add Image</span>
-            </button> */}
+
+            <div className="ml-auto">
+              <Popover onOpenChange={(open) => {
+                  // Snap auto back on if user closes popover with no types selected
+                  if (!open && !genSettings.auto && genSettings.types.length === 0) {
+                    setGenSettings(prev => ({ ...prev, auto: true }));
+                  }
+                }}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex items-center gap-1 px-1.5 py-0.5 rounded-md",
+                      "text-[11px] text-sidebar-foreground/70",
+                      "hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+                    )}
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    <span className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      genSettings.auto ? "bg-purple-500" : "bg-blue-500"
+                    )} />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  side="top"
+                  align="end"
+                  sideOffset={8}
+                  className="w-44 p-3"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className={cn("space-y-2", genSettings.auto && "opacity-40 pointer-events-none")}>
+                    {ALL_CONTENT_TYPES.map(({ key, label }) => {
+                      const active = genSettings.types.includes(key);
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          role="switch"
+                          aria-checked={active}
+                          aria-label={`Toggle ${label}`}
+                          className="flex items-center justify-between w-full"
+                          onClick={() => toggleGenType(key)}
+                        >
+                          <span className="text-xs text-foreground">{label}</span>
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full transition-colors",
+                              active ? "bg-primary" : "bg-muted-foreground/25"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "pointer-events-none inline-block h-3 w-3 rounded-full bg-background shadow-sm ring-0 transition-transform mt-0.5",
+                                active ? "translate-x-[14px]" : "translate-x-0.5"
+                              )}
+                            />
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="my-2.5 h-px bg-border" />
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={genSettings.auto}
+                    aria-label="Toggle auto generation"
+                    className="flex items-center justify-between w-full"
+                    onClick={() => setGenSettings(prev => ({ ...prev, auto: !prev.auto }))}
+                  >
+                    <span className="text-xs font-medium text-foreground">Auto</span>
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full transition-colors",
+                        genSettings.auto ? "bg-primary" : "bg-muted-foreground/25"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "pointer-events-none inline-block h-3 w-3 rounded-full bg-background shadow-sm ring-0 transition-transform mt-0.5",
+                          genSettings.auto ? "translate-x-[14px]" : "translate-x-0.5"
+                        )}
+                      />
+                    </span>
+                  </button>
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           <button
