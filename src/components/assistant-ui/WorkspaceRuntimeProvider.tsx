@@ -3,6 +3,7 @@
 import { AssistantCloud, AssistantRuntimeProvider } from "@assistant-ui/react";
 import { useChatRuntime, AssistantChatTransport } from "@assistant-ui/react-ai-sdk";
 import { useMemo, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { AssistantAvailableProvider } from "@/contexts/AssistantAvailabilityContext";
 import { useUIStore } from "@/lib/stores/ui-store";
 import { useSession } from "@/lib/auth-client";
@@ -38,6 +39,8 @@ export function WorkspaceRuntimeProvider({
   const selectedCardIdsSet = useUIStore((state) => state.selectedCardIds);
   const selectedActions = useUIStore((state) => state.selectedActions);
   const replySelections = useUIStore(useShallow((state) => state.replySelections));
+  const searchParams = useSearchParams();
+  const genTypes = searchParams.get("genTypes");
   const { data: session } = useSession();
 
   // Get workspace state to format selected cards context on client
@@ -147,13 +150,14 @@ export function WorkspaceRuntimeProvider({
           selectedCardsContext, // Pre-formatted context (client-side) instead of IDs
           replySelections,
           selectedActions,
+          genTypes,
         },
         headers: {
           // Headers for static context if needed
         },
       });
       return transport;
-    }, [workspaceId, selectedModelId, activeFolderId, selectedCardsContext, replySelections, selectedActions]),
+    }, [workspaceId, selectedModelId, activeFolderId, selectedCardsContext, replySelections, selectedActions, genTypes]),
     adapters: {
       attachments: new SupabaseAttachmentAdapter(),
     },
