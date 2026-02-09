@@ -17,6 +17,7 @@ interface WorkspaceGridProps {
   allItems: Item[]; // All items (unfiltered) for layout updates
   isFiltered: boolean; // Whether currently in filtered mode
   isTemporaryFilter?: boolean; // Whether in temporary filter mode (search) - prevents layout saves
+  singleColumnMode?: boolean; // Force 1-column layout (for workspace split view)
   onDragStart: () => void;
   onDragStop: (layout: LayoutItem[]) => void;
   onUpdateItem: (itemId: string, updates: Partial<Item>) => void;
@@ -47,6 +48,7 @@ export function WorkspaceGrid({
   allItems,
   isFiltered,
   isTemporaryFilter = false,
+  singleColumnMode = false,
   onDragStart,
   onDragStop,
   onUpdateItem,
@@ -164,6 +166,16 @@ export function WorkspaceGrid({
   const handleDrag = useCallback((layout: Layout, oldItem: LayoutItem | null, newItem: LayoutItem | null, placeholder: LayoutItem | null, e: Event, element: HTMLElement | null) => {
     const draggedItemId = draggedItemIdRef.current;
     if (!draggedItemId || !e) return;
+
+    // Single-column mode: lock horizontal position
+    if (singleColumnMode && newItem) {
+      newItem.x = 0;
+      newItem.w = 1;
+      if (placeholder) {
+        placeholder.x = 0;
+        placeholder.w = 1;
+      }
+    }
 
     const draggedItem = allItemsRef.current.find(i => i.id === draggedItemId);
     if (!draggedItem) {
@@ -336,7 +348,7 @@ export function WorkspaceGrid({
         detail: { folderId: eventFolderId, isHovering: true, selectedCount }
       }));
     }
-  }, [selectedCardIds]);
+  }, [selectedCardIds, singleColumnMode]);
 
   // Handle resize start - track which item is being resized
   const handleResizeStart = useCallback((layout: Layout, oldItem: LayoutItem | null, newItem: LayoutItem | null, placeholder: LayoutItem | null, e: Event, element: HTMLElement | null) => {
@@ -474,8 +486,27 @@ export function WorkspaceGrid({
     }
 
     if (layoutChanged) {
-      // Save the new layout to the current breakpoint
-      const updatedItems = updateItemsWithLayout(allItemsRef.current, [...newLayout], currentBreakpointRef.current);
+      // In single-column mode, restore original x and w values before saving
+      // to prevent permanently locking items into single-column layout
+      let layoutToSave = [...newLayout];
+      if (singleColumnMode) {
+        layoutToSave = newLayout.map(layoutItem => {
+          const originalItem = allItemsRef.current.find(item => item.id === layoutItem.i);
+          // Type guard: check if layout is ResponsiveLayouts (has breakpoint keys)
+          if (originalItem?.layout && typeof originalItem.layout === 'object' && currentBreakpointRef.current in originalItem.layout) {
+            const originalLayout = (originalItem.layout as any)[currentBreakpointRef.current];
+            return {
+              ...layoutItem,
+              x: originalLayout.x,
+              w: originalLayout.w,
+            };
+          }
+          return layoutItem;
+        });
+      }
+
+      // Save the layout with preserved x/w values in single-column mode
+      const updatedItems = updateItemsWithLayout(allItemsRef.current, layoutToSave, currentBreakpointRef.current);
       onUpdateAllItems(updatedItems);
     }
 
@@ -490,13 +521,28 @@ export function WorkspaceGrid({
     // Clear the dragged item reference
     draggedItemIdRef.current = null;
     onGridDragStateChange?.(false);
-  }, [onDragStop, isFiltered, isTemporaryFilter, onGridDragStateChange, onUpdateAllItems, onMoveItem, onMoveItems, selectedCardIds]);
+  }, [onDragStop, isFiltered, isTemporaryFilter, onGridDragStateChange, onUpdateAllItems, onMoveItem, onMoveItems, selectedCardIds, singleColumnMode]);
 
   // Handle resize to enforce constraints
   // Note cards can transition between compact (w=1, h=4) and expanded (w>=2, h>=9) modes
   // based on EITHER width or height changes, allowing vertical-only resizing to trigger mode switches
   const handleResize = useCallback((layout: Layout, oldItem: LayoutItem | null, newItem: LayoutItem | null, placeholder: LayoutItem | null, e: Event, element: HTMLElement | null) => {
-    // Enforce custom constraints for YouTube and single-column items
+    // Single-column mode: lock horizontal resizing, free vertical resizing with min height
+    if (singleColumnMode && newItem) {
+      newItem.x = 0;
+      newItem.w = 1;
+      // Enforce minimum height of 5 rows, but no snapping behavior
+      newItem.h = Math.max(newItem.h, 5);
+      if (placeholder) {
+        placeholder.x = 0;
+        placeholder.w = 1;
+        placeholder.h = newItem.h;
+      }
+      // Skip all other constraint logic for single-column mode
+      return;
+    }
+
+    // Normal workspace mode: enforce custom constraints
     if (!newItem || !oldItem) return;
     const itemData = allItemsRef.current.find(i => i.id === newItem.i);
 
@@ -592,12 +638,32 @@ export function WorkspaceGrid({
 
     // For resize, we always save since resize always changes layout
     // Folders are now items with type: 'folder', so they're included in updateItemsWithLayout
-    const updatedItems = updateItemsWithLayout(allItemsRef.current, [...newLayout], currentBreakpointRef.current);
+
+    // In single-column mode, restore original x and w values before saving
+    // to prevent permanently locking items into single-column layout
+    let layoutToSave = [...newLayout];
+    if (singleColumnMode) {
+      layoutToSave = newLayout.map(layoutItem => {
+        const originalItem = allItemsRef.current.find(item => item.id === layoutItem.i);
+        // Type guard: check if layout is ResponsiveLayouts (has breakpoint keys)
+        if (originalItem?.layout && typeof originalItem.layout === 'object' && currentBreakpointRef.current in originalItem.layout) {
+          const originalLayout = (originalItem.layout as any)[currentBreakpointRef.current];
+          return {
+            ...layoutItem,
+            x: originalLayout.x,
+            w: originalLayout.w,
+          };
+        }
+        return layoutItem;
+      });
+    }
+
+    const updatedItems = updateItemsWithLayout(allItemsRef.current, layoutToSave, currentBreakpointRef.current);
     onUpdateAllItems(updatedItems);
 
     draggedItemIdRef.current = null;
     onGridDragStateChange?.(false);
-  }, [isTemporaryFilter, onUpdateAllItems, onGridDragStateChange, onDragStop]);
+  }, [isTemporaryFilter, onUpdateAllItems, onGridDragStateChange, onDragStop, singleColumnMode]);
 
 
   // Handle item updates - no automatic height recalculation
@@ -667,10 +733,18 @@ export function WorkspaceGrid({
   // Layout for all items (including folder-type items)
   const combinedLayout = useMemo(() => {
     const itemLayouts = itemsToLayout(displayItems);
+
+    // In single-column mode, enforce minimum height of 5 rows
+    if (singleColumnMode) {
+      itemLayouts.forEach(layout => {
+        layout.h = Math.max(layout.h, 5);
+      });
+    }
+
     // Update layout ref
     layoutRef.current = itemLayouts;
     return itemLayouts;
-  }, [displayItems]);
+  }, [displayItems, singleColumnMode]);
 
   // Memoize children to take advantage of ResponsiveGridLayout's shouldComponentUpdate optimization
   const children = useMemo(() => {
@@ -749,7 +823,12 @@ export function WorkspaceGrid({
 
   // Define breakpoints and columns
   const breakpoints = useMemo(() => ({ lg: 600, xxs: 0 }), []);
-  const cols = useMemo(() => ({ lg: 4, xxs: 1 }), []);
+  const cols = useMemo(() => {
+    if (singleColumnMode) {
+      return { lg: 1, xxs: 1 }; // Force 1 column for workspace split view
+    }
+    return { lg: 4, xxs: 1 };
+  }, [singleColumnMode]);
 
   // Create layouts object for ResponsiveGridLayout with both breakpoints
   // Only provide xxs layout if at least one item has a saved xxs layout

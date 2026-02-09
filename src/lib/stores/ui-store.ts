@@ -20,6 +20,7 @@ interface UIState {
   openPanelIds: string[]; // Array of open item IDs (order = layout order, max 2)
   itemPrompt: { itemId: string; x: number; y: number } | null; // Global prompt state
   maximizedItemId: string | null; // The ID of the item currently expanded to full screen
+  workspaceSplitViewActive: boolean; // True when workspace + item split view is active
 
   // Modal state
   showVersionHistory: boolean;
@@ -71,6 +72,9 @@ interface UIState {
   reorderPanels: (fromIndex: number, toIndex: number) => void;
   setItemPrompt: (prompt: { itemId: string; x: number; y: number } | null) => void;
   setMaximizedItemId: (itemId: string | null) => void;
+  toggleWorkspaceSplitView: () => void;
+  enableWorkspaceSplitView: () => void;
+  disableWorkspaceSplitView: () => void;
 
   // Legacy compatibility - setOpenModalItemId is widely used, maps to openPanel replace mode
   setOpenModalItemId: (id: string | null) => void;
@@ -143,6 +147,7 @@ const initialState = {
   openPanelIds: [],
   itemPrompt: null,
   maximizedItemId: null,
+  workspaceSplitViewActive: false,
   showVersionHistory: false,
   showCreateWorkspaceModal: false,
   showSheetModal: false,
@@ -243,7 +248,7 @@ export const useUIStore = create<UIState>()(
 
           const newSelectedCardIds = new Set(state.selectedCardIds);
           const newPanelAutoSelectedCardIds = new Set(state.panelAutoSelectedCardIds);
-          
+
           // Add to selections and track as auto-selected
           newSelectedCardIds.add(itemId);
           newPanelAutoSelectedCardIds.add(itemId);
@@ -266,6 +271,7 @@ export const useUIStore = create<UIState>()(
           return {
             openPanelIds: [],
             maximizedItemId: null,
+            workspaceSplitViewActive: false, // Disable split view when closing
             selectedCardIds: newSelectedCardIds,
             panelAutoSelectedCardIds: new Set(),
           };
@@ -293,7 +299,41 @@ export const useUIStore = create<UIState>()(
       }),
 
       setItemPrompt: (prompt) => set({ itemPrompt: prompt }),
-      setMaximizedItemId: (id) => set({ maximizedItemId: id }),
+      setMaximizedItemId: (id) => set((state) => {
+        // Disable workspace split view when item is un-maximized
+        if (id === null && state.workspaceSplitViewActive) {
+          return { maximizedItemId: id, workspaceSplitViewActive: false };
+        }
+
+        // In workspace split view, deselect the previously maximized card when switching to a new one
+        if (state.workspaceSplitViewActive && id !== null && state.maximizedItemId !== id) {
+          const newSelectedCardIds = new Set(state.selectedCardIds);
+          if (state.maximizedItemId) {
+            newSelectedCardIds.delete(state.maximizedItemId);
+          }
+          return {
+            maximizedItemId: id,
+            selectedCardIds: newSelectedCardIds
+          };
+        }
+
+        return { maximizedItemId: id };
+      }),
+
+      // Workspace Split View actions
+      // Workspace Split View actions
+      toggleWorkspaceSplitView: () => set((state) => {
+        // Only allow enabling split view if an item is maximized
+        if (!state.workspaceSplitViewActive && !state.maximizedItemId) {
+          return { workspaceSplitViewActive: false };
+        }
+        return { workspaceSplitViewActive: !state.workspaceSplitViewActive };
+      }),
+      enableWorkspaceSplitView: () => set((state) => {
+        if (!state.maximizedItemId) return { workspaceSplitViewActive: false };
+        return { workspaceSplitViewActive: true };
+      }),
+      disableWorkspaceSplitView: () => set({ workspaceSplitViewActive: false }),
 
       // Legacy compatibility
       setOpenModalItemId: (id) => {
@@ -311,7 +351,13 @@ export const useUIStore = create<UIState>()(
 
             const newSelectedCardIds = new Set(state.selectedCardIds);
             const newPanelAutoSelectedCardIds = new Set(state.panelAutoSelectedCardIds);
-            
+
+            // In workspace split view, deselect the previously maximized card when opening a new one
+            if (state.workspaceSplitViewActive && state.maximizedItemId && state.maximizedItemId !== id) {
+              newSelectedCardIds.delete(state.maximizedItemId);
+              newPanelAutoSelectedCardIds.delete(state.maximizedItemId);
+            }
+
             // Add to selections and track as auto-selected
             newSelectedCardIds.add(id);
             newPanelAutoSelectedCardIds.add(id);

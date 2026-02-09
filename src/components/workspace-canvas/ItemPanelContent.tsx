@@ -37,6 +37,7 @@ export function ItemPanelContent({
 }: ItemPanelContentProps) {
     const isChatExpanded = useUIStore((state) => state.isChatExpanded);
     const setIsChatExpanded = useUIStore((state) => state.setIsChatExpanded);
+    const workspaceSplitViewActive = useUIStore((state) => state.workspaceSplitViewActive);
     const isDesktop = true;
 
     const isPdf = item.type === 'pdf';
@@ -90,6 +91,58 @@ export function ItemPanelContent({
                         </TooltipTrigger>
                         <TooltipContent>
                             {isMaximized ? "Restore to Panel" : "Maximize to Modal"}
+                        </TooltipContent>
+                    </Tooltip>
+
+                    {/* Split View / Focus Button */}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                type="button"
+                                aria-label={workspaceSplitViewActive ? "Focus" : "Split View"}
+                                title={workspaceSplitViewActive ? "Focus" : "Split View"}
+                                className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer px-3"
+                                onClick={() => {
+                                    const { toggleWorkspaceSplitView } = useUIStore.getState();
+                                    toggleWorkspaceSplitView();
+                                }}
+                            >
+                                {workspaceSplitViewActive ? (
+                                    // Focus icon - eye
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                ) : (
+                                    // Split View icon
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                        <line x1="12" y1="3" x2="12" y2="21" />
+                                    </svg>
+                                )}
+                                <span className="text-xs font-medium">
+                                    {workspaceSplitViewActive ? "Focus" : "Split View"}
+                                </span>
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            {workspaceSplitViewActive ? "Focus on this item" : "Split View"}
                         </TooltipContent>
                     </Tooltip>
 

@@ -16,6 +16,7 @@ interface PDFViewerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdateItem: (updates: Partial<Item>) => void;
+  renderInline?: boolean; // Render as inline content instead of modal overlay
 }
 
 export function PDFViewerModal({
@@ -23,6 +24,7 @@ export function PDFViewerModal({
   isOpen,
   onClose,
   onUpdateItem,
+  renderInline = false,
 }: PDFViewerModalProps) {
   const pdfData = item.data as PdfData;
 
@@ -57,28 +59,44 @@ export function PDFViewerModal({
 
     // If it was already selected, don't change anything on cleanup
     return undefined;
-  }, [isOpen, item?.id]); // Removed selectedCardIds and toggleCardSelection from deps
-
-  // Handle escape key
-  const handleEscape = (e: KeyboardEvent) => {
-    if (e.key === "Escape") {
-      onClose();
-    }
-  };
+  }, [isOpen, item?.id, selectedCardIds, toggleCardSelection]);
 
   useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
     }
     return () => {
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   if (!pdfData?.fileUrl || !isOpen) {
     return null;
   }
 
+  // Render inline (for workspace split view)
+  if (renderInline) {
+    return (
+      <div className="h-full w-full flex flex-col overflow-hidden bg-background">
+        <ItemPanelContent
+          item={item}
+          onClose={onClose}
+          onMaximize={() => useUIStore.getState().setMaximizedItemId(null)}
+          isMaximized={true}
+          onUpdateItem={onUpdateItem}
+          onUpdateItemData={(data) => onUpdateItem({ data })}
+        />
+      </div>
+    );
+  }
+
+  // Render as modal overlay (default)
   return (
     <div
       className="absolute inset-0 z-30 flex items-center justify-center overflow-hidden pdf-viewer-modal"
