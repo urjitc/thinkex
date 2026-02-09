@@ -31,7 +31,6 @@ interface UseWorkspaceInstructionModalResult {
 }
 
 const FIRST_OPEN_UNLOCK_MS = 7000;
-const AUTOGEN_FALLBACK_MS = 45000;
 
 export function useWorkspaceInstructionModal({
   workspaceId,
@@ -176,30 +175,16 @@ export function useWorkspaceInstructionModal({
   }, [action, autogenSignature, createFrom, mode, open, track, workspaceId]);
 
   useEffect(() => {
-    if (!open || mode !== "first-open") return;
+    if (!open) return;
 
     const timeoutId = window.setTimeout(() => {
       setCanClose(true);
     }, FIRST_OPEN_UNLOCK_MS);
 
     return () => window.clearTimeout(timeoutId);
-  }, [mode, open]);
+  }, [open]);
 
-  useEffect(() => {
-    if (!open || mode !== "autogen") return;
-
-    const timeoutId = window.setTimeout(() => {
-      setShowFallback(true);
-      track("workspace-instruction-modal-fallback-shown", {
-        mode,
-        workspace_id: workspaceId,
-        timeout_ms: AUTOGEN_FALLBACK_MS,
-      });
-    }, AUTOGEN_FALLBACK_MS);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [mode, open, track, workspaceId]);
-
+  
   useEffect(() => {
     if (!open || mode !== "autogen") return;
 

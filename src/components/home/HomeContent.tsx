@@ -73,6 +73,10 @@ export function HomeContent() {
     const handleScroll = () => {
       if (scrollRef.current) {
         setScrollY(scrollRef.current.scrollTop);
+        // Hide scroll hint as soon as user scrolls past the hero
+        if (scrollRef.current.scrollTop >= 100) {
+          setShowScrollHint(false);
+        }
       }
     };
 
@@ -109,16 +113,19 @@ export function HomeContent() {
     return () => observer.disconnect();
   }, []);
 
-  // Mouse tracking for scroll hint pill
+  // Mouse tracking for scroll hint pill — only track when hero is visible and workspaces aren't yet
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
 
     function handleMouseMove(e: MouseEvent) {
       if (!el) return;
+      // Only show hint when near top of page (not scrolled) AND mouse in bottom 20%
       const rect = el.getBoundingClientRect();
       const relativeY = e.clientY - rect.top;
-      setShowScrollHint(relativeY > rect.height * 0.8);
+      const nearBottom = relativeY > rect.height * 0.8;
+      const atTop = el.scrollTop < 100;
+      setShowScrollHint(nearBottom && atTop);
     }
 
     function handleMouseLeave() {
@@ -191,7 +198,7 @@ export function HomeContent() {
         <div
           className={cn(
             "fixed bottom-8 left-1/2 -translate-x-1/2 z-[20] transition-all duration-300 ease-out",
-            showScrollHint && heroVisible && hasWorkspaces
+            showScrollHint && hasWorkspaces
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-2 pointer-events-none"
           )}
@@ -199,7 +206,7 @@ export function HomeContent() {
           <button
             type="button"
             onClick={scrollToWorkspaces}
-            className="flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground hover:text-foreground bg-sidebar border border-border transition-colors duration-200 cursor-pointer"
+            className="flex items-center justify-center w-8 h-8 rounded-full text-background hover:text-background bg-foreground border border-border transition-colors duration-200 cursor-pointer"
           >
             <ChevronDown className="h-4 w-4" />
           </button>

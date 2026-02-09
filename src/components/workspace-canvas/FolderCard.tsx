@@ -7,6 +7,7 @@ import { SwatchesPicker, ColorResult } from "react-color";
 import { cn } from "@/lib/utils";
 import type { Item } from "@/lib/workspace-state/types";
 import { getCardColorCSS, getCardAccentColor, SWATCHES_COLOR_GROUPS, type CardColor } from "@/lib/workspace-state/colors";
+import { useTheme } from "next-themes";
 
 import { useUIStore } from "@/lib/stores/ui-store";
 import { useCardContextProvider } from "@/hooks/ai/use-card-context-provider";
@@ -236,10 +237,13 @@ function FolderCardComponent({
     }
   }, [showDeleteConfirm]);
 
+  const { resolvedTheme } = useTheme();
+
   // Calculate colors using the same utilities as WorkspaceCard
   const bodyBgColor = getCardColorCSS(folderColor, 0.25); // Body is more transparent
   const tabBgColor = getCardColorCSS(folderColor, 0.35); // Tab is slightly less transparent
   const borderColor = isSelected ? 'rgba(255, 255, 255, 0.8)' : getCardAccentColor(folderColor, 0.5);
+  const selectedBoxShadow = isSelected && resolvedTheme !== 'dark' ? '0 0 3px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.5)' : undefined;
 
   return (
     <ContextMenu>
@@ -264,11 +268,12 @@ function FolderCardComponent({
               style={{
                 backgroundColor: tabBgColor,
                 borderColor: borderColor,
-                borderTopWidth: isSelected ? '2px' : '1px',
-                borderLeftWidth: isSelected ? '2px' : '1px',
-                borderRightWidth: isSelected ? '2px' : '1px',
+                borderTopWidth: isSelected ? '3px' : '1px',
+                borderLeftWidth: isSelected ? '3px' : '1px',
+                borderRightWidth: isSelected ? '3px' : '1px',
                 borderBottomWidth: 0,
-                transition: 'border-color 150ms ease-out, border-width 150ms ease-out'
+                transition: 'border-color 150ms ease-out, border-width 150ms ease-out',
+                boxShadow: selectedBoxShadow,
               }}
             />
 
@@ -278,8 +283,9 @@ function FolderCardComponent({
               style={{
                 backgroundColor: bodyBgColor,
                 borderColor: borderColor,
-                borderWidth: isSelected ? '2px' : '1px',
-                transition: 'border-color 150ms ease-out, border-width 150ms ease-out'
+                borderWidth: isSelected ? '3px' : '1px',
+                transition: 'border-color 150ms ease-out, border-width 150ms ease-out',
+                boxShadow: selectedBoxShadow,
               }}
             />
 

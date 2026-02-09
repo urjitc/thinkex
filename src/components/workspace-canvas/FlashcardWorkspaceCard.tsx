@@ -415,8 +415,9 @@ export function FlashcardWorkspaceCard({
     }, [isFlipped, startFlipAnimation, handleIndexChange, currentIndex, cards.length]);
 
     // Calculate border styling to match WorkspaceCard
-    const borderColor = isSelected ? 'rgba(255, 255, 255, 0.8)' : (item.color ? getCardAccentColor(item.color, 0.5) : 'transparent');
-    const borderWidth = isSelected ? '2px' : '1px';
+    const borderColor = isSelected ? 'rgba(255, 255, 255, 0.8)' : (item.color ? getCardAccentColor(item.color, resolvedTheme === 'dark' ? 0.5 : 0.3) : 'transparent');
+    const borderWidth = isSelected ? '3px' : '1px';
+    const selectedBoxShadow = isSelected && resolvedTheme !== 'dark' ? '0 0 3px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.5)' : undefined;
 
     return (
         <ContextMenu>
@@ -587,6 +588,7 @@ export function FlashcardWorkspaceCard({
                                     style={{
                                         backgroundColor: item.color ? getCardColorCSS(item.color as CardColor, 0.25) : 'var(--card)',
                                         border: `${borderWidth} solid ${borderColor}`,
+                                        boxShadow: selectedBoxShadow,
                                     }}
                                 >
                                     <div className="flex items-center gap-2 text-white/60 text-sm">
@@ -618,6 +620,7 @@ export function FlashcardWorkspaceCard({
                                     isFlipped={isFlipped}
                                     borderColor={borderColor}
                                     borderWidth={borderWidth}
+                                    selectedBoxShadow={selectedBoxShadow}
                                 />
                             )}
                             {/* Stack Tab 1 (directly below main card) - hidden during flip */}
