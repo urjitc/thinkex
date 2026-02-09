@@ -655,6 +655,8 @@ const Composer: FC<ComposerProps> = ({ items }) => {
 
         // Attach per-request context as metadata via runConfig
         // This flows through as body.metadata.custom on the server
+        // IMPORTANT: Always set runConfig (even empty) to clear stale data from previous sends,
+        // because the composer does NOT reset runConfig after send().
         const customMetadata: Record<string, unknown> = {};
         if (replySelections.length > 0) {
           customMetadata.replySelections = replySelections;
@@ -665,9 +667,9 @@ const Composer: FC<ComposerProps> = ({ items }) => {
         if (selectedActions.length > 0) {
           customMetadata.selectedActions = selectedActions;
         }
-        if (Object.keys(customMetadata).length > 0) {
-          aui?.composer()?.setRunConfig({ custom: customMetadata });
-        }
+        aui?.composer()?.setRunConfig(
+          Object.keys(customMetadata).length > 0 ? { custom: customMetadata } : {}
+        );
 
         // Set the modified text and send
         aui?.composer()?.setText(modifiedText);
