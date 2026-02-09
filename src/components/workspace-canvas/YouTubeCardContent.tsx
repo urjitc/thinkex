@@ -30,7 +30,7 @@ export function YouTubeCardContent({ item, isPlaying, onTogglePlay }: YouTubeCar
     videoId: isPlaying ? videoId : null,
     playlistId: isPlaying ? playlistId : null,
     playerVars: {
-      autoplay: 1,
+      autoplay: 0,
       controls: 0,
       disablekb: 1,
       fs: 0,
