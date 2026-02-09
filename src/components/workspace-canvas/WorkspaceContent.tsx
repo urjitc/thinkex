@@ -83,6 +83,8 @@ export default function WorkspaceContent({
   }, [selectedCardIdsKey]);
   const toggleCardSelection = useUIStore((state) => state.toggleCardSelection);
 
+  // Get workspace split view state from UI store
+  const workspaceSplitViewActive = useUIStore((state) => state.workspaceSplitViewActive);
 
 
 
@@ -402,6 +404,7 @@ export default function WorkspaceContent({
           allItems={viewState.items}
           isFiltered={isFiltering}
           isTemporaryFilter={isTemporaryFilter}
+          singleColumnMode={workspaceSplitViewActive}
           onDragStart={handleDragStart}
           onDragStop={handleDragStop}
           onUpdateItem={handleUpdateItem}

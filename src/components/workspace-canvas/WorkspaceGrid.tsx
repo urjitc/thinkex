@@ -17,6 +17,7 @@ interface WorkspaceGridProps {
   allItems: Item[]; // All items (unfiltered) for layout updates
   isFiltered: boolean; // Whether currently in filtered mode
   isTemporaryFilter?: boolean; // Whether in temporary filter mode (search) - prevents layout saves
+  singleColumnMode?: boolean; // Force 1-column layout (for workspace split view)
   onDragStart: () => void;
   onDragStop: (layout: LayoutItem[]) => void;
   onUpdateItem: (itemId: string, updates: Partial<Item>) => void;
@@ -47,6 +48,7 @@ export function WorkspaceGrid({
   allItems,
   isFiltered,
   isTemporaryFilter = false,
+  singleColumnMode = false,
   onDragStart,
   onDragStop,
   onUpdateItem,
@@ -164,6 +166,16 @@ export function WorkspaceGrid({
   const handleDrag = useCallback((layout: Layout, oldItem: LayoutItem | null, newItem: LayoutItem | null, placeholder: LayoutItem | null, e: Event, element: HTMLElement | null) => {
     const draggedItemId = draggedItemIdRef.current;
     if (!draggedItemId || !e) return;
+
+    // Single-column mode: lock horizontal position
+    if (singleColumnMode && newItem) {
+      newItem.x = 0;
+      newItem.w = 1;
+      if (placeholder) {
+        placeholder.x = 0;
+        placeholder.w = 1;
+      }
+    }
 
     const draggedItem = allItemsRef.current.find(i => i.id === draggedItemId);
     if (!draggedItem) {
@@ -496,6 +508,18 @@ export function WorkspaceGrid({
   // Note cards can transition between compact (w=1, h=4) and expanded (w>=2, h>=9) modes
   // based on EITHER width or height changes, allowing vertical-only resizing to trigger mode switches
   const handleResize = useCallback((layout: Layout, oldItem: LayoutItem | null, newItem: LayoutItem | null, placeholder: LayoutItem | null, e: Event, element: HTMLElement | null) => {
+    // Single-column mode: lock horizontal resizing
+    if (singleColumnMode && newItem) {
+      newItem.x = 0;
+      newItem.w = 1;
+      if (placeholder) {
+        placeholder.x = 0;
+        placeholder.w = 1;
+      }
+      // Allow vertical resizing only
+      return;
+    }
+
     // Enforce custom constraints for YouTube and single-column items
     if (!newItem || !oldItem) return;
     const itemData = allItemsRef.current.find(i => i.id === newItem.i);
@@ -745,7 +769,12 @@ export function WorkspaceGrid({
 
   // Define breakpoints and columns
   const breakpoints = useMemo(() => ({ lg: 600, xxs: 0 }), []);
-  const cols = useMemo(() => ({ lg: 4, xxs: 1 }), []);
+  const cols = useMemo(() => {
+    if (singleColumnMode) {
+      return { lg: 1, xxs: 1 }; // Force 1 column for workspace split view
+    }
+    return { lg: 4, xxs: 1 };
+  }, [singleColumnMode]);
 
   // Create layouts object for ResponsiveGridLayout with both breakpoints
   // Only provide xxs layout if at least one item has a saved xxs layout

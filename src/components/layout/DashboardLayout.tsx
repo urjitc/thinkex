@@ -39,6 +39,7 @@ interface DashboardLayoutProps {
   panels: React.ReactNode[];  // Array of panel elements to render (max 2)
   modalManager?: React.ReactNode; // Add modalManager as a separate prop
   maximizedItemId?: string | null; // Add maximized item ID
+  workspaceSplitViewActive?: boolean; // Workspace split view mode (workspace + item)
 }
 
 /**
@@ -66,6 +67,7 @@ export function DashboardLayout({
   panels,
   modalManager,
   maximizedItemId,
+  workspaceSplitViewActive = false,
 }: DashboardLayoutProps) {
   // Get sidebar control to auto-close when panels open
   const { setOpen } = useSidebar();
@@ -157,15 +159,45 @@ export function DashboardLayout({
                 </Sidebar>
 
                 <SidebarInset className="flex flex-col relative overflow-hidden">
-                  <WorkspaceCanvasDropzone>{workspaceSection}</WorkspaceCanvasDropzone>
+                  {/* WORKSPACE SPLIT VIEW MODE: Show workspace + item side-by-side */}
+                  {workspaceSplitViewActive && maximizedItemId ? (
+                    <ResizablePanelGroup direction="horizontal" className="flex-1">
+                      {/* Workspace Panel - Single Column Mode */}
+                      <ResizablePanel
+                        id="split-workspace-panel"
+                        order={1}
+                        defaultSize={40}
+                        minSize={25}
+                        maxSize={60}
+                      >
+                        <WorkspaceCanvasDropzone>{workspaceSection}</WorkspaceCanvasDropzone>
+                      </ResizablePanel>
 
-                  {/* Hide workspace content when item is maximized for better performance */}
-                  {maximizedItemId && (
-                    <div className="absolute inset-0 bg-background pointer-events-none" />
+                      <ResizableHandle className="border-r border-sidebar-border" />
+
+                      {/* Item Panel */}
+                      <ResizablePanel
+                        id="split-item-panel"
+                        order={2}
+                        defaultSize={60}
+                        minSize={40}
+                      >
+                        {modalManager}
+                      </ResizablePanel>
+                    </ResizablePanelGroup>
+                  ) : (
+                    <>
+                      <WorkspaceCanvasDropzone>{workspaceSection}</WorkspaceCanvasDropzone>
+
+                      {/* Hide workspace content when item is maximized for better performance */}
+                      {maximizedItemId && (
+                        <div className="absolute inset-0 bg-background pointer-events-none" />
+                      )}
+
+                      {/* Modal Manager - positioned here to cover strictly the workspace content area (below header) */}
+                      {modalManager}
+                    </>
                   )}
-
-                  {/* Modal Manager - positioned here to cover strictly the workspace content area (below header) */}
-                  {modalManager}
                 </SidebarInset>
               </div>
             </div>

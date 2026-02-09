@@ -698,6 +698,36 @@ export default function WorkspaceHeader({
           <div className="flex items-center gap-2 pointer-events-auto">
             <div id="workspace-header-portal" className="flex items-center gap-2" />
 
+            {/* Split View Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => {
+                    const { toggleWorkspaceSplitView } = useUIStore.getState();
+                    toggleWorkspaceSplitView();
+                  }}
+                  className="h-8 flex items-center justify-center gap-1.5 rounded-md border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer px-3"
+                  aria-label="Split View"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 4H5a2 2 0 00-2 2v14a2 2 0 002 2h4M15 4h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M9 4v16M15 4v16"
+                    />
+                  </svg>
+                  <span className="text-sm">Split View</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Split View</TooltipContent>
+            </Tooltip>
 
             <Tooltip>
               <TooltipTrigger asChild>
