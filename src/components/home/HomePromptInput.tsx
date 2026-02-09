@@ -45,6 +45,8 @@ const ALL_CONTENT_TYPES: { key: GenContentType; label: string }[] = [
   { key: 'youtube', label: 'YouTube Videos' },
 ];
 
+const VALID_GEN_TYPES = new Set<string>(ALL_CONTENT_TYPES.map(t => t.key));
+
 /**
  * Build placeholder workspace items for selected content types.
  */
@@ -104,7 +106,7 @@ function loadGenSettings(): GenerationSettings {
       const parsed = JSON.parse(stored);
       return {
         auto: typeof parsed.auto === 'boolean' ? parsed.auto : true,
-        types: Array.isArray(parsed.types) ? parsed.types : DEFAULT_GEN_SETTINGS.types,
+        types: Array.isArray(parsed.types) ? parsed.types.filter((t: string) => VALID_GEN_TYPES.has(t)) : DEFAULT_GEN_SETTINGS.types,
       };
     }
   } catch {}

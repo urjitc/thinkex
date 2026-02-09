@@ -131,7 +131,7 @@ function CreateFromPromptHandler({
     setIsChatExpanded?.(true);
 
     // Build type-aware message: only mention YouTube if selected (or auto mode)
-    const types = genTypes ? genTypes.split(',') : null;
+    const types = genTypes ? genTypes.split(',').map(s => s.trim()).filter(Boolean) : null;
     const includeYoutube = !types || types.includes('youtube');
     const wrapped = includeYoutube
       ? `Update the preexisting contents of this workspace to be about ${createFrom}. Only add one quality YouTube video.`
@@ -204,7 +204,7 @@ function GenerateStudyMaterialsHandler({
     setIsChatExpanded?.(true);
 
     // Build type-aware prompt: only include steps for selected types
-    const types = genTypes ? new Set(genTypes.split(',')) : null;
+    const types = genTypes ? new Set(genTypes.split(',').map(s => s.trim()).filter(Boolean)) : null;
     const steps: string[] = [];
     let n = 1;
     if (!types || types.has('note'))      steps.push(`${n++}. Update the note with a comprehensive summary`);
