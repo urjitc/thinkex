@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { WORKSPACE_PANEL_SIZES } from '@/lib/layout-constants';
 
 /**
@@ -184,6 +184,7 @@ const initialState = {
 
 export const useUIStore = create<UIState>()(
   devtools(
+    persist(
     (set) => ({
       ...initialState,
 
@@ -519,6 +520,12 @@ export const useUIStore = create<UIState>()(
         };
       }),
     }),
+    {
+      name: 'thinkex-ui-preferences',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ selectedModelId: state.selectedModelId }),
+    },
+    ),
     { name: 'UI Store' }
   )
 );
