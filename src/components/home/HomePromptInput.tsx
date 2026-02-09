@@ -44,6 +44,57 @@ const ALL_CONTENT_TYPES: { key: GenContentType; label: string }[] = [
   { key: 'youtube', label: 'YouTube Videos' },
 ];
 
+/**
+ * Build placeholder workspace items for selected content types.
+ */
+function buildPlaceholderItems(
+  effectiveTypes: Set<GenContentType>,
+  startY: number,
+  heights: { note: number; flashcard: number },
+): any[] {
+  const placeholders: any[] = [];
+  let currentY = startY;
+
+  if (effectiveTypes.has('note')) {
+    placeholders.push({
+      id: crypto.randomUUID(),
+      type: 'note',
+      name: 'Update me',
+      subtitle: '',
+      color: '#10B981',
+      layout: { x: 0, y: currentY, w: 4, h: heights.note },
+      data: { blockContent: [], field1: '' },
+    });
+    currentY += heights.note;
+  }
+
+  if (effectiveTypes.has('quiz')) {
+    placeholders.push({
+      id: crypto.randomUUID(),
+      type: 'quiz',
+      name: 'Update me',
+      subtitle: '',
+      color: '#F59E0B',
+      layout: { x: 0, y: currentY, w: 2, h: 13 },
+      data: { questions: [] },
+    });
+  }
+
+  if (effectiveTypes.has('flashcard')) {
+    placeholders.push({
+      id: crypto.randomUUID(),
+      type: 'flashcard',
+      name: 'Update me',
+      subtitle: '',
+      color: '#EC4899',
+      layout: { x: effectiveTypes.has('quiz') ? 2 : 0, y: currentY, w: 2, h: heights.flashcard },
+      data: { cards: [] },
+    });
+  }
+
+  return placeholders;
+}
+
 function loadGenSettings(): GenerationSettings {
   if (typeof window === 'undefined') return DEFAULT_GEN_SETTINGS;
   try {
@@ -262,48 +313,8 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
       const totalUploadY = uploadedFiles.length * fileHeight;
 
       // Build placeholder cards based on effective types, stacking layouts dynamically
-      const placeholders: any[] = [];
-      let currentY = totalUploadY;
-
-      if (effectiveTypes.has('note')) {
-        placeholders.push({
-          id: crypto.randomUUID(),
-          type: 'note' as const,
-          name: 'Update me',
-          subtitle: '',
-          color: '#10B981' as const,
-          layout: { x: 0, y: currentY, w: 4, h: 13 },
-          lastSource: 'user' as const,
-          data: { blockContent: [], field1: '' } as any,
-        });
-        currentY += 13;
-      }
-
-      if (effectiveTypes.has('quiz')) {
-        placeholders.push({
-          id: crypto.randomUUID(),
-          type: 'quiz' as const,
-          name: 'Update me',
-          subtitle: '',
-          color: '#F59E0B' as const,
-          layout: { x: 0, y: currentY, w: 2, h: 13 },
-          lastSource: 'user' as const,
-          data: { questions: [] } as any,
-        });
-      }
-
-      if (effectiveTypes.has('flashcard')) {
-        placeholders.push({
-          id: crypto.randomUUID(),
-          type: 'flashcard' as const,
-          name: 'Update me',
-          subtitle: '',
-          color: '#EC4899' as const,
-          layout: { x: effectiveTypes.has('quiz') ? 2 : 0, y: currentY, w: 2, h: 8 },
-          lastSource: 'user' as const,
-          data: { cards: [] } as any,
-        });
-      }
+      const placeholders = buildPlaceholderItems(effectiveTypes, totalUploadY, { note: 13, flashcard: 8 })
+        .map(item => ({ ...item, lastSource: 'user' as const }));
 
       const allItems: any[] = [...pdfItems, ...placeholders];
 
@@ -323,47 +334,7 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
       template = "blank";
     } else if (isCustom) {
       template = "blank";
-      const placeholders: any[] = [];
-      let currentY = 0;
-      const colors = ['#10B981', '#F59E0B', '#EC4899'];
-      let colorIdx = 0;
-
-      if (effectiveTypes.has('note')) {
-        placeholders.push({
-          id: crypto.randomUUID(),
-          type: 'note',
-          name: 'Update me',
-          subtitle: '',
-          color: colors[colorIdx++ % colors.length],
-          layout: { x: 0, y: currentY, w: 4, h: 9 },
-          data: { blockContent: [], field1: '' },
-        });
-        currentY += 9;
-      }
-
-      if (effectiveTypes.has('quiz')) {
-        placeholders.push({
-          id: crypto.randomUUID(),
-          type: 'quiz',
-          name: 'Update me',
-          subtitle: '',
-          color: colors[colorIdx++ % colors.length],
-          layout: { x: 0, y: currentY, w: 2, h: 13 },
-          data: { questions: [] },
-        });
-      }
-
-      if (effectiveTypes.has('flashcard')) {
-        placeholders.push({
-          id: crypto.randomUUID(),
-          type: 'flashcard',
-          name: 'Update me',
-          subtitle: '',
-          color: colors[colorIdx++ % colors.length],
-          layout: { x: effectiveTypes.has('quiz') ? 2 : 0, y: currentY, w: 2, h: 9 },
-          data: { cards: [] },
-        });
-      }
+      const placeholders = buildPlaceholderItems(effectiveTypes, 0, { note: 9, flashcard: 9 });
 
       if (placeholders.length > 0) {
         initialState = {
@@ -645,11 +616,15 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
                         <button
                           key={key}
                           type="button"
+                          role="switch"
+                          aria-checked={active}
+                          aria-label={`Toggle ${label}`}
                           className="flex items-center justify-between w-full"
                           onClick={() => toggleGenType(key)}
                         >
                           <span className="text-xs text-foreground">{label}</span>
                           <span
+                            aria-hidden="true"
                             className={cn(
                               "relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full transition-colors",
                               active ? "bg-primary" : "bg-muted-foreground/25"
@@ -669,11 +644,15 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
                   <div className="my-2.5 h-px bg-border" />
                   <button
                     type="button"
+                    role="switch"
+                    aria-checked={genSettings.auto}
+                    aria-label="Toggle auto generation"
                     className="flex items-center justify-between w-full"
                     onClick={() => setGenSettings(prev => ({ ...prev, auto: !prev.auto }))}
                   >
                     <span className="text-xs font-medium text-foreground">Auto</span>
                     <span
+                      aria-hidden="true"
                       className={cn(
                         "relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full transition-colors",
                         genSettings.auto ? "bg-primary" : "bg-muted-foreground/25"

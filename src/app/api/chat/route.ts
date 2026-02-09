@@ -96,7 +96,7 @@ function getSelectedCardsContext(body: any): string {
 }
 
 // Regex to detect createFrom auto-generated prompts (YouTube suffix is optional for custom type selections)
-const CREATE_FROM_REGEX = /^Update the preexisting contents of this workspace to be about (.+?)\.(?:\s*Only add one quality YouTube video\.)?$/;
+const CREATE_FROM_REGEX = /^Update the preexisting contents of this workspace to be about (.+)\.(?:\s*Only add one quality YouTube video\.)?$/;
 
 /**
  * Detect if the first user message is a createFrom auto-generated prompt
@@ -126,9 +126,9 @@ function getCreateFromSystemPrompt(messages: any[], genTypes: string[] | null): 
 
   // Build type-specific update instructions — always include title param
   const updateInstructions: string[] = [];
-  if (types.has('note'))      updateInstructions.push('   - Use `updateNote` with noteName "Update me" and a descriptive `title` (e.g. "${topic} Notes")');
-  if (types.has('flashcard')) updateInstructions.push('   - Use `updateFlashcards` with deckName "Update me" and a descriptive `title` (e.g. "${topic} Flashcards")');
-  if (types.has('quiz'))      updateInstructions.push('   - Use `updateQuiz` with quizName "Update me" and a descriptive `title` (e.g. "${topic} Quiz")');
+  if (types.has('note'))      updateInstructions.push(`   - Use \`updateNote\` with noteName "Update me" and a descriptive \`title\` (e.g. "${topic} Notes")`);
+  if (types.has('flashcard')) updateInstructions.push(`   - Use \`updateFlashcards\` with deckName "Update me" and a descriptive \`title\` (e.g. "${topic} Flashcards")`);
+  if (types.has('quiz'))      updateInstructions.push(`   - Use \`updateQuiz\` with quizName "Update me" and a descriptive \`title\` (e.g. "${topic} Quiz")`);
 
   // Build type-specific quality guidelines
   const qualityGuidelines: string[] = [];
@@ -146,20 +146,22 @@ YOUTUBE VIDEO:
 - Look for high view counts and reputable channels as quality signals`;
   }
 
-  // Type restriction only when custom types are specified
-  const restriction = genTypes
-    ? '\n3. **Do NOT create or update any other item types** beyond what is listed above.'
-    : '';
+  // Build numbered instructions dynamically to avoid numbering gaps
+  const instructions: string[] = [];
+  let instrNum = 1;
+  instructions.push(`${instrNum++}. **Update ONLY these workspace items** about the topic:\n${updateInstructions.join('\n')}`);
+  instructions.push(`${instrNum++}. **Be thorough but focused** - Provide a solid foundation for understanding the topic without being overwhelming.`);
+  if (genTypes) {
+    instructions.push(`${instrNum++}. **Do NOT create or update any other item types** beyond what is listed above.`);
+  }
+  instructions.push(`${instrNum++}. **Do NOT ask the user questions** - This is an automated initialization, proceed directly with updating the workspace.`);
 
   return `
 CREATE-FROM WORKSPACE INITIALIZATION MODE:
 This is an automatic workspace initialization request. The user wants to transform this workspace into a curated learning/research space about: "${topic}"
 
 CRITICAL INSTRUCTIONS FOR WORKSPACE CURATION:
-1. **Update ONLY these workspace items** about the topic:
-${updateInstructions.join('\n')}
-2. **Be thorough but focused** - Provide a solid foundation for understanding the topic without being overwhelming.${restriction}
-4. **Do NOT ask the user questions** - This is an automated initialization, proceed directly with updating the workspace.
+${instructions.join('\n')}
 
 QUALITY GUIDELINES FOR CONTENT:
 ${qualityGuidelines.join('\n')}
@@ -244,7 +246,7 @@ export async function POST(req: Request) {
     ];
 
     // Inject createFrom workspace initialization prompt if detected
-    const genTypes: string[] | null = body.genTypes ? body.genTypes.split(',') : null;
+    const genTypes: string[] | null = body.genTypes ? body.genTypes.split(',').map((t: string) => t.trim()).filter(Boolean) : null;
     const createFromPrompt = getCreateFromSystemPrompt(cleanedMessages, genTypes);
     if (createFromPrompt) {
       systemPromptParts.push(`\n\n${createFromPrompt}`);

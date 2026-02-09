@@ -212,6 +212,14 @@ function GenerateStudyMaterialsHandler({
     if (!types || types.has('flashcard')) steps.push(`${n++}. Update the flashcards with key terms and concepts`);
     if (!types || types.has('youtube'))   steps.push(`${n++}. Search and add one relevant YouTube video if possible`);
 
+    // If genTypes was set but contained no recognized values, fall back to all types
+    if (steps.length === 0) {
+      steps.push('1. Update the note with a comprehensive summary');
+      steps.push('2. Update the quiz with 5-10 relevant questions');
+      steps.push('3. Update the flashcards with key terms and concepts');
+      steps.push('4. Search and add one relevant YouTube video if possible');
+    }
+
     const prompt = `First, process any PDF files in this workspace.\n\nThen, using the content:\n${steps.join('\n')}`;
 
     let attempts = 0;
