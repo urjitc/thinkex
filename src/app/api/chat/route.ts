@@ -149,7 +149,9 @@ YOUTUBE VIDEO:
   // Build numbered instructions dynamically to avoid numbering gaps
   const instructions: string[] = [];
   let instrNum = 1;
-  instructions.push(`${instrNum++}. **Update ONLY these workspace items** about the topic:\n${updateInstructions.join('\n')}`);
+  if (updateInstructions.length > 0) {
+    instructions.push(`${instrNum++}. **Update ONLY these workspace items** about the topic:\n${updateInstructions.join('\n')}`);
+  }
   instructions.push(`${instrNum++}. **Be thorough but focused** - Provide a solid foundation for understanding the topic without being overwhelming.`);
   if (genTypes) {
     instructions.push(`${instrNum++}. **Do NOT create or update any other item types** beyond what is listed above.`);
