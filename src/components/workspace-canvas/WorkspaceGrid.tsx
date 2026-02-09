@@ -690,10 +690,18 @@ export function WorkspaceGrid({
   // Layout for all items (including folder-type items)
   const combinedLayout = useMemo(() => {
     const itemLayouts = itemsToLayout(displayItems);
+
+    // In single-column mode, enforce minimum height of 5 rows
+    if (singleColumnMode) {
+      itemLayouts.forEach(layout => {
+        layout.h = Math.max(layout.h, 5);
+      });
+    }
+
     // Update layout ref
     layoutRef.current = itemLayouts;
     return itemLayouts;
-  }, [displayItems]);
+  }, [displayItems, singleColumnMode]);
 
   // Memoize children to take advantage of ResponsiveGridLayout's shouldComponentUpdate optimization
   const children = useMemo(() => {
