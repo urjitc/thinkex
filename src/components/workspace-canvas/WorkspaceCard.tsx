@@ -592,7 +592,8 @@ function WorkspaceCard({
             style={{
               backgroundColor: (item.type === 'youtube' || item.type === 'image') ? 'transparent' : (item.color ? getCardColorCSS(item.color, resolvedTheme === 'dark' ? 0.25 : 0.4) : 'var(--card)'),
               borderColor: isSelected ? 'rgba(255, 255, 255, 0.8)' : (item.color ? getCardAccentColor(item.color, resolvedTheme === 'dark' ? 0.5 : 0.3) : 'transparent'),
-              borderWidth: isSelected ? '2px' : ((item.type === 'youtube' || item.type === 'image' || (item.type === 'pdf' && shouldShowPreview)) ? '0px' : '1px'),
+              borderWidth: isSelected ? '3px' : ((item.type === 'youtube' || item.type === 'image' || (item.type === 'pdf' && shouldShowPreview)) ? '0px' : '1px'),
+              boxShadow: isSelected && resolvedTheme !== 'dark' ? '0 0 3px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.5)' : undefined,
               transition: 'border-color 150ms ease-out, box-shadow 150ms ease-out, background-color 150ms ease-out'
             } as React.CSSProperties}
             onMouseDown={handleMouseDown}

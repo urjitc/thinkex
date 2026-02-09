@@ -11,10 +11,11 @@ interface FlipCardProps {
     isFlipped: boolean;
     borderColor?: string;
     borderWidth?: string;
+    selectedBoxShadow?: string;
 }
 
 // Memoize the entire FlipCard to prevent unnecessary re-renders
-export const FlipCard = memo(function FlipCard({ front, back, className = "", color, isFlipped, borderColor, borderWidth }: FlipCardProps) {
+export const FlipCard = memo(function FlipCard({ front, back, className = "", color, isFlipped, borderColor, borderWidth, selectedBoxShadow }: FlipCardProps) {
     // Track animation state to control content visibility
     const [isAnimating, setIsAnimating] = useState(false);
     const [showFront, setShowFront] = useState(!isFlipped);
@@ -55,8 +56,10 @@ export const FlipCard = memo(function FlipCard({ front, back, className = "", co
         };
     }, [isFlipped]);
 
-    // Static box shadow
-    const boxShadow = "0 8px 30px rgba(0, 0, 0, 0.2)";
+    // Static box shadow, merge with selected shadow if present
+    const boxShadow = selectedBoxShadow
+        ? `0 8px 30px rgba(0, 0, 0, 0.2), ${selectedBoxShadow}`
+        : "0 8px 30px rgba(0, 0, 0, 0.2)";
 
     return (
         <div
@@ -150,7 +153,8 @@ export const FlipCard = memo(function FlipCard({ front, back, className = "", co
         prevProps.front === nextProps.front &&
         prevProps.back === nextProps.back &&
         prevProps.borderColor === nextProps.borderColor &&
-        prevProps.borderWidth === nextProps.borderWidth
+        prevProps.borderWidth === nextProps.borderWidth &&
+        prevProps.selectedBoxShadow === nextProps.selectedBoxShadow
     );
 });
 
