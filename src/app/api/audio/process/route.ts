@@ -1,4 +1,9 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import {
+  GoogleGenAI,
+  Type,
+  createPartFromUri,
+  createUserContent,
+} from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -77,12 +82,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Enforce a 50 MB size limit before buffering into memory
-    const MAX_AUDIO_SIZE = 50 * 1024 * 1024;
+    // Enforce a 200 MB size limit before buffering into memory
+    const MAX_AUDIO_SIZE = 200 * 1024 * 1024;
     const contentLength = Number(audioResponse.headers.get("content-length") || "0");
     if (contentLength > MAX_AUDIO_SIZE) {
       return NextResponse.json(
-        { error: "Audio file exceeds the 50 MB size limit" },
+        { error: "Audio file exceeds the 200 MB size limit" },
         { status: 400 }
       );
     }
@@ -90,13 +95,26 @@ export async function POST(req: NextRequest) {
     const audioBuffer = await audioResponse.arrayBuffer();
     if (audioBuffer.byteLength > MAX_AUDIO_SIZE) {
       return NextResponse.json(
-        { error: "Audio file exceeds the 50 MB size limit" },
+        { error: "Audio file exceeds the 200 MB size limit" },
         { status: 400 }
       );
     }
-    const base64Audio = Buffer.from(audioBuffer).toString("base64");
 
     const client = new GoogleGenAI({ apiKey });
+
+    // Upload audio to Gemini Files API (supports up to 2 GB, avoids 20 MB inline limit)
+    const audioBlob = new Blob([audioBuffer], { type: audioMimeType });
+    const uploadedFile = await client.files.upload({
+      file: audioBlob,
+      config: { mimeType: audioMimeType },
+    });
+
+    if (!uploadedFile.uri || !uploadedFile.mimeType) {
+      return NextResponse.json(
+        { error: "Failed to upload audio to Gemini" },
+        { status: 500 }
+      );
+    }
 
     const prompt = `Process this audio file and generate a detailed transcription and summary.
 
@@ -107,20 +125,10 @@ Requirements:
 
     const response = await client.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              inlineData: {
-                mimeType: audioMimeType,
-                data: base64Audio,
-              },
-            },
-            { text: prompt },
-          ],
-        },
-      ],
+      contents: createUserContent([
+        createPartFromUri(uploadedFile.uri, uploadedFile.mimeType),
+        prompt,
+      ]),
       config: {
         responseMimeType: "application/json",
         responseSchema: {

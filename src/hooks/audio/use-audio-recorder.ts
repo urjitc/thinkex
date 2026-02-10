@@ -68,7 +68,11 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       streamRef.current = stream;
 
       const mimeType = getSupportedMimeType();
-      const recorder = new MediaRecorder(stream, { mimeType });
+      // Use a low bitrate optimised for speech — keeps 45-min recordings under ~15 MB
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        audioBitsPerSecond: 32_000,
+      });
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {

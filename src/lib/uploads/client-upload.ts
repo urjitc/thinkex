@@ -10,7 +10,7 @@
  * Falls back to /api/upload-file for local storage mode.
  */
 
-const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_SIZE_BYTES = 200 * 1024 * 1024; // 200MB
 
 interface UploadResult {
   url: string;

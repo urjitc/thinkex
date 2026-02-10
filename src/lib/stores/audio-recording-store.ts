@@ -81,7 +81,11 @@ export const useAudioRecordingStore = create<AudioRecordingState>((set, get) => 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = getSupportedMimeType();
-      const recorder = new MediaRecorder(stream, { mimeType });
+      // Use a low bitrate optimised for speech — keeps 45-min recordings under ~15 MB
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        audioBitsPerSecond: 32_000,
+      });
 
       // Set up Web Audio API analyser for waveform visualisation
       const audioContext = new AudioContext();
