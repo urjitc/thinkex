@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
-export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
@@ -60,13 +59,10 @@ export async function POST(req: NextRequest) {
     const prompt = `Process this audio file and generate a detailed transcription and summary.
 
 Requirements:
-1. Provide a brief summary of the entire audio content.
+1. Provide a comprehensive summary of the entire audio content.
 2. Identify distinct speakers (e.g., Speaker 1, Speaker 2, or names if context allows).
 3. Provide accurate timestamps for each segment (Format: MM:SS).
-4. Detect the primary language of each segment.
-5. If the segment is in a language different than English, also provide the English translation.
-6. Identify the primary emotion of the speaker in this segment. You MUST choose exactly one of the following: happy, sad, angry, neutral.
-7. Provide the full plain-text transcript combining all segments.`;
+4. Provide the full plain-text transcript combining all segments.`;
 
     const response = await client.models.generateContent({
       model: "gemini-2.5-flash",
@@ -108,21 +104,11 @@ Requirements:
                   speaker: { type: Type.STRING },
                   timestamp: { type: Type.STRING },
                   content: { type: Type.STRING },
-                  language: { type: Type.STRING },
-                  language_code: { type: Type.STRING },
-                  translation: { type: Type.STRING },
-                  emotion: {
-                    type: Type.STRING,
-                    enum: ["happy", "sad", "angry", "neutral"],
-                  },
                 },
                 required: [
                   "speaker",
                   "timestamp",
                   "content",
-                  "language",
-                  "language_code",
-                  "emotion",
                 ],
               },
             },
