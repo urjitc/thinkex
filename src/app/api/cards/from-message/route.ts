@@ -82,18 +82,15 @@ INSTRUCTIONS:
    - Use > for block quotes when appropriate
    - Use proper line breaks and spacing for readability
 4. Format mathematical expressions using LaTeX:
-   - ALWAYS use DOUBLE dollar signs $$...$$ for ALL math. NEVER use single $ for math — single $ is ONLY for currency (e.g., $19.99).
-   - Using single $...$ for math WILL BREAK rendering. This is critical.
+   - Use $$...$$ for all math expressions (both inline and block)
    - For inline math: $$E = mc^2$$ (same line as text)
    - For block math (separate lines):
      $$
      \\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}
      $$
-   - CORRECT: "The variable $$x$$ satisfies $$x^2 + 1 = 0$$"
-   - WRONG: "The variable $x$ satisfies $x^2 + 1 = 0$" ← NEVER do this
-   - CRITICAL: Always ensure math blocks are properly closed with matching $$
+   - For currency, use a plain $ with no closing $: e.g. $19.99, $5
+   - Always ensure math blocks are properly closed with matching $$
    - Add spaces around $$ symbols when math appears in lists or tables
-   - Do not add periods, commas, or other punctuation immediately after math expressions
 5. If the content contains multiple selections or fragments, combine them into a single cohesive narrative
 6. Maintain the original meaning and key information while improving clarity and organization
 7. Remove any redundant or repetitive information

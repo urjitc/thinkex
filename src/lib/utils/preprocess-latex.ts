@@ -1,13 +1,17 @@
 /**
  * Preprocesses markdown content to normalize LaTeX delimiters for Streamdown/remark-math.
  *
- * Fixes two issues:
- * 1. Converts \(...\) → $...$ and \[...\] → $$...$$ (remark-math doesn't support these)
- * 2. Collapses internal newlines in $$ blocks so multiline math renders correctly
- *    (workaround for streamdown parse-blocks splitting issue, fixed in unreleased 83f043c)
+ * Handles:
+ * 1. Protects currency values ($19.99, $5, $1,000) from being parsed as math
+ * 2. Converts \(...\) → $...$ and \[...\] → $$...$$ (remark-math doesn't support these)
  *
  * Preserves code blocks (``` and inline `) so their contents are never modified.
  */
+
+// Currency pattern: $ followed by digits, optional commas/decimals — e.g. $5, $19.99, $1,000.50
+// Must NOT be preceded by another $ (to avoid matching inside $$...$$)
+const CURRENCY_REGEX = /(?<!\$)\$(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)\b/g;
+
 export function preprocessLatex(markdown: string): string {
   if (!markdown) return markdown;
 
@@ -18,28 +22,30 @@ export function preprocessLatex(markdown: string): string {
     return `\x00CODE${preserved.length - 1}\x00`;
   });
 
-  // 2. Convert \(...\) → $...$ (inline math)
+  // 2. Protect currency values from being parsed as math delimiters
+  //    e.g. "$19.99" → placeholder, restored at the end
+  const currencies: string[] = [];
+  result = result.replace(CURRENCY_REGEX, (match) => {
+    currencies.push(match);
+    return `\x00CUR${currencies.length - 1}\x00`;
+  });
+
+  // 3. Convert \(...\) → $...$ (inline math)
   result = result.replace(/\\\(([\s\S]*?)\\\)/g, (_match, math) => {
     return `$${math}$`;
   });
 
-  // 3. Convert \[...\] → $$...$$ (display math)
+  // 4. Convert \[...\] → $$...$$ (display math)
   result = result.replace(/\\\[([\s\S]*?)\\\]/g, (_match, math) => {
     return `$$${math}$$`;
   });
 
-  // 4. Collapse internal newlines in $$ blocks (preserve \\ for matrix row breaks)
-  //    This fixes multiline display math that gets split by marked's Lexer.
-  result = result.replace(/\$\$([\s\S]*?)\$\$/g, (_match, math) => {
-    const placeholder = "\x01NEWLINE\x01";
-    let processed = math.replace(/\\\\/g, placeholder);
-    processed = processed.trim();
-    processed = processed.replace(/\n/g, " ");
-    processed = processed.replace(new RegExp(placeholder, "g"), "\\\\");
-    return `$$\n${processed}\n$$`;
+  // 5. Restore protected currency values
+  result = result.replace(/\x00CUR(\d+)\x00/g, (_match, idx) => {
+    return currencies[Number(idx)];
   });
 
-  // 5. Restore protected code blocks
+  // 6. Restore protected code blocks
   result = result.replace(/\x00CODE(\d+)\x00/g, (_match, idx) => {
     return preserved[Number(idx)];
   });

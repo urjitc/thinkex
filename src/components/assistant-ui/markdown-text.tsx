@@ -6,7 +6,7 @@ import { createCodePlugin } from "@streamdown/code";
 import { mermaid } from "@streamdown/mermaid";
 import { createMathPlugin } from "@streamdown/math";
 
-const math = createMathPlugin();
+const math = createMathPlugin({ singleDollarTextMath: true });
 
 // Create code plugin with one-dark-pro theme
 const code = createCodePlugin({

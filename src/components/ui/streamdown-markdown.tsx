@@ -10,7 +10,7 @@ import type { AnchorHTMLAttributes, HTMLAttributes } from "react";
 import { MarkdownLink } from "@/components/ui/markdown-link";
 import { preprocessLatex } from "@/lib/utils/preprocess-latex";
 
-const math = createMathPlugin();
+const math = createMathPlugin({ singleDollarTextMath: true });
 
 // Create code plugin with one-dark-pro theme
 const code = createCodePlugin({
