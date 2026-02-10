@@ -4,7 +4,9 @@ import { Streamdown, defaultRehypePlugins } from "streamdown";
 import "streamdown/styles.css";
 import { createCodePlugin } from "@streamdown/code";
 import { mermaid } from "@streamdown/mermaid";
-import { math } from "@streamdown/math";
+import { createMathPlugin } from "@streamdown/math";
+
+const math = createMathPlugin();
 
 // Create code plugin with one-dark-pro theme
 const code = createCodePlugin({
@@ -16,6 +18,7 @@ import { cn } from "@/lib/utils";
 import React, { memo, useRef, useEffect } from "react";
 import type { AnchorHTMLAttributes, HTMLAttributes } from "react";
 import { MarkdownLink } from "@/components/ui/markdown-link";
+import { preprocessLatex } from "@/lib/utils/preprocess-latex";
 
 const MarkdownTextImpl = () => {
   // Get the text content from assistant-ui context
@@ -154,7 +157,7 @@ const MarkdownTextImpl = () => {
           },
         }}
       >
-        {text}
+        {preprocessLatex(text)}
       </Streamdown>
     </div>
   );

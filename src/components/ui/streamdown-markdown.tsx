@@ -3,11 +3,14 @@
 import { Streamdown, defaultRehypePlugins } from "streamdown";
 import { createCodePlugin } from "@streamdown/code";
 import { mermaid } from "@streamdown/mermaid";
-import { math } from "@streamdown/math";
+import { createMathPlugin } from "@streamdown/math";
 import { cn } from "@/lib/utils";
 import React, { memo } from "react";
 import type { AnchorHTMLAttributes, HTMLAttributes } from "react";
 import { MarkdownLink } from "@/components/ui/markdown-link";
+import { preprocessLatex } from "@/lib/utils/preprocess-latex";
+
+const math = createMathPlugin();
 
 // Create code plugin with one-dark-pro theme
 const code = createCodePlugin({
@@ -73,7 +76,7 @@ const StreamdownMarkdownImpl: React.FC<StreamdownMarkdownProps> = ({
           },
         }}
       >
-        {children}
+        {preprocessLatex(children)}
       </Streamdown>
     </div>
   );

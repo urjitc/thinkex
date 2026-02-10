@@ -54,22 +54,30 @@ Rules:
 
 FORMATTING:
 - Use Markdown (GFM) with proper structure
-- Math: Use $$...$$ for ALL math. Single $ is for currency only.
-  - Inline math: $$E = mc^2$$ (same line as text)
-  - Block math: $$...$$ on separate lines (centered display)
-    Example:
+- MATH (CRITICAL — read carefully):
+  - ALWAYS use DOUBLE dollar signs $$...$$ for ALL math. NEVER use single dollar sign $...$ for math.
+  - Single $ is ONLY for currency (e.g., $19.99, $5). Using single $ for math WILL BREAK rendering.
+  - Inline math example: The equation $$E = mc^2$$ shows mass-energy equivalence.
+  - Block math example (on separate lines for centered display):
     $$
-    \int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
+    \\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}
     $$
-  - Apply these same math formatting rules to all tool calls and responses
-  - Spacing: Use \, for thin space in integrals: $$\int f(x) \, dx$$
+  - CORRECT examples:
+    * "The value of $$x$$ is 5" (inline, double $$)
+    * "We know that $$\\frac{a}{b} = c$$" (inline fraction, double $$)
+    * "$$\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}$$" (inline sum, double $$)
+  - WRONG examples (NEVER do these):
+    * "The value of $x$ is 5" ← WRONG, single $ breaks rendering
+    * "$\\frac{a}{b} = c$" ← WRONG, single $ breaks rendering
+  - Apply these same math formatting rules to ALL tool calls (createNote, updateNote, flashcards, etc.)
+  - Spacing: Use \\, for thin space in integrals: $$\\int f(x) \\, dx$$
   - Common patterns:
-    * Fractions: $$\frac{a}{b}$$
-    * Square roots: $$\sqrt{x}$$ or $$\sqrt[n]{x}$$
-    * Greek letters: $$\alpha, \beta, \gamma, \pi$$
-    * Summations: $$\sum_{i=1}^{n}$$
-    * Integrals: $$\int_{a}^{b}$$
-    * Matrices: $$\begin{bmatrix} a & b \\ c & d \end{bmatrix}$$
+    * Fractions: $$\\frac{a}{b}$$
+    * Square roots: $$\\sqrt{x}$$ or $$\\sqrt[n]{x}$$
+    * Greek letters: $$\\alpha, \\beta, \\gamma, \\pi$$
+    * Summations: $$\\sum_{i=1}^{n}$$
+    * Integrals: $$\\int_{a}^{b}$$
+    * Matrices: $$\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}$$
   - Best practices:
     * Keep inline math simple (e.g., $$x = 5$$)
     * Use block math for complex expressions
