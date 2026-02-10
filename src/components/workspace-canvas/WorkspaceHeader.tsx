@@ -55,6 +55,7 @@ import { UploadDialog } from "@/components/modals/UploadDialog";
 import { AudioRecorderDialog } from "@/components/modals/AudioRecorderDialog";
 import { useAudioRecordingStore } from "@/lib/stores/audio-recording-store";
 import { getBestFrameForRatio } from "@/lib/workspace-state/aspect-ratios";
+import { renderWorkspaceMenuItems } from "./workspace-menu-items";
 interface WorkspaceHeaderProps {
   titleInputRef: React.RefObject<HTMLInputElement | null>;
   searchQuery: string;
@@ -964,141 +965,43 @@ export default function WorkspaceHeader({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56" sideOffset={8}>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      if (addItem) {
-                        const itemId = addItem("note");
-                        // Auto-navigate to the newly created note instead of opening modal
-                        if (onItemCreated && itemId) {
-                          onItemCreated([itemId]);
-                        }
-                      }
-                    }}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <FileText className="size-4" />
-                    Note
-                  </DropdownMenuItem>
-
-                  {addItem && (
-                    <DropdownMenuItem
-                      onClick={() => {
+                  {renderWorkspaceMenuItems({
+                    callbacks: {
+                      onCreateNote: () => {
                         if (addItem) {
-                          addItem("folder");
+                          const itemId = addItem("note");
+                          if (onItemCreated && itemId) {
+                            onItemCreated([itemId]);
+                          }
                         }
-                      }}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <FolderIcon className="size-4" />
-                      Folder
-                    </DropdownMenuItem>
-                  )}
-
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setShowUploadDialog(true);
-                      setIsNewMenuOpen(false);
-                    }}
-                    className="flex items-center gap-2 cursor-pointer p-2"
-                  >
-                    <Upload className="size-4" />
-                    <div className="flex items-center justify-between w-full">
-                      <span>Upload</span>
-                      <span className="text-xs text-muted-foreground">PDF/Image</span>
-                    </div>
-                  </DropdownMenuItem>
-
-                                    <DropdownMenuItem
-                    onClick={() => {
-                      const isRecording = useAudioRecordingStore.getState().isRecording;
-                      if (isRecording) {
-                        toast.error("Recording already in progress");
-                        return;
-                      }
-                      openAudioDialog();
-                      setIsNewMenuOpen(false);
-                    }}
-                    className="flex items-center gap-2 cursor-pointer p-2"
-                  >
-                    <Mic className="size-4" />
-                    <div className="flex items-center justify-between w-full">
-                      <span>Audio</span>
-                      <span className="text-xs text-muted-foreground">Lecture/Meeting</span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setShowYouTubeDialog(true);
-                    }}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <Play className="size-4" />
-                    YouTube
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setShowWebsiteDialog(true);
-                      setIsNewMenuOpen(false);
-                    }}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <Newspaper className="size-4" />
-                    Website
-                  </DropdownMenuItem>
-
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
-                      <LuBook className="size-4 text-muted-foreground" />
-                      Learn
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          if (addItem) {
-                            const itemId = addItem("flashcard");
-                            if (onItemCreated && itemId) {
-                              onItemCreated([itemId]);
-                            }
+                      },
+                      onCreateFolder: () => { if (addItem) addItem("folder"); },
+                      onUpload: () => { setShowUploadDialog(true); setIsNewMenuOpen(false); },
+                      onAudio: () => { openAudioDialog(); setIsNewMenuOpen(false); },
+                      onYouTube: () => { setShowYouTubeDialog(true); setIsNewMenuOpen(false); },
+                      onWebsite: () => { setShowWebsiteDialog(true); setIsNewMenuOpen(false); },
+                      onFlashcards: () => {
+                        if (addItem) {
+                          const itemId = addItem("flashcard");
+                          if (onItemCreated && itemId) {
+                            onItemCreated([itemId]);
                           }
-                        }}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <PiCardsThreeBold className="size-4 text-muted-foreground rotate-180" />
-                        Flashcards
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          // Open chat if closed
-                          if (setIsChatExpanded && !isChatExpanded) {
-                            setIsChatExpanded(true);
-                          }
-                          // Fill composer with quiz creation prompt
-                          aui?.composer().setText("Create a quiz about ");
-                          // Focus the composer input
-                          focusComposerInput();
-                          toast.success("Quiz creation started");
-                        }}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <Brain className="size-4" />
-                        Quiz
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                  {/* <DropdownMenuItem
-                    onClick={() => {
-                      toast.success("Deep Research action selected");
-                      setSelectedActions(["deep-research"]);
-                      aui?.composer().setText("I want to do research on ");
-                      if (setIsChatExpanded && !isChatExpanded) {
-                        setIsChatExpanded(true);
-                      }
-                    }}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <Globe className="size-4" />
-                    Deep Research
-                  </DropdownMenuItem> */}
+                        }
+                      },
+                      onQuiz: () => {
+                        if (setIsChatExpanded && !isChatExpanded) {
+                          setIsChatExpanded(true);
+                        }
+                        aui?.composer().setText("Create a quiz about ");
+                        focusComposerInput();
+                        toast.success("Quiz creation started");
+                      },
+                    },
+                    MenuItem: DropdownMenuItem,
+                    MenuSub: DropdownMenuSub,
+                    MenuSubTrigger: DropdownMenuSubTrigger,
+                    MenuSubContent: DropdownMenuSubContent,
+                  })}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
