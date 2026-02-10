@@ -947,24 +947,24 @@ export default function WorkspaceHeader({
             {addItem && (
               <DropdownMenu open={isNewMenuOpen} onOpenChange={setIsNewMenuOpen}>
                 <DropdownMenuTrigger asChild>
-                  <button
-                    className={cn(
-                      "h-8 outline-none rounded-md text-sm pointer-events-auto whitespace-nowrap relative cursor-pointer box-border",
-                      "border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
-                      isCompactMode
-                        ? "w-8 flex items-center justify-center px-0"
-                        : "inline-flex items-center gap-2 px-2",
-                      isNewMenuOpen && "text-sidebar-foreground bg-sidebar-accent"
-                    )}
-                    data-tour="add-card-button"
-                  >
-                    <Plus className="h-4 w-4" />
-                    {!isCompactMode && (
-                      <NewFeatureBadge featureKey="new-button-badge" variant="badge">
+                  <NewFeatureBadge featureKey="new-button-badge" variant="icon">
+                    <button
+                      className={cn(
+                        "h-8 outline-none rounded-md text-sm pointer-events-auto whitespace-nowrap relative cursor-pointer box-border",
+                        "border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
+                        isCompactMode
+                          ? "w-8 flex items-center justify-center px-0"
+                          : "inline-flex items-center gap-2 px-2",
+                        isNewMenuOpen && "text-sidebar-foreground bg-sidebar-accent"
+                      )}
+                      data-tour="add-card-button"
+                    >
+                      <Plus className="h-4 w-4" />
+                      {!isCompactMode && (
                         <span>New</span>
-                      </NewFeatureBadge>
-                    )}
-                  </button>
+                      )}
+                    </button>
+                  </NewFeatureBadge>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56" sideOffset={8}>
                   {renderWorkspaceMenuItems({

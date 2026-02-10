@@ -88,19 +88,19 @@ export function renderWorkspaceMenuItems({
         </MenuItem>
       )}
 
-      <MenuItem
-        onSelect={handleAudioClick}
-        onClick={handleAudioClick}
-        className="flex items-center gap-2 cursor-pointer p-2"
-      >
-        <Mic className="size-4" />
-        <div className="flex items-center justify-between w-full">
-          <NewFeatureBadge featureKey="audio-menu-badge" variant="badge">
+      <NewFeatureBadge featureKey="audio-menu-badge" variant="icon">
+        <MenuItem
+          onSelect={handleAudioClick}
+          onClick={handleAudioClick}
+          className="flex items-center gap-2 cursor-pointer p-2"
+        >
+          <Mic className="size-4" />
+          <div className="flex items-center justify-between w-full">
             <span>Audio</span>
-          </NewFeatureBadge>
-          <span className="text-xs text-muted-foreground">Lecture/Meeting</span>
-        </div>
-      </MenuItem>
+            <span className="text-xs text-muted-foreground">Lecture/Meeting</span>
+          </div>
+        </MenuItem>
+      </NewFeatureBadge>
 
       <MenuItem
         onSelect={callbacks.onYouTube}
