@@ -239,7 +239,7 @@ export function HomeContent() {
 
             {/* Social proof */}
             <div className="mb-12 flex flex-wrap items-center justify-center gap-3 text-xs sm:text-sm relative z-10">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/30 text-sidebar-foreground">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/10 text-sidebar-foreground">
                 <div className="flex -space-x-2">
                   {[
                     "bg-gradient-to-br from-blue-400 to-blue-600",
