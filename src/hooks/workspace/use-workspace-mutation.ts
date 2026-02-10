@@ -216,18 +216,18 @@ export function useWorkspaceMutation(workspaceId: string | null, options: Worksp
           // Increment retry counter
           retryAttemptsRef.current.set(event.id, currentRetries + 1);
 
-          // First, remove the optimistic event from cache
+          // First, remove this specific optimistic event from cache
           queryClient.setQueryData<EventResponse>(
             ["workspace", workspaceId, "events"],
             (old) => {
               if (!old) return old;
 
-              // Remove events without version numbers (optimistic events)
-              const confirmedEvents = old.events.filter(e => typeof e.version === 'number');
+              // Only remove the conflicting event, preserve other pending optimistic events
+              const filteredEvents = old.events.filter(e => e.id !== event.id);
 
               return {
                 ...old,
-                events: confirmedEvents,
+                events: filteredEvents,
                 version: data.version, // Update to current server version
               };
             }
@@ -386,17 +386,10 @@ export function useWorkspaceMutation(workspaceId: string | null, options: Worksp
           (old) => {
             if (!old) return old;
 
-            // Find the last event without a version (the optimistic one) and assign the server version
-            const updatedEvents = [...old.events];
-            for (let i = updatedEvents.length - 1; i >= 0; i--) {
-              if (typeof updatedEvents[i].version !== 'number') {
-                updatedEvents[i] = {
-                  ...updatedEvents[i],
-                  version: data.version,
-                };
-                break; // Only update the first unversioned event we find
-              }
-            }
+            // Find the specific optimistic event by ID and assign the server version
+            const updatedEvents = old.events.map(e =>
+              e.id === event.id ? { ...e, version: data.version } : e
+            );
 
             const newState = {
               ...old,

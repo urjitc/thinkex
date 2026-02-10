@@ -34,7 +34,7 @@ export function renderWorkspaceMenuItems({
   showUpload = true,
 }: {
   callbacks: WorkspaceMenuCallbacks;
-  MenuItem: React.ComponentType<{ onSelect?: () => void; onClick?: () => void; className?: string; children: React.ReactNode }>;
+  MenuItem: React.ComponentType<{ onSelect?: () => void; className?: string; children: React.ReactNode }>;
   MenuSub: React.ComponentType<{ children: React.ReactNode }>;
   MenuSubTrigger: React.ComponentType<{ className?: string; children: React.ReactNode }>;
   MenuSubContent: React.ComponentType<{ children: React.ReactNode }>;
@@ -58,7 +58,6 @@ export function renderWorkspaceMenuItems({
 
       <MenuItem
         onSelect={callbacks.onCreateNote}
-        onClick={callbacks.onCreateNote}
         className="flex items-center gap-2 cursor-pointer"
       >
         <FileText className="size-4" />
@@ -67,7 +66,6 @@ export function renderWorkspaceMenuItems({
 
       <MenuItem
         onSelect={callbacks.onCreateFolder}
-        onClick={callbacks.onCreateFolder}
         className="flex items-center gap-2 cursor-pointer"
       >
         <Folder className="size-4" />
@@ -77,7 +75,6 @@ export function renderWorkspaceMenuItems({
       {showUpload && (
         <MenuItem
           onSelect={callbacks.onUpload}
-          onClick={callbacks.onUpload}
           className="flex items-center gap-2 cursor-pointer p-2"
         >
           <Upload className="size-4" />
@@ -90,7 +87,6 @@ export function renderWorkspaceMenuItems({
 
       <MenuItem
         onSelect={handleAudioClick}
-        onClick={handleAudioClick}
         className="flex items-center gap-2 cursor-pointer p-2"
       >
         <Mic className="size-4" />
@@ -102,7 +98,6 @@ export function renderWorkspaceMenuItems({
 
       <MenuItem
         onSelect={callbacks.onYouTube}
-        onClick={callbacks.onYouTube}
         className="flex items-center gap-2 cursor-pointer"
       >
         <Play className="size-4" />
@@ -111,7 +106,6 @@ export function renderWorkspaceMenuItems({
 
       <MenuItem
         onSelect={callbacks.onWebsite}
-        onClick={callbacks.onWebsite}
         className="flex items-center gap-2 cursor-pointer"
       >
         <Newspaper className="size-4" />
@@ -126,7 +120,6 @@ export function renderWorkspaceMenuItems({
         <MenuSubContent>
           <MenuItem
             onSelect={callbacks.onFlashcards}
-            onClick={callbacks.onFlashcards}
             className="flex items-center gap-2 cursor-pointer"
           >
             <PiCardsThreeBold className="size-4 text-muted-foreground rotate-180" />
@@ -134,7 +127,6 @@ export function renderWorkspaceMenuItems({
           </MenuItem>
           <MenuItem
             onSelect={callbacks.onQuiz}
-            onClick={callbacks.onQuiz}
             className="flex items-center gap-2 cursor-pointer"
           >
             <Brain className="size-4" />
