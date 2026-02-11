@@ -37,6 +37,7 @@ interface WorkspaceItemProps {
   onWorkspaceClick: (workspaceSlug: string) => void;
   onSettingsClick: (workspace: WorkspaceWithState) => void;
   onShareClick: (workspace: WorkspaceWithState) => void;
+  disableNavigation?: boolean;
 }
 
 function WorkspaceItem({
@@ -45,6 +46,7 @@ function WorkspaceItem({
   onWorkspaceClick,
   onSettingsClick,
   onShareClick,
+  disableNavigation,
 }: WorkspaceItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -54,7 +56,10 @@ function WorkspaceItem({
 
   const handleMouseEnter = useCallback(() => setIsHovered(true), []);
   const handleMouseLeave = useCallback(() => setIsHovered(false), []);
-  const handleClick = useCallback(() => onWorkspaceClick(workspace.slug || workspace.id), [onWorkspaceClick, workspace.slug, workspace.id]);
+  const handleClick = useCallback(() => {
+    if (disableNavigation) return;
+    onWorkspaceClick(workspace.slug || workspace.id);
+  }, [onWorkspaceClick, workspace.slug, workspace.id, disableNavigation]);
 
   const handleSettings = useCallback(
     (e: React.MouseEvent) => {
@@ -141,7 +146,8 @@ function WorkspaceItem({
     <SidebarMenuSubItem
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      style={{ cursor: "pointer" }}
+      style={{ cursor: disableNavigation ? "default" : "pointer" }}
+
     >
       <div className="relative w-full">
         <SidebarMenuButton
@@ -149,10 +155,11 @@ function WorkspaceItem({
           onClick={handleClick}
           size="sm"
           className={cn(
-            "group/workspace w-full cursor-pointer p-0",
-            isActive ? "bg-accent text-accent-foreground" : ""
+            "group/workspace w-full p-0",
+            isActive ? "bg-accent text-accent-foreground" : "",
+            disableNavigation ? "cursor-default hover:bg-transparent" : "cursor-pointer"
           )}
-          style={{ cursor: "inherit" }}
+          style={{ cursor: disableNavigation ? "default" : "inherit" }}
         >
           <div className="flex items-center gap-2 flex-1 min-w-0 px-1 py-1">
             {workspace.isPublic && (
@@ -332,8 +339,10 @@ export default memo(WorkspaceItem, (prevProps, nextProps) => {
     prevProps.workspace.color === nextProps.workspace.color &&
     prevProps.isActive === nextProps.isActive &&
     prevProps.onWorkspaceClick === nextProps.onWorkspaceClick &&
+    prevProps.onWorkspaceClick === nextProps.onWorkspaceClick &&
     prevProps.onSettingsClick === nextProps.onSettingsClick &&
-    prevProps.onShareClick === nextProps.onShareClick
+    prevProps.onShareClick === nextProps.onShareClick &&
+    prevProps.disableNavigation === nextProps.disableNavigation
   );
 });
 

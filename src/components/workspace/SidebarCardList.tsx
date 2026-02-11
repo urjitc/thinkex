@@ -496,8 +496,9 @@ function SidebarFolderItem({
 
     const handleFolderClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
+        if (isActive) return;
         onFolderClick();
-    }, [onFolderClick]);
+    }, [onFolderClick, isActive]);
 
     const handleDelete = useCallback(() => {
         if (onDeleteFolder) {
@@ -545,7 +546,7 @@ function SidebarFolderItem({
                     className={cn(
                         "w-full cursor-pointer p-0 group/folder-item",
                         isNested && "ml-1",
-                        isActive && "bg-blue-600/30 hover:bg-blue-500/40"
+                        isActive ? "bg-blue-600/30 cursor-default hover:bg-blue-600/30" : "cursor-pointer"
                     )}
                     onClick={(e: React.MouseEvent) => {
                         // Don't trigger folder click if clicking the menu button
@@ -593,8 +594,8 @@ function SidebarFolderItem({
                         <div
                             onClick={handleFolderClick}
                             className={cn(
-                                "flex-1 flex items-center gap-2 px-1 py-1 rounded cursor-pointer min-w-0",
-                                !isActive && "hover:bg-sidebar-accent hover:bg-opacity-50"
+                                "flex-1 flex items-center gap-2 px-1 py-1 rounded min-w-0",
+                                isActive ? "cursor-default hover:bg-transparent" : "cursor-pointer hover:bg-sidebar-accent hover:bg-opacity-50"
                             )}
                         >
                             <span className={cn("flex-1 text-xs", (isHovered || isDropdownOpen) ? "truncate pr-6" : "truncate")}>{folder.name}</span>

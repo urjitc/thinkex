@@ -86,6 +86,8 @@ function WorkspaceSidebar({
 
   // Get clearActiveFolder from UI store to navigate to root level
   const clearActiveFolder = useUIStore((state) => state.clearActiveFolder);
+  const activeFolderId = useUIStore((state) => state.activeFolderId);
+  const openPanelIds = useUIStore((state) => state.openPanelIds);
 
   // Get Joyride context for tour functionality
   // const { startTour } = useJoyride();
@@ -233,6 +235,7 @@ function WorkspaceSidebar({
                                   }}
                                   onSettingsClick={handleSettingsClick}
                                   onShareClick={handleShareClick}
+                                  disableNavigation={activeFolderId === null && openPanelIds.length === 0}
                                 />
                               </div>
                             </SidebarMenuSub>
