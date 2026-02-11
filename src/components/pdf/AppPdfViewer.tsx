@@ -425,7 +425,7 @@ const ThumbnailSidebar = ({ documentId }: ThumbnailSidebarProps) => {
   const { provides: scroll, state } = useScroll(documentId);
 
   return (
-    <div className="w-[130px] flex-shrink-0 bg-black/30 border-r border-white/10 flex flex-col overflow-hidden">
+    <div className="w-[220px] flex-shrink-0 bg-black/30 border-r border-white/10 flex flex-col overflow-hidden">
       {/* Thumbnails */}
       <div className="flex-1 relative overflow-hidden">
         <ThumbnailsPane documentId={documentId}>
@@ -533,8 +533,8 @@ const AppPdfViewer = ({ pdfSrc, showThumbnails = false, renderHeader, itemName, 
       annotationAuthor: "User",
     }),
     createPluginRegistration(ThumbnailPluginPackage, {
-      width: 90,
-      gap: 8,
+      width: 180,
+      gap: 16,
       autoScroll: true,
     }),
     createPluginRegistration(CapturePluginPackage, {
