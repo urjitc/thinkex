@@ -44,7 +44,7 @@ export function ModalManager({
   const closePanel = useUIStore((state) => state.closePanel);
   const maximizedItemId = useUIStore((state) => state.maximizedItemId);
   const setMaximizedItemId = useUIStore((state) => state.setMaximizedItemId);
-  const workspaceSplitViewActive = useUIStore((state) => state.workspaceSplitViewActive);
+
 
   // Find the current item from the items array using live data
   // All item types (notes, flashcards, etc.) are shown only when maximized
@@ -76,7 +76,7 @@ export function ModalManager({
             isOpen={true}
             onClose={() => handleClose(currentItem.id)}
             onUpdateItem={(updates) => onUpdateItem(currentItem.id, updates)}
-            renderInline={workspaceSplitViewActive}
+            renderInline={false}
           />
         ) : (
           <CardDetailModal
@@ -87,7 +87,7 @@ export function ModalManager({
             onUpdateItem={(updates) => onUpdateItem(currentItem.id, updates)}
             onUpdateItemData={(updater) => onUpdateItemData(currentItem.id, updater)}
             onFlushPendingChanges={onFlushPendingChanges}
-            renderInline={workspaceSplitViewActive}
+            renderInline={false}
           />
         )
       )}

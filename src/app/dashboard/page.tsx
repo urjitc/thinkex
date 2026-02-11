@@ -221,7 +221,7 @@ function DashboardContent({
   const closePanel = useUIStore((state) => state.closePanel);
   const maximizedItemId = useUIStore((state) => state.maximizedItemId);
   const setMaximizedItemId = useUIStore((state) => state.setMaximizedItemId);
-  const workspaceSplitViewActive = useUIStore((state) => state.workspaceSplitViewActive);
+
 
   // Refs and custom hooks
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
@@ -478,7 +478,7 @@ function DashboardContent({
         }
         modalManager={modalManagerElement}
         maximizedItemId={maximizedItemId}
-        workspaceSplitViewActive={workspaceSplitViewActive}
+
       />
       <WorkspaceInstructionModal
         mode={instructionModal.mode ?? "first-open"}

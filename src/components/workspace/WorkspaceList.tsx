@@ -20,6 +20,7 @@ interface WorkspaceListProps {
   onWorkspaceClick: (workspaceSlug: string) => void;
   onSettingsClick: (workspace: WorkspaceWithState) => void;
   onShareClick: (workspace: WorkspaceWithState) => void;
+  excludeActive?: boolean;
 }
 
 function WorkspaceList({
@@ -30,23 +31,29 @@ function WorkspaceList({
   onWorkspaceClick,
   onSettingsClick,
   onShareClick,
+  excludeActive,
 }: WorkspaceListProps) {
+  // Filter workspaces if excludeActive is true
+  const filteredWorkspaces = excludeActive
+    ? workspaces.filter(w => w.slug !== currentSlug && w.id !== currentWorkspaceId)
+    : workspaces;
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <div className="flex items-center gap-2 px-3 py-2 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:justify-center">
+        <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center">
           <div className="group-data-[collapsible=icon]:cursor-pointer">
             <FolderOpen className="size-4 text-blue-400" />
           </div>
           <div className="flex items-center gap-2 flex-1 group-data-[collapsible=icon]:hidden">
-            <span className="truncate">Workspaces</span>
+            <span className="truncate text-xs">Recent workspaces</span>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-5 w-5 p-0 ml-auto hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden transition-transform duration-200 hover:scale-110"
+                className="h-5 w-5 p-0 ml-auto text-muted-foreground hover:text-foreground hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden transition-transform duration-200 hover:scale-110"
                 onClick={onCreateWorkspace}
               >
                 <Plus className="h-3 w-3" />
@@ -58,9 +65,9 @@ function WorkspaceList({
           </Tooltip>
         </div>
 
-        <SidebarMenuSub className="group-data-[collapsible=icon]:hidden">
+        <SidebarMenuSub className="group-data-[collapsible=icon]:hidden border-l-0">
           {/* Workspaces list */}
-          {workspaces.map((workspace) => (
+          {filteredWorkspaces.map((workspace) => (
             <WorkspaceItem
               key={workspace.id}
               workspace={workspace}

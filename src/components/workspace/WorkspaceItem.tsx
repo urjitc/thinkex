@@ -255,7 +255,7 @@ function WorkspaceItem({
             </div>
             <div className="flex-1 min-w-0">
               <div className={cn(
-                "truncate text-xs font-medium",
+                "truncate text-xs",
                 (isHovered || isDropdownOpen) ? "pr-6" : ""
               )}>
                 {workspace.name}

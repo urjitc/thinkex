@@ -241,8 +241,22 @@ function WorkspaceSidebar({
                       </div>
 
                       {/* Scrollable section: Workspace content */}
-                      <div className="flex-1 min-h-0 overflow-y-auto pl-4">
-                        <SidebarCardList />
+                      <div className="flex-1 min-h-0 overflow-y-auto">
+                        <div className="pl-4">
+                          <SidebarCardList />
+                        </div>
+                        <div className="py-2 border-t border-sidebar-border/50 mt-2">
+                          <WorkspaceList
+                            workspaces={workspaces}
+                            currentWorkspaceId={currentWorkspaceId || undefined}
+                            currentSlug={currentSlug}
+                            onCreateWorkspace={handleShowCreateModal}
+                            onWorkspaceClick={handleWorkspaceClick}
+                            onSettingsClick={handleSettingsClick}
+                            onShareClick={handleShareClick}
+                            excludeActive={true}
+                          />
+                        </div>
                       </div>
                     </>
                   );

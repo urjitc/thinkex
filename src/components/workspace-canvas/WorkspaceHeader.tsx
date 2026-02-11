@@ -165,7 +165,7 @@ export default function WorkspaceHeader({
   // Assistant API for Deep Research action
   const aui = useAui();
   const setSelectedActions = useUIStore((state) => state.setSelectedActions);
-  const workspaceSplitViewActive = useUIStore((state) => state.workspaceSplitViewActive);
+
 
   // React Query client for cache invalidation
   const queryClient = useQueryClient();
@@ -345,18 +345,18 @@ export default function WorkspaceHeader({
 
       // Create the audio card immediately (shows "processing" state)
       const now = new Date();
-      const dateStr = now.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: now.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined 
+      const dateStr = now.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: now.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
       });
-      const timeStr = now.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
+      const timeStr = now.toLocaleTimeString('en-US', {
+        hour: 'numeric',
         minute: '2-digit',
-        hour12: true 
+        hour12: true
       });
       const title = `${dateStr} ${timeStr} Recording`;
-      
+
       const itemId = addItem("audio", title, {
         fileUrl,
         filename: file.name,
@@ -799,41 +799,22 @@ export default function WorkspaceHeader({
             <div id="workspace-header-portal" className="flex items-center gap-2" />
 
             {/* Split View / Focus Button */}
+            {/* Split View / Focus Button - Now just a visual indicator or placeholder */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => {
-                    const { toggleWorkspaceSplitView } = useUIStore.getState();
-                    toggleWorkspaceSplitView();
-                  }}
-                  className="h-8 flex items-center justify-center gap-1.5 rounded-md border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer px-3"
-                  aria-label={workspaceSplitViewActive ? "Focus" : "Split View"}
+                  className="h-8 flex items-center justify-center gap-1.5 rounded-md border border-sidebar-border text-muted-foreground opacity-50 cursor-not-allowed px-3"
+                  aria-label="Focus Mode"
+                  disabled
                 >
-                  {workspaceSplitViewActive ? (
-                    // Focus icon - eye
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  ) : (
-                    // Split View icon
-                    <LuPanelLeftOpen />
-                  )}
+                  <LuPanelLeftOpen />
                   <span className="text-xs font-medium">
-                    {workspaceSplitViewActive ? "Focus" : "Split"}
+                    Focus
                   </span>
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                {workspaceSplitViewActive ? "Focus on this item" : "Split View"}
+                Focus mode is active
               </TooltipContent>
             </Tooltip>
 
@@ -933,24 +914,24 @@ export default function WorkspaceHeader({
             {/* New Button */}
             {addItem && (
               <DropdownMenu open={isNewMenuOpen} onOpenChange={setIsNewMenuOpen}>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className={cn(
-                        "h-8 outline-none rounded-md text-sm pointer-events-auto whitespace-nowrap relative cursor-pointer box-border",
-                        "border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
-                        isCompactMode
-                          ? "w-8 flex items-center justify-center px-0"
-                          : "inline-flex items-center gap-2 px-2",
-                        isNewMenuOpen && "text-sidebar-foreground bg-sidebar-accent"
-                      )}
-                      data-tour="add-card-button"
-                    >
-                      <Plus className="h-4 w-4" />
-                      {!isCompactMode && (
-                        <span>New</span>
-                      )}
-                    </button>
-                  </DropdownMenuTrigger>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      "h-8 outline-none rounded-md text-sm pointer-events-auto whitespace-nowrap relative cursor-pointer box-border",
+                      "border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
+                      isCompactMode
+                        ? "w-8 flex items-center justify-center px-0"
+                        : "inline-flex items-center gap-2 px-2",
+                      isNewMenuOpen && "text-sidebar-foreground bg-sidebar-accent"
+                    )}
+                    data-tour="add-card-button"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {!isCompactMode && (
+                      <span>New</span>
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56" sideOffset={8}>
                   {renderWorkspaceMenuItems({
                     callbacks: {
@@ -990,7 +971,7 @@ export default function WorkspaceHeader({
                     MenuSubContent: DropdownMenuSubContent,
                   })}
                 </DropdownMenuContent>
-                </DropdownMenu>
+              </DropdownMenu>
             )}
 
             {!isItemPanelOpen && setIsChatExpanded ? (
