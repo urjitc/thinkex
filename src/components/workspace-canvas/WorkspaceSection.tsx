@@ -1,4 +1,5 @@
 import React, { RefObject, useState, useMemo, useCallback } from "react";
+import { useElementWidth } from "@/hooks/use-element-width";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -163,6 +164,9 @@ export function WorkspaceSection({
   const openPanel = useUIStore((state) => state.openPanel);
   const setSelectedActions = useUIStore((state) => state.setSelectedActions);
   const { data: session } = useSession();
+
+  // Measure container width for responsive SelectionActionBar
+  const containerWidth = useElementWidth(scrollAreaRef);
 
   // Assistant API for Deep Research action
   // Note: WorkspaceSection is inside WorkspaceRuntimeProvider in DashboardLayout, so this hook works
@@ -692,7 +696,7 @@ export function WorkspaceSection({
           onDeleteSelected={handleDeleteRequest}
           onCreateFolderFromSelection={handleCreateFolderFromSelection}
           onMoveSelected={handleMoveSelected}
-          isCompactMode={isItemPanelOpen && isChatExpanded}
+          isCompactMode={containerWidth !== undefined && containerWidth < 400}
         />
       )}
       {/* Move To Dialog */}
