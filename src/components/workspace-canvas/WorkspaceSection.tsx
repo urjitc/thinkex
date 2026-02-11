@@ -646,17 +646,13 @@ export function WorkspaceSection({
                 onCreateNote: () => {
                   if (addItem) {
                     const itemId = addItem("note");
-                    if (handleCreatedItems && itemId) {
-                      handleCreatedItems([itemId]);
-                    }
+                    handleCreatedItems([itemId]);
                   }
                 },
                 onCreateFolder: () => {
                   if (addItem) {
                     const itemId = addItem("folder");
-                    if (handleCreatedItems && itemId) {
-                      handleCreatedItems([itemId]);
-                    }
+                    handleCreatedItems([itemId]);
                   }
                 },
                 onUpload: () => handleUploadMenuItemClick(),
@@ -666,9 +662,7 @@ export function WorkspaceSection({
                 onFlashcards: () => {
                   if (addItem) {
                     const itemId = addItem("flashcard");
-                    if (handleCreatedItems && itemId) {
-                      handleCreatedItems([itemId]);
-                    }
+                    handleCreatedItems([itemId]);
                   }
                 },
                 onQuiz: () => {
