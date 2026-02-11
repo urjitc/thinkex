@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from "react-dom";
-import { X, RotateCcw, Search, Maximize, Minimize, ChevronUp, ChevronDown, MoreHorizontal, Expand, Shrink, Camera } from 'lucide-react';
+import { X, RotateCcw, Maximize, Minimize, ChevronUp, ChevronDown, MoreHorizontal, Expand, Shrink, Camera } from 'lucide-react';
 import { LuLayoutList } from "react-icons/lu";
 import { formatKeyboardShortcut } from '@/lib/utils/keyboard-shortcut';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -22,142 +22,11 @@ import { toast } from "sonner";
 import { useZoom, ZoomMode } from '@embedpdf/plugin-zoom/react';
 import { useRotate } from '@embedpdf/plugin-rotate/react';
 import { useFullscreen } from '@embedpdf/plugin-fullscreen/react';
-import { useSearch } from '@embedpdf/plugin-search/react';
+
 import { useScroll } from '@embedpdf/plugin-scroll/react';
 import { useCapture } from '@embedpdf/plugin-capture/react';
 // Separate SearchBar component - mounts fresh so autoFocus works
-interface SearchBarProps {
-    searchProvides: ReturnType<typeof useSearch>['provides'];
-    searchState: ReturnType<typeof useSearch>['state'];
-    onClose: () => void;
-    searchInputRef: React.RefObject<HTMLInputElement | null>;
-    documentId: string;
-}
 
-function SearchBar({ searchProvides, searchState, onClose, searchInputRef, documentId }: SearchBarProps) {
-    const [searchQuery, setSearchQuery] = useState('');
-    const { provides: scroll } = useScroll(documentId);
-
-    // Sync search with input
-    useEffect(() => {
-        if (searchQuery === '') {
-            searchProvides?.stopSearch();
-        } else if (searchQuery.length > 2) {
-            searchProvides?.searchAllPages(searchQuery);
-        }
-    }, [searchQuery, searchProvides]);
-
-    // Scroll to a specific result by index
-    const scrollToResult = useCallback((index: number) => {
-        if (!searchState?.results || !scroll) return;
-        const result = searchState.results[index];
-        if (!result) return;
-
-        // Get minimum coordinates from the result rects
-        const minCoords = result.rects.reduce(
-            (min, rect) => ({
-                x: Math.min(min.x, rect.origin.x),
-                y: Math.min(min.y, rect.origin.y),
-            }),
-            { x: Infinity, y: Infinity }
-        );
-
-        scroll.scrollToPage({
-            pageNumber: result.pageIndex + 1,
-            pageCoordinates: minCoords,
-            alignX: 50,
-            alignY: 50,
-        });
-    }, [searchState?.results, scroll]);
-
-    // Handle next result and scroll
-    const handleNextResult = useCallback(() => {
-        searchProvides?.nextResult();
-        // Scroll to the next result (current + 1, wrapping around)
-        if (searchState?.results && searchState.results.length > 0) {
-            const nextIndex = ((searchState.activeResultIndex ?? 0) + 1) % searchState.results.length;
-            scrollToResult(nextIndex);
-        }
-    }, [searchProvides, searchState, scrollToResult]);
-
-    // Handle previous result and scroll
-    const handlePreviousResult = useCallback(() => {
-        searchProvides?.previousResult();
-        // Scroll to the previous result (current - 1, wrapping around)
-        if (searchState?.results && searchState.results.length > 0) {
-            const prevIndex = ((searchState.activeResultIndex ?? 0) - 1 + searchState.results.length) % searchState.results.length;
-            scrollToResult(prevIndex);
-        }
-    }, [searchProvides, searchState, scrollToResult]);
-
-    // Handle Enter key to cycle through results
-    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && searchState?.results && searchState.results.length > 0) {
-            e.preventDefault();
-            if (e.shiftKey) {
-                handlePreviousResult();
-            } else {
-                handleNextResult();
-            }
-        }
-    }, [searchState, handleNextResult, handlePreviousResult]);
-
-    const handleClear = useCallback(() => {
-        setSearchQuery('');
-        searchProvides?.stopSearch();
-        onClose();
-    }, [searchProvides, onClose]);
-
-    // Determine if we should show "no results" message
-    const showNoResults = searchQuery.length > 2 && searchState?.results && searchState.results.length === 0 && !searchState.loading;
-
-    return (
-        <div className="px-3 py-1.5 border-t border-sidebar-border/50 flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-2">
-                <input
-                    type="text"
-                    ref={searchInputRef}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Search in document..."
-                    className="flex-1 px-2 py-1 rounded bg-sidebar-accent/50 border border-sidebar-border text-sidebar-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-sidebar-foreground/30"
-                />
-            </div>
-            {/* No results message */}
-            {showNoResults && (
-                <span className="text-xs text-sidebar-foreground/50">No results</span>
-            )}
-            {/* Results navigation */}
-            {searchState?.results && searchState.results.length > 0 && (
-                <div className="flex items-center gap-1 text-xs text-sidebar-foreground/60">
-                    <span>
-                        {(searchState.activeResultIndex ?? 0) + 1}/{searchState.total ?? searchState.results.length}
-                    </span>
-                    <button
-                        onClick={handlePreviousResult}
-                        className="p-0.5 rounded hover:bg-sidebar-accent"
-                    >
-                        <ChevronUp className="h-3 w-3" />
-                    </button>
-                    <button
-                        onClick={handleNextResult}
-                        className="p-0.5 rounded hover:bg-sidebar-accent"
-                    >
-                        <ChevronDown className="h-3 w-3" />
-                    </button>
-                </div>
-            )}
-            <button
-                onClick={handleClear}
-                className="p-1 rounded hover:bg-sidebar-accent text-muted-foreground hover:text-sidebar-foreground transition-colors"
-                title="Close Search"
-            >
-                <X className="h-3.5 w-3.5" />
-            </button>
-        </div>
-    );
-}
 
 interface PdfPanelHeaderProps {
     documentId: string;
@@ -200,7 +69,7 @@ export function PdfPanelHeader({
     const { provides: zoomProvides, state: zoomState } = useZoom(documentId);
     const { provides: rotateProvider } = useRotate(documentId);
     const { provides: fullscreenProvider, state: fullscreenState } = useFullscreen();
-    const { provides: searchProvides, state: searchState } = useSearch(documentId);
+
     const { provides: capture, state: captureState } = useCapture(documentId);
 
     const aui = useAui();
@@ -208,15 +77,7 @@ export function PdfPanelHeader({
     const isChatExpanded = useUIStore((state) => state.isChatExpanded);
     const setIsChatExpanded = useUIStore((state) => state.setIsChatExpanded);
 
-    const [showSearch, setShowSearch] = useState(false);
-    const searchInputRef = useRef<HTMLInputElement>(null);
 
-    // Auto-focus search input when expanded (like workspace header)
-    useEffect(() => {
-        if (showSearch && searchInputRef.current) {
-            searchInputRef.current.focus();
-        }
-    }, [showSearch]);
 
 
 
@@ -325,23 +186,13 @@ export function PdfPanelHeader({
         </>
     );
 
-    const SearchBarComponent = () => (
-        showSearch ? (
-            <SearchBar
-                searchProvides={searchProvides}
-                searchState={searchState}
-                onClose={() => setShowSearch(false)}
-                searchInputRef={searchInputRef}
-                documentId={documentId}
-            />
-        ) : null
-    );
+
 
     if (renderInPortal && portalTarget) {
         return (
             <>
                 {createPortal(<ControlsGroup />, portalTarget)}
-                <SearchBarComponent />
+
             </>
         );
     }
@@ -410,8 +261,7 @@ export function PdfPanelHeader({
                 </div>
             </div>
 
-            {/* Search Bar (collapsible) - separate component for proper autoFocus */}
-            <SearchBarComponent />
+
 
         </div>
     );
