@@ -216,7 +216,7 @@ export function HomeContent() {
         <div
           ref={heroRef}
           {...getRootProps()}
-          className="relative z-10 h-[85vh] flex flex-col items-center justify-center text-center px-6"
+          className="relative z-10 h-[75vh] flex flex-col items-center justify-center text-center px-6"
         >
           <input {...getInputProps()} />
 
@@ -295,7 +295,7 @@ export function HomeContent() {
         <div ref={workspacesRef} className="relative z-10 px-6 pb-8 pt-8 min-h-screen bg-gradient-to-b from-transparent via-background to-background">
           <div className="w-full max-w-6xl mx-auto h-full">
             {/* Your Workspaces */}
-            <div className="bg-sidebar rounded-md p-6">
+            <div className="bg-sidebar backdrop-blur-xl border border-border/50 rounded-2xl p-6 shadow-2xl">
               <h2 className="text-lg font-normal text-muted-foreground mb-4">Recent workspaces</h2>
               <WorkspaceGrid searchQuery={searchQuery} />
             </div>
