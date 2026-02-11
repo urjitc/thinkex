@@ -218,18 +218,7 @@ export function PdfPanelHeader({
         }
     }, [showSearch]);
 
-    // Intercept Ctrl+F / Cmd+F to open search bar
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
-                e.preventDefault();
-                setShowSearch(true);
-            }
-        };
 
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
 
     // Handle Capture
     useEffect(() => {
