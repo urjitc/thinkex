@@ -99,7 +99,7 @@ Priority: User safety and system integrity.
  */
 function formatItem(item: Item, index: number): string {
     const lines = [
-        `${index}. [${item.type.charAt(0).toUpperCase() + item.type.slice(1)}] "${item.name}" (ID: ${item.id})`
+        `${index}. [${item.type.charAt(0).toUpperCase() + item.type.slice(1)}] "${item.name}"`
     ];
 
     // Add subtitle if present
