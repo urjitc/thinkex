@@ -864,6 +864,23 @@ export function WorkspaceHeader({
               </TooltipContent>
             </Tooltip>
 
+            {/* Close Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Close"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
+                  onClick={() => onCloseActiveItem?.(activeItems[0]?.id)}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Close item
+              </TooltipContent>
+            </Tooltip>
+
 
             {setIsChatExpanded ? (
               <ChatFloatingButton

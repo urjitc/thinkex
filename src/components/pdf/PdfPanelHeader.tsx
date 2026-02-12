@@ -132,20 +132,6 @@ export const PdfPanelHeader = memo(function PdfPanelHeader({
 
     const controlsContent = (
         <>
-            {/* Thumbnail Toggle */}
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <button
-                        type="button"
-                        onClick={onToggleThumbnails}
-                        className={showThumbnails ? activeButtonClass : buttonClass}
-                    >
-                        <LuLayoutList className={iconClass} />
-                    </button>
-                </TooltipTrigger>
-                <TooltipContent>{showThumbnails ? 'Hide Thumbnails' : 'Show Thumbnails'}</TooltipContent>
-            </Tooltip>
-
             {/* Capture Button */}
             <Tooltip>
                 <TooltipTrigger asChild>
@@ -168,6 +154,11 @@ export const PdfPanelHeader = memo(function PdfPanelHeader({
                     </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-40">
+                    <DropdownMenuItem onClick={onToggleThumbnails}>
+                        <LuLayoutList className="mr-2 h-4 w-4" />
+                        Thumbnail
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => zoomProvides?.requestZoom(ZoomMode.FitWidth)}>
                         <Expand className="mr-2 h-4 w-4" />
                         Fit to Width
@@ -220,7 +211,7 @@ export const PdfPanelHeader = memo(function PdfPanelHeader({
                                 <Maximize className={iconClass} />
                             </button>
                         </TooltipTrigger>
-                        <TooltipContent>Open in full screen focus mode</TooltipContent>
+                        <TooltipContent>Maximize</TooltipContent>
                     </Tooltip>
 
                     {/* Close Button */}
