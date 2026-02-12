@@ -1,7 +1,7 @@
 "use client";
 
-import { memo } from "react";
-import { Plus, FolderOpen } from "lucide-react";
+import { memo, useState } from "react";
+import { Plus, FolderOpen, ChevronDown } from "lucide-react";
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -9,6 +9,11 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import WorkspaceItem from "./WorkspaceItem";
 import type { WorkspaceWithState } from "@/lib/workspace-state/types";
 
@@ -33,6 +38,8 @@ function WorkspaceList({
   onShareClick,
   excludeActive,
 }: WorkspaceListProps) {
+  const [isOpen, setIsOpen] = useState(false); // Default to collapsed
+
   // Filter workspaces if excludeActive is true
   const filteredWorkspaces = excludeActive
     ? workspaces.filter(w => w.slug !== currentSlug && w.id !== currentWorkspaceId)
@@ -41,50 +48,66 @@ function WorkspaceList({
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center">
-          <div className="group-data-[collapsible=icon]:cursor-pointer">
-            <FolderOpen className="size-4 text-blue-400" />
-          </div>
-          <div className="flex items-center gap-2 flex-1 group-data-[collapsible=icon]:hidden">
-            <span className="truncate text-xs">Recent workspaces</span>
-          </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 w-5 p-0 ml-auto text-muted-foreground hover:text-foreground hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden transition-transform duration-200 hover:scale-110"
-                onClick={onCreateWorkspace}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              Create new workspace
-            </TooltipContent>
-          </Tooltip>
-        </div>
-
-        <SidebarMenuSub className="group-data-[collapsible=icon]:hidden border-l-0">
-          {/* Workspaces list */}
-          {filteredWorkspaces.map((workspace) => (
-            <WorkspaceItem
-              key={workspace.id}
-              workspace={workspace}
-              isActive={currentSlug === workspace.slug || currentWorkspaceId === workspace.id}
-              onWorkspaceClick={onWorkspaceClick}
-              onSettingsClick={onSettingsClick}
-              onShareClick={onShareClick}
-            />
-          ))}
-
-          {/* Empty state */}
-          {workspaces.length === 0 && (
-            <div className="px-3 py-2 text-xs text-muted-foreground">
-              No workspaces yet
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger asChild>
+            <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center w-full cursor-pointer hover:bg-sidebar-accent/50 rounded">
+              <div className="flex items-center gap-2 flex-1">
+                <div className="group-data-[collapsible=icon]:cursor-pointer">
+                  <FolderOpen className="size-4 text-blue-400" />
+                </div>
+                <div className="flex items-center gap-2 flex-1 group-data-[collapsible=icon]:hidden">
+                  <span className="truncate text-xs">Recent workspaces</span>
+                </div>
+                <ChevronDown 
+                  className={`size-3.5 text-muted-foreground transition-transform duration-200 group-data-[collapsible=icon]:hidden ${
+                    isOpen ? 'rotate-180' : ''
+                  }`} 
+                />
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden transition-transform duration-200 hover:scale-110"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCreateWorkspace();
+                    }}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  Create new workspace
+                </TooltipContent>
+              </Tooltip>
             </div>
-          )}
-        </SidebarMenuSub>
+          </CollapsibleTrigger>
+          
+          <CollapsibleContent>
+            <SidebarMenuSub className="group-data-[collapsible=icon]:hidden border-l-0">
+              {/* Workspaces list */}
+              {filteredWorkspaces.map((workspace) => (
+                <WorkspaceItem
+                  key={workspace.id}
+                  workspace={workspace}
+                  isActive={currentSlug === workspace.slug || currentWorkspaceId === workspace.id}
+                  onWorkspaceClick={onWorkspaceClick}
+                  onSettingsClick={onSettingsClick}
+                  onShareClick={onShareClick}
+                />
+              ))}
+
+              {/* Empty state */}
+              {workspaces.length === 0 && (
+                <div className="px-3 py-2 text-xs text-muted-foreground">
+                  No workspaces yet
+                </div>
+              )}
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </Collapsible>
       </SidebarMenuItem>
     </SidebarMenu>
   );
