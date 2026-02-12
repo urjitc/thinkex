@@ -806,7 +806,7 @@ export default function WorkspaceHeader({
                     const { toggleWorkspaceSplitView } = useUIStore.getState();
                     toggleWorkspaceSplitView();
                   }}
-                  className="h-8 flex items-center justify-center gap-1.5 rounded-md border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer px-3"
+                  className="h-8 flex items-center justify-center gap-1.5 rounded-md border border-sidebar-border text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer px-3 mr-2"
                   aria-label={workspaceSplitViewActive ? "Focus" : "Split View"}
                 >
                   {workspaceSplitViewActive ? (
@@ -833,7 +833,7 @@ export default function WorkspaceHeader({
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                {workspaceSplitViewActive ? "Focus on this item" : "Split View"}
+                {workspaceSplitViewActive ? "Focus on this item" : "Split"}
               </TooltipContent>
             </Tooltip>
 
@@ -962,7 +962,14 @@ export default function WorkspaceHeader({
                           }
                         }
                       },
-                      onCreateFolder: () => { if (addItem) addItem("folder"); },
+                      onCreateFolder: () => {
+                        if (addItem) {
+                          const itemId = addItem("folder");
+                          if (onItemCreated && itemId) {
+                            onItemCreated([itemId]);
+                          }
+                        }
+                      },
                       onUpload: () => { setShowUploadDialog(true); setIsNewMenuOpen(false); },
                       onAudio: () => { openAudioDialog(); setIsNewMenuOpen(false); },
                       onYouTube: () => { setShowYouTubeDialog(true); setIsNewMenuOpen(false); },

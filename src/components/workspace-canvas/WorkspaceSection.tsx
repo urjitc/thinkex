@@ -1,4 +1,5 @@
 import React, { RefObject, useState, useMemo, useCallback } from "react";
+import { useElementWidth } from "@/hooks/use-element-width";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -163,6 +164,9 @@ export function WorkspaceSection({
   const openPanel = useUIStore((state) => state.openPanel);
   const setSelectedActions = useUIStore((state) => state.setSelectedActions);
   const { data: session } = useSession();
+
+  // Measure container width for responsive SelectionActionBar
+  const containerWidth = useElementWidth(scrollAreaRef);
 
   // Assistant API for Deep Research action
   // Note: WorkspaceSection is inside WorkspaceRuntimeProvider in DashboardLayout, so this hook works
@@ -416,7 +420,8 @@ export function WorkspaceSection({
     // Clear the selection
     clearCardSelection();
 
-    // Note: FolderCard auto-focuses the title when name is "New Folder"
+    // Navigate to the newly created folder
+    handleCreatedItems([folderId]);
   };
 
   // Handle PDF upload from BottomActionBar
@@ -645,12 +650,15 @@ export function WorkspaceSection({
                 onCreateNote: () => {
                   if (addItem) {
                     const itemId = addItem("note");
-                    if (handleCreatedItems && itemId) {
-                      handleCreatedItems([itemId]);
-                    }
+                    handleCreatedItems([itemId]);
                   }
                 },
-                onCreateFolder: () => { if (addItem) addItem("folder"); },
+                onCreateFolder: () => {
+                  if (addItem) {
+                    const itemId = addItem("folder");
+                    handleCreatedItems([itemId]);
+                  }
+                },
                 onUpload: () => handleUploadMenuItemClick(),
                 onAudio: () => openAudioDialog(),
                 onYouTube: () => setShowYouTubeDialog(true),
@@ -658,9 +666,7 @@ export function WorkspaceSection({
                 onFlashcards: () => {
                   if (addItem) {
                     const itemId = addItem("flashcard");
-                    if (handleCreatedItems && itemId) {
-                      handleCreatedItems([itemId]);
-                    }
+                    handleCreatedItems([itemId]);
                   }
                 },
                 onQuiz: () => {
@@ -690,7 +696,7 @@ export function WorkspaceSection({
           onDeleteSelected={handleDeleteRequest}
           onCreateFolderFromSelection={handleCreateFolderFromSelection}
           onMoveSelected={handleMoveSelected}
-          isCompactMode={isItemPanelOpen && isChatExpanded}
+          isCompactMode={containerWidth !== undefined && containerWidth < 400}
         />
       )}
       {/* Move To Dialog */}

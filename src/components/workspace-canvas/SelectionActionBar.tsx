@@ -23,8 +23,8 @@ export default function SelectionActionBar({
   return (
     <div
       className={cn(
-        "absolute left-1/2 -translate-x-1/2 bottom-4",
-        "inline-flex items-center gap-2 px-3 py-2 rounded-md",
+        "absolute inset-x-0 mx-auto bottom-4 max-w-[calc(100%-2rem)] w-fit",
+        "flex items-center gap-2 px-3 py-2 rounded-md overflow-hidden",
         "bg-white/5 border border-white/10",
         "shadow-lg backdrop-blur-md",
         "transition-all duration-300 ease-out",
@@ -32,19 +32,19 @@ export default function SelectionActionBar({
       )}
     >
       {/* Selection count */}
-      <span className="text-sm font-medium text-foreground/90 whitespace-nowrap dark:text-white/90">
+      <span className="text-sm font-medium text-foreground/90 dark:text-white/90 truncate min-w-0">
         {isCompactMode ? (
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-foreground/90 dark:text-white/90" />
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-foreground/90 dark:text-white/90" />
             <span>{selectedCount}</span>
-          </div>
+          </span>
         ) : (
           `${selectedCount} ${selectedCount === 1 ? 'item' : 'items'} selected`
         )}
       </span>
 
       {/* Separator */}
-      <div className="h-5 w-px bg-foreground/20 dark:bg-white/20" />
+      <div className="h-5 w-px shrink-0 bg-foreground/20 dark:bg-white/20" />
 
       {/* New Folder Button */}
       <Tooltip>
@@ -53,7 +53,7 @@ export default function SelectionActionBar({
             type="button"
             onClick={onCreateFolderFromSelection}
             className={cn(
-              "inline-flex items-center gap-2 px-2 py-2 rounded-md",
+              "inline-flex items-center gap-2 px-2 py-2 rounded-md shrink-0",
               "text-sm font-medium text-amber-400",
               "bg-amber-500/10 border border-amber-500/20",
               "hover:bg-amber-500/20 hover:border-amber-500/30",
@@ -75,7 +75,7 @@ export default function SelectionActionBar({
             type="button"
             onClick={onMoveSelected}
             className={cn(
-              "inline-flex items-center gap-2 px-2 py-2 rounded-md",
+              "inline-flex items-center gap-2 px-2 py-2 rounded-md shrink-0",
               "text-sm font-medium text-blue-400",
               "bg-blue-500/10 border border-blue-500/20",
               "hover:bg-blue-500/20 hover:border-blue-500/30",
@@ -97,7 +97,7 @@ export default function SelectionActionBar({
             type="button"
             onClick={onDeleteSelected}
             className={cn(
-              "inline-flex items-center gap-2 px-2 py-2 rounded-md",
+              "inline-flex items-center gap-2 px-2 py-2 rounded-md shrink-0",
               "text-sm font-medium text-red-400",
               "bg-red-500/10 border border-red-500/20",
               "hover:bg-red-500/20 hover:border-red-500/30",
@@ -113,7 +113,7 @@ export default function SelectionActionBar({
       </Tooltip>
 
       {/* Separator before Clear */}
-      <div className="h-5 w-px bg-foreground/20 dark:bg-white/20" />
+      <div className="h-5 w-px shrink-0 bg-foreground/20 dark:bg-white/20" />
 
       {/* Clear Selection Button */}
       <Tooltip>
@@ -122,7 +122,7 @@ export default function SelectionActionBar({
             type="button"
             onClick={onClearSelection}
             className={cn(
-              "inline-flex items-center justify-center p-2 rounded-md",
+              "inline-flex items-center justify-center p-2 rounded-md shrink-0",
               "text-foreground/60 dark:text-white/60",
               "hover:text-foreground/90 hover:bg-foreground/5 dark:hover:text-white/90 dark:hover:bg-white/5",
               "transition-all duration-200"

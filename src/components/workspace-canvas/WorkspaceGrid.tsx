@@ -859,6 +859,7 @@ export function WorkspaceGrid({
       `}</style>
       {mounted && (
         <ResponsiveGridLayout
+          key={singleColumnMode ? 'single-col' : 'multi-col'}
           className="layout"
           width={width}
           layouts={layouts}
