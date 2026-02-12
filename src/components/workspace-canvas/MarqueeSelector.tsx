@@ -25,17 +25,17 @@ export function MarqueeSelector({
 }: MarqueeSelectorProps) {
   const [isSelecting, setIsSelecting] = useState(false);
   const [marqueeRect, setMarqueeRect] = useState<Rectangle | null>(null);
-  
+
   const selectMultipleCards = useUIStore((state) => state.selectMultipleCards);
   // Use array selector with shallow comparison to prevent unnecessary re-renders and SSR issues
   const selectedCardIdsArray = useUIStore(
     useShallow(selectSelectedCardIdsArray)
   );
   const selectedCardIds = useMemo(() => new Set(selectedCardIdsArray), [selectedCardIdsArray]);
-  
+
   const isDraggingRef = useRef(false);
   const startPointRef = useRef({ x: 0, y: 0 });
-  
+
   // Use autoscroll hook for smooth scrolling during selection
   const { handleDragStart: startAutoScroll, handleDragStop: stopAutoScroll } = useAutoScroll(
     scrollContainerRef as React.RefObject<HTMLDivElement | null>
@@ -58,7 +58,7 @@ export function MarqueeSelector({
     } else {
       document.body.classList.remove('marquee-selecting');
     }
-    
+
     return () => {
       document.body.classList.remove('marquee-selecting');
     };
@@ -70,7 +70,7 @@ export function MarqueeSelector({
     if (!container) return false;
 
     const containerRect = container.getBoundingClientRect();
-    
+
     // Check if click is within the container bounds
     if (
       e.clientX < containerRect.left ||
@@ -80,50 +80,50 @@ export function MarqueeSelector({
     ) {
       return false;
     }
-    
+
     // Robust scrollbar detection: calculate actual scrollbar dimensions
     // offsetWidth/Height includes scrollbar, clientWidth/Height excludes it
     const scrollbarWidth = container.offsetWidth - container.clientWidth;
     const scrollbarHeight = container.offsetHeight - container.clientHeight;
-    
+
     // Check if clicking on scrollbar by comparing click position with client area
     // For vertical scrollbar: check if click is to the right of the client area
     const clickXRelativeToContainer = e.clientX - containerRect.left;
     const isVerticalScrollbar = scrollbarWidth > 0 && clickXRelativeToContainer > container.clientWidth;
-    
+
     // For horizontal scrollbar: check if click is below the client area
     const clickYRelativeToContainer = e.clientY - containerRect.top;
     const isHorizontalScrollbar = scrollbarHeight > 0 && clickYRelativeToContainer > container.clientHeight;
-    
+
     // Don't start marquee if clicking on scrollbar
     if (isHorizontalScrollbar || isVerticalScrollbar) {
       return false;
     }
-    
+
     const x = e.clientX - containerRect.left + container.scrollLeft;
     const y = e.clientY - containerRect.top + container.scrollTop;
 
     startPointRef.current = { x, y };
     setIsSelecting(true);
     isDraggingRef.current = true;
-    
+
     // Start autoscroll for marquee selection
     startAutoScroll();
 
     // Prevent text selection and other drag behaviors during marquee
     e.preventDefault();
     e.stopPropagation();
-    
+
     return true;
   }, [scrollContainerRef, startAutoScroll]);
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
     // Only start marquee on left click
     if (e.button !== 0) return;
-    
+
     // Don't start if clicking on a card or interactive element
     const target = e.target as HTMLElement;
-    
+
     // Check if clicking on any interactive or grid element
     if (
       target.closest('article') ||           // Card itself
@@ -145,18 +145,18 @@ export function MarqueeSelector({
   const handleGlobalShiftMouseDown = useCallback((e: MouseEvent) => {
     // Only activate on left click with Shift held
     if (e.button !== 0 || !e.shiftKey) return;
-    
+
     // Don't interfere with text inputs
     const target = e.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
       return;
     }
-    
+
     const container = scrollContainerRef.current;
     if (!container) return;
 
     const containerRect = container.getBoundingClientRect();
-    
+
     // Use raw mouse position - marquee can start from anywhere
     const x = e.clientX - containerRect.left + container.scrollLeft;
     const y = e.clientY - containerRect.top + container.scrollTop;
@@ -164,7 +164,7 @@ export function MarqueeSelector({
     startPointRef.current = { x, y };
     setIsSelecting(true);
     isDraggingRef.current = true;
-    
+
     // Start autoscroll for marquee selection
     startAutoScroll();
 
@@ -198,7 +198,7 @@ export function MarqueeSelector({
 
     isDraggingRef.current = false;
     setIsSelecting(false);
-    
+
     // Stop autoscroll when selection ends
     stopAutoScroll();
 

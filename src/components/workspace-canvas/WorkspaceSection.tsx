@@ -603,6 +603,9 @@ export function WorkspaceSection({
     >
       {/* WorkspaceHeader is now rendered in DashboardLayout above the sidebar */}
 
+      {/* Modal Manager - Renders over content */}
+      {modalManager}
+
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div ref={scrollAreaRef} className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
@@ -610,8 +613,7 @@ export function WorkspaceSection({
               "relative min-h-full flex flex-col",
               showJsonView ? "h-full" : "",
             )}>
-              {/* Modal Manager - Renders over content but BELOW header */}
-              {modalManager}
+
 
               {/* Show skeleton until workspace content is loaded */}
               {(!currentWorkspaceId && currentSlug) || (currentWorkspaceId && isLoadingWorkspace) ? (
