@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { FolderPlus, MoreVertical, Users, Trash2, Share2, X, CheckSquare } from "lucide-react";
 import { useUIStore } from "@/lib/stores/ui-store";
@@ -365,72 +366,75 @@ export function WorkspaceGrid({ searchQuery = "" }: WorkspaceGridProps) {
       </div>
 
       {/* Bulk Action Bar */}
-      <AnimatePresence>
-        {selectedIds.size > 0 && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-foreground text-background px-4 py-2 rounded-full shadow-xl border border-border/20"
-          >
-            <div className="flex items-center gap-2 pr-4 border-r border-background/20 mr-2">
-              <div className="bg-primary text-primary-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                {selectedIds.size}
-              </div>
-              <span className="text-sm font-medium whitespace-nowrap">Selected</span>
-            </div>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 hover:bg-background/20 hover:text-background text-background/90"
-              onClick={() => setShowShareDialog(true)}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {selectedIds.size > 0 && (
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 bg-foreground text-background px-4 py-2 rounded-full shadow-xl border border-border/20"
             >
-              <Share2 className="h-4 w-4 mr-2" />
-              Share
-            </Button>
+              <div className="flex items-center gap-2 pr-4 border-r border-background/20 mr-2">
+                <div className="bg-primary text-primary-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {selectedIds.size}
+                </div>
+                <span className="text-sm font-medium whitespace-nowrap">Selected</span>
+              </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 hover:bg-red-500/20 hover:text-red-400 text-red-400"
-              onClick={async () => {
-                if (confirm(`Delete ${selectedIds.size} workspaces? This cannot be undone.`)) {
-                  const ids = Array.from(selectedIds);
-                  clearSelection(); // Clear UI first
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 hover:bg-background/20 hover:text-background text-background/90"
+                onClick={() => setShowShareDialog(true)}
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </Button>
 
-                  let successCount = 0;
-                  for (const id of ids) {
-                    try {
-                      await deleteWorkspace(id);
-                      successCount++;
-                    } catch (err) {
-                      console.error(`Failed to delete ${id}`, err);
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 hover:bg-red-500/20 hover:text-red-400 text-red-400"
+                onClick={async () => {
+                  if (confirm(`Delete ${selectedIds.size} workspaces? This cannot be undone.`)) {
+                    const ids = Array.from(selectedIds);
+                    clearSelection(); // Clear UI first
+
+                    let successCount = 0;
+                    for (const id of ids) {
+                      try {
+                        await deleteWorkspace(id);
+                        successCount++;
+                      } catch (err) {
+                        console.error(`Failed to delete ${id}`, err);
+                      }
+                    }
+
+                    if (successCount > 0) {
+                      toast.success(`Deleted ${successCount} workspaces`);
                     }
                   }
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
 
-                  if (successCount > 0) {
-                    toast.success(`Deleted ${successCount} workspaces`);
-                  }
-                }
-              }}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 ml-2 hover:bg-background/20 hover:text-background rounded-full"
-              onClick={clearSelection}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 ml-2 hover:bg-background/20 hover:text-background rounded-full"
+                onClick={clearSelection}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Settings Modal */}
       <WorkspaceSettingsModal
