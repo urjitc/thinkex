@@ -3,12 +3,8 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { useCreateWorkspaceFromPrompt } from "@/hooks/workspace/use-create-workspace";
-import { ArrowUp, Loader2, X } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 import TypingText from "@/components/ui/typing-text";
 
@@ -35,8 +31,6 @@ const PLACEHOLDER_OPTIONS = [
   "help me prep for my presentation",
 ];
 
-const baseText = "Create a workspace on ";
-
 interface HomePromptInputProps {
   shouldFocus?: boolean;
 }
@@ -53,7 +47,6 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingKeyRef = useRef(0);
 
-  const createFromPrompt = useCreateWorkspaceFromPrompt();
   // const {
   //   uploadFiles: uploadImages,
   //   uploadedFiles: uploadedImages,
@@ -151,7 +144,9 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast("Autogen coming soon");
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    router.push(`/generate?prompt=${encodeURIComponent(trimmed)}`);
   };
 
 

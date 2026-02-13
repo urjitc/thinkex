@@ -109,6 +109,8 @@ export async function workspaceWorker(
             favicon?: string;
         }>;
         folderId?: string;
+        /** Optional layout { x, y, w, h } for the item (lg breakpoint) */
+        layout?: { x: number; y: number; w: number; h: number };
     }
 ): Promise<{ success: boolean; message: string; itemId?: string; cardsAdded?: number; cardCount?: number; event?: WorkspaceEvent; version?: number }> {
     // For "create" operations, allow parallel execution (bypass queue)
@@ -295,6 +297,7 @@ export async function workspaceWorker(
                     data: itemData,
                     color: getRandomCardColor(),
                     folderId: params.folderId,
+                    ...(params.layout && { layout: params.layout }),
                 };
 
                 const event = createEvent("ITEM_CREATED", { id: itemId, item }, userId);
