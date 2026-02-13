@@ -235,8 +235,7 @@ export function WorkspaceInstructionModal({
       if (e.key === "Escape") {
         if (mode === "first-open" && canClose) {
           onRequestClose?.();
-        } else if (mode === "autogen" && (!isGenerating || showFallback)) {
-          onFallbackContinue?.();
+
         }
       }
     }
@@ -267,19 +266,7 @@ export function WorkspaceInstructionModal({
       >
 
         <div className="relative z-[2] flex h-[620px] flex-col rounded-[24px] bg-transparent overflow-hidden">
-          {/* Generation status banner (autogen only) */}
-          {mode === "autogen" && (
-            <div className="flex items-center gap-2.5 rounded-t-[24px] bg-white/40 dark:bg-white/[0.04] backdrop-blur-lg px-5 py-2.5">
-              {!isGenerating ? (
-                <div className="h-2 w-2 rounded-full bg-green-500" />
-              ) : (
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              )}
-              <span className="text-sm font-medium text-primary">
-                {!isGenerating ? "Your workspace is ready" : "Generating your workspace..."}
-              </span>
-            </div>
-          )}
+
 
           {/* Upper panel — video fills the space */}
           <div className="relative min-h-0 flex-1 overflow-hidden bg-white/40 dark:bg-white/[0.04] backdrop-blur-lg">
@@ -406,15 +393,7 @@ export function WorkspaceInstructionModal({
                 Close
               </button>
             )}
-            {mode === "autogen" && (!isGenerating || showFallback) && (
-              <button
-                type="button"
-                onClick={onFallbackContinue}
-                className="absolute right-5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium bg-white/25 dark:bg-white/10 backdrop-blur-md border border-white/20 dark:border-white/[0.08] text-sidebar-foreground hover:bg-white/35 dark:hover:bg-white/15 shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.3)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] transition-all duration-200"
-              >
-                Continue to workspace
-              </button>
-            )}
+
           </div>
         </div>
       </div>

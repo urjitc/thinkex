@@ -95,57 +95,7 @@ function getSelectedCardsContext(body: any): string {
   return body.selectedCardsContext || "";
 }
 
-// Regex to detect createFrom auto-generated prompts
-const CREATE_FROM_REGEX = /^Update the preexisting contents of this workspace to be about (.+)\. Only add one quality YouTube video\.$/;
 
-/**
- * Detect if the first user message is a createFrom auto-generated prompt
- * and return additional system instructions for better workspace curation
- */
-function getCreateFromSystemPrompt(messages: any[]): string | null {
-  // Find the first user message
-  const firstUserMessage = messages.find((m) => m.role === "user");
-  if (!firstUserMessage) return null;
-
-  // Extract text content from the message
-  let textContent = "";
-  if (typeof firstUserMessage.content === "string") {
-    textContent = firstUserMessage.content;
-  } else if (Array.isArray(firstUserMessage.content)) {
-    const textPart = firstUserMessage.content.find((p: any) => p.type === "text");
-    if (textPart?.text) textContent = textPart.text;
-  }
-
-  // Check if it matches the createFrom pattern
-  const match = textContent.match(CREATE_FROM_REGEX);
-  if (!match) return null;
-
-  const topic = match[1];
-
-  return `
-CREATE-FROM WORKSPACE INITIALIZATION MODE:
-This is an automatic workspace initialization request. The user wants to transform this workspace into a curated learning/research space
-ace about: "${topic}"
-
-CRITICAL INSTRUCTIONS FOR WORKSPACE CURATION:
-1. **For each of the existing workspace items** update the title and content to be about the topic:
-   - Use \`updateNote\` tool for notes
-   - Use \`updateFlashcards\` tool for flashcard sets
-   - Use \`updateQuiz\` tool for quizzes
-2. **Be thorough but focused** - Provide a solid foundation for understanding the topic without being overwhelming.
-3. **Do NOT ask the user questions** - This is an automated initialization, proceed directly with updating the workspace.
-
-QUALITY GUIDELINES FOR CONTENT:
-- For notes: add a comprehensive summary of the topic
-- For flashcards: create exactly 5 meaningful question/answer pairs covering key concepts
-- For quizzes: create challenging but fair questions that test understanding
-
-QUALITY GUIDELINES FOR THE YOUTUBE VIDEO:
-- Search with specific, relevant terms for the topic
-- Prefer videos that are educational/explanatory
-- Look for high view counts and reputable channels as quality signals
-`;
-}
 
 /**
  * Inject user-selected context (reply quotes + BlockNote selection) into the last user message.
@@ -278,11 +228,7 @@ export async function POST(req: Request) {
       `\n\nMODEL IDENTITY: You are currently running as "${modelId}". If the user asks what model you are, tell them this model ID.`,
     ];
 
-    // Inject createFrom workspace initialization prompt if detected
-    const createFromPrompt = getCreateFromSystemPrompt(cleanedMessages);
-    if (createFromPrompt) {
-      systemPromptParts.push(`\n\n${createFromPrompt}`);
-    }
+
 
     // Inject selected cards context if available
     if (selectedCardsContext) {

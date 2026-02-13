@@ -252,13 +252,7 @@ function DashboardContent({
     }
   );
 
-  // Expand chat when landing with ?createFrom=... (create workspace from home prompt)
-  const searchParams = useSearchParams();
-  useEffect(() => {
-    if (searchParams.get("createFrom")) {
-      setIsChatExpanded(true);
-    }
-  }, [searchParams, setIsChatExpanded]);
+
 
   // Reset JSON view when there are no items
   useEffect(() => {

@@ -170,121 +170,7 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const prompt = value.trim();
-    if (!prompt || createFromPrompt.isLoading || isUploading) return;
-
-    const hasUploads = uploadedFiles.length > 0;
-
-    // Construct initial state with file cards AND empty placeholder cards if files were uploaded
-    let initialState = undefined;
-    if (hasUploads) {
-      const fileHeight = 10;
-
-      // Create PDF card items from uploaded files (stacked vertically at top)
-      const pdfItems = uploadedFiles.map((file, index) => ({
-        id: crypto.randomUUID(),
-        type: 'pdf' as const,
-        name: file.name,
-        subtitle: '',
-        color: '#6366F1' as const, // Indigo for PDFs
-        layout: { x: 0, y: index * fileHeight, w: 4, h: fileHeight },
-        lastSource: 'user' as const,
-        data: {
-          fileUrl: file.fileUrl,
-          filename: file.filename,
-          fileSize: file.fileSize,
-        } as PdfData,
-      }));
-
-      const totalUploadY = uploadedFiles.length * fileHeight;
-
-      // const pdfEndY = uploadedFiles.length * fileHeight;
-
-      // // Create Image card items (stacked below PDFs)
-      // const imageItems = uploadedImages.map((file, index) => ({
-      //   id: crypto.randomUUID(),
-      //   type: 'image' as const,
-      //   name: file.name,
-      //   subtitle: '',
-      //   color: '#8B5CF6' as const, // Violet for Images
-      //   layout: { x: 0, y: pdfEndY + index * fileHeight, w: 4, h: fileHeight },
-      //   lastSource: 'user' as const,
-      //   data: {
-      //     fileUrl: file.fileUrl,
-      //     filename: file.filename,
-      //     fileSize: file.fileSize,
-      //   } as ImageData,
-      // }));
-
-      // const totalUploadY = pdfEndY + uploadedImages.length * fileHeight;
-
-      // Create empty placeholder cards with fixed layout and colors
-      const emptyNote = {
-        id: crypto.randomUUID(),
-        type: 'note' as const,
-        name: 'Update me',
-        subtitle: '',
-        color: '#10B981' as const,
-        layout: { x: 0, y: totalUploadY, w: 4, h: 13 },
-        lastSource: 'user' as const,
-        data: { blockContent: [], field1: '' },
-      };
-
-      const emptyQuiz = {
-        id: crypto.randomUUID(),
-        type: 'quiz' as const,
-        name: 'Update me',
-        subtitle: '',
-        color: '#F59E0B' as const,
-        layout: { x: 0, y: totalUploadY + 13, w: 2, h: 13 },
-        lastSource: 'user' as const,
-        data: { questions: [] },
-      };
-
-      const emptyFlashcard = {
-        id: crypto.randomUUID(),
-        type: 'flashcard' as const,
-        name: 'Update me',
-        subtitle: '',
-        color: '#EC4899' as const,
-        layout: { x: 2, y: totalUploadY + 13, w: 2, h: 8 },
-        lastSource: 'user' as const,
-        data: { cards: [] },
-      };
-
-      const allItems = [...pdfItems, emptyNote, emptyQuiz, emptyFlashcard];
-
-      initialState = {
-        workspaceId: '',
-        globalTitle: '',
-        globalDescription: '',
-        items: allItems,
-        itemsCreated: allItems.length,
-      };
-    }
-
-    createFromPrompt.mutate(prompt, {
-      template: hasUploads ? "blank" : "getting_started",
-      initialState,
-      onSuccess: (workspace) => {
-        typingKeyRef.current += 1;
-        clearFiles();
-        // clearImages();
-        const url = `/workspace/${workspace.slug}`;
-        const params = new URLSearchParams();
-
-        if (hasUploads) {
-          params.set('action', 'generate_study_materials');
-        } else {
-          params.set('createFrom', prompt);
-        }
-
-        router.push(`${url}?${params.toString()}`);
-      },
-      onError: (err) => {
-        toast.error("Could not create workspace", { description: err.message });
-      },
-    });
+    toast("Autogen coming soon");
   };
 
   const handleUrlSubmit = () => {
@@ -504,7 +390,7 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
 
           <button
             type="submit"
-            disabled={!value.trim() || createFromPrompt.isLoading || isUploading}
+            disabled={!value.trim()}
             onClick={(e) => e.stopPropagation()}
             className={cn(
               "absolute right-3 md:right-4 top-1/2 -translate-y-1/2",
@@ -517,11 +403,7 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
             )}
             aria-label="Submit prompt"
           >
-            {createFromPrompt.isLoading || isUploading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <ArrowUp className="h-5 w-5" />
-            )}
+            <ArrowUp className="h-5 w-5" />
           </button>
         </div>
       </div>
