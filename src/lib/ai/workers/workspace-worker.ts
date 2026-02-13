@@ -74,7 +74,12 @@ export async function workspaceWorker(
         content?: string; // For notes
         itemId?: string;
 
-        itemType?: "note" | "flashcard" | "quiz" | "youtube" | "image" | "audio"; // Defaults to "note" if undefined
+        itemType?: "note" | "flashcard" | "quiz" | "youtube" | "image" | "audio" | "pdf"; // Defaults to "note" if undefined
+        pdfData?: {
+            fileUrl: string;
+            filename: string;
+            fileSize?: number;
+        };
         pdfTextContent?: string; // For caching extracted PDF text content
         flashcardData?: {
             cards?: { front: string; back: string }[]; // For creating flashcards
@@ -244,6 +249,16 @@ export async function workspaceWorker(
                         duration: params.audioData.duration,
                         processingStatus: "processing",
                     };
+                } else if (itemType === "pdf") {
+                    // PDF type
+                    if (!params.pdfData || !params.pdfData.fileUrl) {
+                        throw new Error("PDF data required for pdf card creation");
+                    }
+                    itemData = {
+                        fileUrl: params.pdfData.fileUrl,
+                        filename: params.pdfData.filename || "document.pdf",
+                        fileSize: params.pdfData.fileSize,
+                    };
                 } else if (itemType === "quiz") {
                     // Quiz type
                     if (!params.quizData) {
@@ -292,7 +307,7 @@ export async function workspaceWorker(
                 const item: Item = {
                     id: itemId,
                     type: itemType,
-                    name: params.title || (itemType === "youtube" ? "YouTube Video" : itemType === "image" ? "Image" : itemType === "quiz" ? "New Quiz" : itemType === "flashcard" ? "New Flashcard Deck" : itemType === "audio" ? "Audio Recording" : "New Note"),
+                    name: params.title || (itemType === "youtube" ? "YouTube Video" : itemType === "image" ? "Image" : itemType === "quiz" ? "New Quiz" : itemType === "flashcard" ? "New Flashcard Deck" : itemType === "audio" ? "Audio Recording" : itemType === "pdf" ? "PDF Document" : "New Note"),
                     subtitle: "",
                     data: itemData,
                     color: getRandomCardColor(),

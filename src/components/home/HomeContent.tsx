@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
+import { HomeAttachmentsProvider, useHomeAttachments } from "@/contexts/HomeAttachmentsContext";
+import { LinkInputDialog } from "./LinkInputDialog";
 
 // Context for section visibility - allows child components to know when to focus
 const SectionVisibilityContext = createContext<{
@@ -30,6 +32,72 @@ const SectionVisibilityContext = createContext<{
 export const useSectionVisibility = () => useContext(SectionVisibilityContext);
 
 import { HomeActionCards } from "./HomeActionCards";
+
+const ACCEPT_FILES = "application/pdf,image/*,audio/*";
+
+interface HeroAttachmentsSectionProps {
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  showLinkDialog: boolean;
+  setShowLinkDialog: (open: boolean) => void;
+  handleCreateBlankWorkspace: () => void;
+  createWorkspacePending: boolean;
+  handleActionClick: (action: string) => void;
+  heroVisible: boolean;
+}
+
+function HeroAttachmentsSection({
+  fileInputRef,
+  showLinkDialog,
+  setShowLinkDialog,
+  handleCreateBlankWorkspace,
+  createWorkspacePending,
+  handleActionClick,
+  heroVisible,
+}: HeroAttachmentsSectionProps) {
+  const { addFiles, addLink, canAddMoreLinks, canAddYouTube } = useHomeAttachments();
+
+  const handleUpload = () => fileInputRef.current?.click();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      addFiles(Array.from(files));
+    }
+    e.target.value = "";
+  };
+
+  return (
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={ACCEPT_FILES}
+        multiple
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      <div className="flex justify-center w-full relative z-10 mb-2">
+        <HomeActionCards
+          onUpload={handleUpload}
+          onLink={() => setShowLinkDialog(true)}
+          onRecord={() => handleActionClick("Record")}
+          onStartFromScratch={handleCreateBlankWorkspace}
+          isLoading={createWorkspacePending}
+        />
+      </div>
+      <div className="flex justify-center w-full relative z-10">
+        <HomePromptInput shouldFocus={heroVisible} />
+      </div>
+      <LinkInputDialog
+        open={showLinkDialog}
+        onOpenChange={setShowLinkDialog}
+        onAdd={addLink}
+        canAddMoreLinks={canAddMoreLinks}
+        canAddYouTube={canAddYouTube}
+      />
+    </>
+  );
+}
 
 export function HomeContent() {
   const router = useRouter();
@@ -46,6 +114,9 @@ export function HomeContent() {
       description: "This feature is coming soon!",
     });
   };
+
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [workspacesVisible, setWorkspacesVisible] = useState(false);
   const [showScrollHint, setShowScrollHint] = useState(false);
@@ -234,21 +305,17 @@ export function HomeContent() {
               <DynamicTagline />
             </div>
 
-            <div className="flex justify-center w-full relative z-10 mb-2">
-              <HomeActionCards
-                onUpload={() => {}}
-                onLink={() => handleActionClick("Link")}
-                onRecord={() => handleActionClick("Record")}
-                onStartFromScratch={handleCreateBlankWorkspace}
-                isLoading={createWorkspace.isPending}
+            <HomeAttachmentsProvider>
+              <HeroAttachmentsSection
+                fileInputRef={fileInputRef}
+                showLinkDialog={showLinkDialog}
+                setShowLinkDialog={setShowLinkDialog}
+                handleCreateBlankWorkspace={handleCreateBlankWorkspace}
+                createWorkspacePending={createWorkspace.isPending}
+                handleActionClick={handleActionClick}
+                heroVisible={heroVisible}
               />
-            </div>
-
-            <div className="flex justify-center w-full relative z-10">
-              <HomePromptInput
-                shouldFocus={heroVisible}
-              />
-            </div>
+            </HomeAttachmentsProvider>
           </div>
         </div>
 

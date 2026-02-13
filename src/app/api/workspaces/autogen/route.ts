@@ -9,6 +9,8 @@ import { db, workspaces } from "@/lib/db/client";
 import { generateSlug } from "@/lib/workspace/slug";
 import { workspaceWorker, quizWorker } from "@/lib/ai/workers";
 import { searchVideos } from "@/lib/youtube";
+import { loadWorkspaceState } from "@/lib/workspace/state-loader";
+import { findNextAvailablePosition } from "@/lib/workspace-state/grid-layout-helpers";
 import { CANVAS_CARD_COLORS } from "@/lib/workspace-state/colors";
 
 const MAX_TITLE_LENGTH = 60;
@@ -38,7 +40,71 @@ const AUTOGEN_LAYOUTS = {
   flashcard: { x: 2, y: 0, w: 2, h: 5 },
   note: { x: 2, y: 5, w: 1, h: 4 },
   quiz: { x: 0, y: 7, w: 2, h: 13 },
+  pdf: { w: 1, h: 4 },
 } as const;
+
+type FileUrlItem = { url: string; mediaType: string; filename?: string; fileSize?: number };
+
+type UserMessagePart =
+  | { type: "text"; text: string }
+  | { type: "image"; image: string; mediaType?: string }
+  | { type: "file"; data: string; mediaType: string };
+
+function isYouTubeUrl(url: string): boolean {
+  return /youtube\.com\/watch|youtu\.be\//.test(url);
+}
+
+function buildUserMessage(
+  prompt: string,
+  fileUrls?: FileUrlItem[],
+  links?: string[]
+): { role: "user"; content: UserMessagePart[] } {
+  const parts: UserMessagePart[] = [];
+  const textParts: string[] = [prompt];
+  const nonYtLinks = links?.filter((l) => !isYouTubeUrl(l)) ?? [];
+  if (nonYtLinks.length) {
+    textParts.push("\n\nReferences: " + nonYtLinks.join(", "));
+  }
+  parts.push({ type: "text", text: textParts.join("") });
+  for (const f of fileUrls ?? []) {
+    const isImage = f.mediaType.startsWith("image/");
+    if (isImage) {
+      parts.push({ type: "image", image: f.url, mediaType: f.mediaType });
+    } else {
+      parts.push({ type: "file", data: f.url, mediaType: f.mediaType });
+    }
+  }
+  const ytUrl = links?.find(isYouTubeUrl);
+  if (ytUrl) {
+    parts.push({ type: "file", data: ytUrl, mediaType: "video/mp4" });
+  }
+  return { role: "user", content: parts };
+}
+
+const ALLOWED_URL_HOSTS = (() => {
+  const hosts = ["supabase.co", "supabase.in"];
+  try {
+    const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (typeof envUrl === "string" && envUrl) {
+      hosts.push(new URL(envUrl).hostname);
+    }
+  } catch {
+    /* ignore */
+  }
+  return hosts;
+})();
+
+function isAllowedFileUrl(url: string | undefined): boolean {
+  if (!url || typeof url !== "string") return false;
+  try {
+    const u = new URL(url);
+    return ALLOWED_URL_HOSTS.some(
+      (h) => u.hostname === h || u.hostname.endsWith(`.${h}`)
+    );
+  } catch {
+    return false;
+  }
+}
 
 /** System prompt for note + flashcard generation. Aligns with formatWorkspaceContext FORMATTING (markdown, math, mermaid). */
 const NOTE_FLASHCARD_SYSTEM = `You generate a study note and a flashcard deck for ThinkEx. Both must be on the same topic and use consistent formatting.
@@ -67,7 +133,12 @@ function streamEvent(ev: StreamEvent): string {
 /**
  * Generate workspace metadata (title, icon, color) from a prompt
  */
-async function generateWorkspaceMetadata(prompt: string) {
+async function generateWorkspaceMetadata(
+  prompt: string,
+  fileUrls?: FileUrlItem[],
+  links?: string[]
+) {
+  const hasParts = (fileUrls?.length ?? 0) > 0 || (links?.length ?? 0) > 0;
   const { output } = await generateText({
     model: google("gemini-2.5-flash-lite"),
     output: Output.object({
@@ -80,11 +151,13 @@ async function generateWorkspaceMetadata(prompt: string) {
       }),
     }),
     system: `You are a helpful assistant that generates workspace metadata.
-Given a user's prompt, generate:
+Given a user's prompt (and any attached files/links), generate:
 1. A short, concise workspace title (max 5-6 words)
 2. An appropriate HeroIcon name from: ${AVAILABLE_ICONS.join(", ")}
 3. A hex color code that matches the topic theme (e.g. #3B82F6)`,
-    prompt: `User prompt: "${prompt}"\n\nGenerate workspace title, icon, and color.`,
+    ...(hasParts
+      ? { messages: [buildUserMessage(prompt, fileUrls, links)] as const }
+      : { prompt: `User prompt: "${prompt}"\n\nGenerate workspace title, icon, and color.` }),
   });
 
   let title = output.title.trim();
@@ -126,7 +199,7 @@ export async function POST(request: NextRequest) {
       try {
         const userId = user!.userId;
 
-        let body: { prompt?: string };
+        let body: { prompt?: string; fileUrls?: FileUrlItem[]; links?: string[] };
         try {
           body = await request.json();
         } catch {
@@ -142,8 +215,21 @@ export async function POST(request: NextRequest) {
           return;
         }
 
+        const fileUrls = Array.isArray(body?.fileUrls) ? body.fileUrls : undefined;
+        const links = Array.isArray(body?.links) ? body.links : undefined;
+
+        // Validate file URLs to prevent SSRF
+        if (fileUrls?.length) {
+          const invalid = fileUrls.filter((f) => !f?.url || !isAllowedFileUrl(f.url));
+          if (invalid.length > 0) {
+            send({ type: "error", data: { message: "One or more file URLs are not allowed" } });
+            controller.close();
+            return;
+          }
+        }
+
         // 1. Generate metadata and stream immediately
-        const { title, icon, color } = await generateWorkspaceMetadata(prompt);
+        const { title, icon, color } = await generateWorkspaceMetadata(prompt, fileUrls, links);
         send({ type: "metadata", data: { title, icon, color } });
 
         // 2. Create workspace
@@ -217,6 +303,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 3. Generate content in parallel. Note + flashcard share one Gemini call; quiz and youtube are separate.
+        const hasParts = (fileUrls?.length ?? 0) > 0 || (links?.length ?? 0) > 0;
         const noteAndFlashcardFn = async () => {
           const { output } = await generateText({
             model: google("gemini-2.5-flash-lite"),
@@ -238,11 +325,15 @@ export async function POST(request: NextRequest) {
                 }),
               }),
             }),
-            prompt: `Create study materials about: "${prompt}".
+            ...(hasParts
+              ? { messages: [buildUserMessage(prompt, fileUrls, links)] as const }
+              : {
+                  prompt: `Create study materials about: "${prompt}".
 
 Return:
 1. note: a short title and markdown content for a study note.
 2. flashcards: a title and 5-8 flashcard pairs (front, back) on the same topic.`,
+                }),
           });
 
           await workspaceWorker("create", {
@@ -264,11 +355,18 @@ Return:
           send({ type: "progress", data: { step: "flashcards", status: "done" } });
         };
 
+        const youtubeUrlFromLinks = links?.find(isYouTubeUrl);
+        const nonYtLinks = links?.filter((l) => !isYouTubeUrl(l)) ?? [];
+        const quizTopic =
+          nonYtLinks.length > 0
+            ? `${prompt}\n\nReferences: ${nonYtLinks.join(", ")}`
+            : prompt;
+
         const tasks: Array<{ step: "quiz" | "youtube"; fn: () => Promise<unknown> }> = [
           {
             step: "quiz",
             fn: async () => {
-              const quiz = await quizWorker({ topic: prompt, questionCount: 5 });
+              const quiz = await quizWorker({ topic: quizTopic, questionCount: 5 });
               return workspaceWorker("create", {
                 workspaceId,
                 title: quiz.title,
@@ -281,6 +379,15 @@ Return:
           {
             step: "youtube",
             fn: async () => {
+              if (youtubeUrlFromLinks) {
+                return workspaceWorker("create", {
+                  workspaceId,
+                  title: "YouTube Video",
+                  itemType: "youtube",
+                  youtubeData: { url: youtubeUrlFromLinks },
+                  layout: AUTOGEN_LAYOUTS.youtube,
+                });
+              }
               const videos = await searchVideos(prompt, 3);
               const video = videos[0];
               if (!video) return { success: false, message: "No videos found" };
@@ -303,6 +410,33 @@ Return:
             send({ type: "progress", data: { step, status: "done" } });
           }),
         ]);
+
+        // Create PDF workspace items for uploaded PDFs
+        const pdfFileUrls = (fileUrls ?? []).filter((f) => f.mediaType === "application/pdf");
+        if (pdfFileUrls.length > 0) {
+          const state = await loadWorkspaceState(workspaceId);
+          let currentItems = [...(state.items ?? [])];
+          for (const pdf of pdfFileUrls) {
+            const position = findNextAvailablePosition(currentItems, "pdf", 4, "", "", AUTOGEN_LAYOUTS.pdf.w, AUTOGEN_LAYOUTS.pdf.h);
+            const title = (pdf.filename ?? "document").replace(/\.pdf$/i, "");
+            await workspaceWorker("create", {
+              workspaceId,
+              title,
+              itemType: "pdf",
+              pdfData: { fileUrl: pdf.url, filename: pdf.filename ?? "document.pdf", fileSize: pdf.fileSize },
+              layout: position,
+            });
+            currentItems = [
+              ...currentItems,
+              {
+                id: `temp-${pdf.url}`,
+                type: "pdf" as const,
+                name: title,
+                layout: { lg: position },
+              },
+            ] as typeof currentItems;
+          }
+        }
 
         send({
           type: "complete",

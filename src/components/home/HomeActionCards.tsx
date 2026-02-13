@@ -47,8 +47,7 @@ export function HomeActionCards({ onUpload, onLink, onRecord, onStartFromScratch
                 icon={<Upload className="h-6 w-6" />}
                 title="Upload"
                 subtitle="PDF, Image, Audio"
-                onClick={() => {}}
-                isLoading={false}
+                onClick={onUpload}
             />
             <ActionCard
                 icon={<LinkIcon className="h-6 w-6" />}

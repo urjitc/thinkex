@@ -7,6 +7,13 @@ import { ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 import TypingText from "@/components/ui/typing-text";
+import {
+  useHomeAttachments,
+  ATTACHMENTS_SESSION_KEY,
+  MAX_TOTAL_FILE_BYTES,
+} from "@/contexts/HomeAttachmentsContext";
+import { HomeAttachmentCards } from "./HomeAttachmentCards";
+import { toast } from "sonner";
 
 const PLACEHOLDER_OPTIONS = [
   "help me study organic chemistry",
@@ -37,10 +44,20 @@ interface HomePromptInputProps {
 
 export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
   const router = useRouter();
+  const {
+    fileItems,
+    links,
+    removeFile,
+    removeLink,
+    totalFileSize,
+    clearAll,
+    hasUploading,
+    awaitAllUploads,
+  } = useHomeAttachments();
 
-  const { resolvedTheme } = useTheme();
   const [value, setValue] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [introComplete, setIntroComplete] = useState(false);
   const [prefixTyped, setPrefixTyped] = useState(false);
   const [typedPrefix, setTypedPrefix] = useState("");
@@ -146,7 +163,42 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
     e.preventDefault();
     const trimmed = value.trim();
     if (!trimmed) return;
-    router.push(`/generate?prompt=${encodeURIComponent(trimmed)}`);
+
+    if (totalFileSize > MAX_TOTAL_FILE_BYTES) {
+      toast.error(
+        `Total file size exceeds ${MAX_TOTAL_FILE_BYTES / (1024 * 1024)}MB limit`
+      );
+      return;
+    }
+
+    if (fileItems.some((i) => i.status === "error")) {
+      toast.error("Please remove failed uploads or try again");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (hasUploading) {
+        await awaitAllUploads();
+      }
+
+      const fileUrls = fileItems
+        .filter((i) => i.status === "ready" && i.result)
+        .map((i) => i.result!);
+
+      sessionStorage.setItem(
+        ATTACHMENTS_SESSION_KEY,
+        JSON.stringify({ fileUrls, links })
+      );
+      clearAll();
+      router.push(`/generate?prompt=${encodeURIComponent(trimmed)}`);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Something went wrong"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
 
@@ -170,6 +222,12 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
           )}
         >
           <div>
+            <HomeAttachmentCards
+              fileItems={fileItems}
+              links={links}
+              onRemoveFile={removeFile}
+              onRemoveLink={removeLink}
+            />
             <div className="relative min-w-0 overflow-hidden">
               <textarea
                 ref={inputRef}
@@ -260,7 +318,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
             variant="default"
             size="icon"
             className="size-[34px] rounded-full p-1 absolute right-3 md:right-4 top-1/2 -translate-y-1/2"
-            disabled={!value.trim()}
+            disabled={!value.trim() || isSubmitting}
             onClick={(e) => e.stopPropagation()}
             aria-label="Create workspace"
           >

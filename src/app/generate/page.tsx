@@ -11,6 +11,7 @@ import { AnonymousSessionHandler } from "@/components/layout/SessionHandler";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { MobileWarning } from "@/components/ui/MobileWarning";
 import { FloatingWorkspaceCards } from "@/components/landing/FloatingWorkspaceCards";
+import { ATTACHMENTS_SESSION_KEY } from "@/contexts/HomeAttachmentsContext";
 
 const PROGRESS_LABELS: Record<string, string> = {
   metadata: "Generating workspace title...",
@@ -42,11 +43,32 @@ function GenerateContent() {
     setCompletedSteps([]);
     setProgressText("Generating workspace title...");
 
+    let fileUrls: Array<{ url: string; mediaType: string; filename?: string; fileSize?: number }> = [];
+    let links: string[] = [];
+    try {
+      const stored = sessionStorage.getItem(ATTACHMENTS_SESSION_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as {
+          fileUrls?: typeof fileUrls;
+          links?: string[];
+        };
+        fileUrls = parsed.fileUrls ?? [];
+        links = parsed.links ?? [];
+        sessionStorage.removeItem(ATTACHMENTS_SESSION_KEY);
+      }
+    } catch {
+      // Ignore parse errors
+    }
+
     try {
       const res = await fetch("/api/workspaces/autogen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({
+          prompt,
+          ...(fileUrls.length > 0 && { fileUrls }),
+          ...(links.length > 0 && { links }),
+        }),
       });
 
       if (!res.ok || !res.body) {
