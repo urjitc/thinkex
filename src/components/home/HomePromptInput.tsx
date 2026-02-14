@@ -3,26 +3,17 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { useCreateWorkspaceFromPrompt } from "@/hooks/workspace/use-create-workspace";
-import type { UploadedPdfMetadata } from "@/hooks/workspace/use-pdf-upload";
-// import { useImageUpload } from "@/hooks/workspace/use-image-upload";
-import { ArrowUp, FileText, Loader2, X, Link as LinkIcon } from "lucide-react";
-// import { ImageIcon } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 import TypingText from "@/components/ui/typing-text";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-import type { PdfData } from "@/lib/workspace-state/types";
-// import type { ImageData } from "@/lib/workspace-state/types";
+  useHomeAttachments,
+  ATTACHMENTS_SESSION_KEY,
+  MAX_TOTAL_FILE_BYTES,
+} from "@/contexts/HomeAttachmentsContext";
+import { HomeAttachmentCards } from "./HomeAttachmentCards";
+import { toast } from "sonner";
 
 const PLACEHOLDER_OPTIONS = [
   "help me study organic chemistry",
@@ -47,32 +38,33 @@ const PLACEHOLDER_OPTIONS = [
   "help me prep for my presentation",
 ];
 
-const baseText = "Create a workspace on ";
-
 interface HomePromptInputProps {
   shouldFocus?: boolean;
-  uploadedFiles: UploadedPdfMetadata[];
-  isUploading: boolean;
-  removeFile: (fileUrl: string) => void;
-  clearFiles: () => void;
-  openFilePicker: () => void;
-  uploadFiles: (files: File[]) => Promise<UploadedPdfMetadata[]>;
 }
 
-export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, removeFile, clearFiles, openFilePicker, uploadFiles }: HomePromptInputProps) {
+export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
   const router = useRouter();
-  const { resolvedTheme } = useTheme();
+  const {
+    fileItems,
+    links,
+    removeFile,
+    removeLink,
+    totalFileSize,
+    clearAll,
+    hasUploading,
+    awaitAllUploads,
+    getFileItems,
+  } = useHomeAttachments();
+
   const [value, setValue] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [introComplete, setIntroComplete] = useState(false);
   const [prefixTyped, setPrefixTyped] = useState(false);
   const [typedPrefix, setTypedPrefix] = useState("");
-  const [isUrlDialogOpen, setIsUrlDialogOpen] = useState(false);
-  const [urlInput, setUrlInput] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingKeyRef = useRef(0);
 
-  const createFromPrompt = useCreateWorkspaceFromPrompt();
   // const {
   //   uploadFiles: uploadImages,
   //   uploadedFiles: uploadedImages,
@@ -170,199 +162,58 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const prompt = value.trim();
-    if (!prompt || createFromPrompt.isLoading || isUploading) return;
+    const trimmed = value.trim();
+    if (!trimmed) return;
 
-    const hasUploads = uploadedFiles.length > 0;
-
-    // Construct initial state with file cards AND empty placeholder cards if files were uploaded
-    let initialState = undefined;
-    if (hasUploads) {
-      const fileHeight = 10;
-
-      // Create PDF card items from uploaded files (stacked vertically at top)
-      const pdfItems = uploadedFiles.map((file, index) => ({
-        id: crypto.randomUUID(),
-        type: 'pdf' as const,
-        name: file.name,
-        subtitle: '',
-        color: '#6366F1' as const, // Indigo for PDFs
-        layout: { x: 0, y: index * fileHeight, w: 4, h: fileHeight },
-        lastSource: 'user' as const,
-        data: {
-          fileUrl: file.fileUrl,
-          filename: file.filename,
-          fileSize: file.fileSize,
-        } as PdfData,
-      }));
-
-      const totalUploadY = uploadedFiles.length * fileHeight;
-
-      // const pdfEndY = uploadedFiles.length * fileHeight;
-
-      // // Create Image card items (stacked below PDFs)
-      // const imageItems = uploadedImages.map((file, index) => ({
-      //   id: crypto.randomUUID(),
-      //   type: 'image' as const,
-      //   name: file.name,
-      //   subtitle: '',
-      //   color: '#8B5CF6' as const, // Violet for Images
-      //   layout: { x: 0, y: pdfEndY + index * fileHeight, w: 4, h: fileHeight },
-      //   lastSource: 'user' as const,
-      //   data: {
-      //     fileUrl: file.fileUrl,
-      //     filename: file.filename,
-      //     fileSize: file.fileSize,
-      //   } as ImageData,
-      // }));
-
-      // const totalUploadY = pdfEndY + uploadedImages.length * fileHeight;
-
-      // Create empty placeholder cards with fixed layout and colors
-      const emptyNote = {
-        id: crypto.randomUUID(),
-        type: 'note' as const,
-        name: 'Update me',
-        subtitle: '',
-        color: '#10B981' as const,
-        layout: { x: 0, y: totalUploadY, w: 4, h: 13 },
-        lastSource: 'user' as const,
-        data: { blockContent: [], field1: '' },
-      };
-
-      const emptyQuiz = {
-        id: crypto.randomUUID(),
-        type: 'quiz' as const,
-        name: 'Update me',
-        subtitle: '',
-        color: '#F59E0B' as const,
-        layout: { x: 0, y: totalUploadY + 13, w: 2, h: 13 },
-        lastSource: 'user' as const,
-        data: { questions: [] },
-      };
-
-      const emptyFlashcard = {
-        id: crypto.randomUUID(),
-        type: 'flashcard' as const,
-        name: 'Update me',
-        subtitle: '',
-        color: '#EC4899' as const,
-        layout: { x: 2, y: totalUploadY + 13, w: 2, h: 8 },
-        lastSource: 'user' as const,
-        data: { cards: [] },
-      };
-
-      const allItems = [...pdfItems, emptyNote, emptyQuiz, emptyFlashcard];
-
-      initialState = {
-        workspaceId: '',
-        globalTitle: '',
-        globalDescription: '',
-        items: allItems,
-        itemsCreated: allItems.length,
-      };
+    if (totalFileSize > MAX_TOTAL_FILE_BYTES) {
+      toast.error(
+        `Total file size exceeds ${MAX_TOTAL_FILE_BYTES / (1024 * 1024)}MB limit`
+      );
+      return;
     }
 
-    createFromPrompt.mutate(prompt, {
-      template: hasUploads ? "blank" : "getting_started",
-      initialState,
-      onSuccess: (workspace) => {
-        typingKeyRef.current += 1;
-        clearFiles();
-        // clearImages();
-        const url = `/workspace/${workspace.slug}`;
-        const params = new URLSearchParams();
+    if (fileItems.some((i) => i.status === "error")) {
+      toast.error("Please remove failed uploads or try again");
+      return;
+    }
 
-        if (hasUploads) {
-          params.set('action', 'generate_study_materials');
-        } else {
-          params.set('createFrom', prompt);
-        }
+    setIsSubmitting(true);
+    try {
+      if (hasUploading) {
+        await awaitAllUploads();
+      }
 
-        router.push(`${url}?${params.toString()}`);
-      },
-      onError: (err) => {
-        toast.error("Could not create workspace", { description: err.message });
-      },
-    });
+      const latestFileItems = getFileItems();
+      if (latestFileItems.some((i) => i.status === "error")) {
+        toast.error("Please remove failed uploads or try again");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const fileUrls = latestFileItems
+        .filter((i) => i.status === "ready" && i.result)
+        .map((i) => i.result!);
+
+      sessionStorage.setItem(
+        ATTACHMENTS_SESSION_KEY,
+        JSON.stringify({ fileUrls, links })
+      );
+      clearAll();
+      router.push(`/generate?prompt=${encodeURIComponent(trimmed)}`);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Something went wrong"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleUrlSubmit = () => {
-    if (!urlInput.trim()) return;
 
-    // Append URL to current value, adding a space if needed
-    const newValue = value + (value && !value.endsWith(' ') ? ' ' : '') + urlInput.trim() + ' ';
-    setValue(newValue);
-    setUrlInput("");
-    setIsUrlDialogOpen(false);
-
-    // Focus back on input
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
-  };
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-[760px]">
       <div className="relative">
-        {/* Uploaded files display */}
-        {uploadedFiles.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
-            {uploadedFiles.map((file) => (
-              <div
-                key={file.fileUrl}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-1.5",
-                  "bg-muted border",
-                  "text-sm"
-                )}
-              >
-                <FileText className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="truncate max-w-[200px]">{file.name}</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeFile(file.fileUrl);
-                  }}
-                  className="ml-1 hover:text-foreground transition-colors"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* // Uploaded images display */}
-        {/* uploadedImages.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
-            {uploadedImages.map((file) => (
-              <div
-                key={file.fileUrl}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-1.5",
-                  "bg-foreground/5 border border-foreground/10",
-                  "text-sm text-foreground/80"
-                )}
-              >
-                <ImageIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="truncate max-w-[200px]">{file.name}</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeImage(file.fileUrl);
-                  }}
-                  className="ml-1 hover:text-foreground transition-colors"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        ) */}
-
         {/* Input container styled to look like one input */}
         <div
           onClick={() => inputRef.current?.focus()}
@@ -371,15 +222,20 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
             isExpanded ? "rounded-[24px]" : "rounded-[32px]",
             "border",
             "bg-sidebar backdrop-blur-xl",
-            "px-4 py-2 md:px-6 md:py-3",
+            "px-4 py-1 md:px-6 md:py-2",
             "pr-14 md:pr-16",
             "shadow-[0_24px_90px_-40px_rgba(0,0,0,0.85)]",
-            "focus-within:border-foreground/40",
             "transition-[border-radius,height] duration-300 ease-in-out",
             "cursor-text"
           )}
         >
           <div>
+            <HomeAttachmentCards
+              fileItems={fileItems}
+              links={links}
+              onRemoveFile={removeFile}
+              onRemoveLink={removeLink}
+            />
             <div className="relative min-w-0 overflow-hidden">
               <textarea
                 ref={inputRef}
@@ -461,100 +317,24 @@ export function HomePromptInput({ shouldFocus, uploadedFiles, isUploading, remov
             </div>
           </div>
 
-          <div className="mx-0 my-1 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />
 
-          <div className="mt-0 flex items-center gap-0.5">
-            <button
-              type="button"
-              onClick={() => openFilePicker()}
-              className={cn(
-                "flex items-center gap-1 px-1.5 py-0.5 rounded-md",
-                "text-[11px] text-sidebar-foreground/70",
-                "hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-              )}
-            >
-              <FileText className="h-3 w-3" />
-              <span>Upload PDF</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsUrlDialogOpen(true)}
-              className={cn(
-                "flex items-center gap-1 px-1.5 py-0.5 rounded-md",
-                "text-[11px] text-sidebar-foreground/70",
-                "hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-              )}
-            >
-              <LinkIcon className="h-3 w-3" />
-              <span>Add URL</span>
-            </button>
-            {/* <button
-              type="button"
-              onClick={() => openImagePicker()}
-              className={cn(
-                "flex items-center gap-1 px-1.5 py-0.5 rounded-md",
-                "text-[11px] text-sidebar-foreground/70",
-                "hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-              )}
-            >
-              <ImageIcon className="h-3 w-3" />
-              <span>Add Image</span>
-            </button> */}
-          </div>
 
-          <button
+          <TooltipIconButton
+            tooltip="Create workspace"
+            side="bottom"
             type="submit"
-            disabled={!value.trim() || createFromPrompt.isLoading || isUploading}
+            variant="default"
+            size="icon"
+            className="size-[34px] rounded-full p-1 absolute right-3 md:right-4 top-1/2 -translate-y-1/2"
+            disabled={!value.trim() || isSubmitting}
             onClick={(e) => e.stopPropagation()}
-            className={cn(
-              "absolute right-3 md:right-4 top-1/2 -translate-y-1/2",
-              "h-7 w-7 md:h-8 md:w-8 rounded-full",
-              "flex items-center justify-center",
-              "bg-background text-foreground border border-border",
-              "transition-colors",
-              "hover:bg-muted hover:border-border/80",
-              "disabled:opacity-40 disabled:cursor-not-allowed"
-            )}
-            aria-label="Submit prompt"
+            aria-label="Create workspace"
           >
-            {createFromPrompt.isLoading || isUploading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <ArrowUp className="h-5 w-5" />
-            )}
-          </button>
+            <ArrowUp className="size-4 text-background" />
+          </TooltipIconButton>
         </div>
       </div>
 
-      <Dialog open={isUrlDialogOpen} onOpenChange={setIsUrlDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Link</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Input
-              placeholder="Paste URL here..."
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleUrlSubmit();
-                }
-              }}
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUrlDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUrlSubmit} disabled={!urlInput.trim()}>
-              Add
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </form>
   );
 }

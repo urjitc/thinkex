@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Move, SquarePen, FileSearch, Youtube, Share2, ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Move, SquarePen, FileSearch, Youtube, Share2, ChevronLeft, ChevronRight, X, ArrowRight } from "lucide-react";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import type { WorkspaceInstructionMode } from "@/hooks/workspace/use-workspace-instruction-modal";
@@ -15,63 +16,61 @@ export interface WorkspaceInstructionModalProps {
   onFallbackContinue?: () => void;
   onUserInteracted?: () => void;
   isGenerating?: boolean;
+  /** Progress text shown at top when generating (e.g. "Creating your note...") */
+  progressText?: string;
+  /** Steps completed so far (e.g. ["metadata", "workspace", "note"]) */
+  completedSteps?: string[];
+  /** Total number of steps for progress indicator */
+  totalSteps?: number;
+  /** When true and workspaceSlug is set, shows "Open workspace" button instead of auto-redirecting (used when user interacted during generation) */
+  generationComplete?: boolean;
+  workspaceSlug?: string | null;
+  onOpenWorkspace?: () => void;
 }
 
 interface Step {
   icon: typeof Move;
   label: string;
-  description: string;
-  /** When set, shows "Method X of Y" badge on the slide */
-  variant?: { current: number; total: number };
   video?: { dark: string; light: string };
 }
 
 const VIDEO_BASE = "https://uxcoymwbfcbvkgwbhttq.supabase.co/storage/v1/object/public/video";
 
+// Order front-loads cooler / less intuitive features so drop-off users still see the wow moments
 const STEPS: Step[] = [
   {
-    icon: Move,
-    label: "Arrange your materials",
-    description: "Drag, resize, and organize cards on your workspace grid to build your layout.",
-    video: { dark: `${VIDEO_BASE}/step-1-arrange-dark.mp4`, light: `${VIDEO_BASE}/step-1-arrange-light.mp4` },
-  },
-  {
     icon: SquarePen,
-    label: "Generate notes as you go",
-    description: "Type a prompt and let the AI create a complete set of study materials for you.",
-    variant: { current: 1, total: 3 },
-    video: { dark: `${VIDEO_BASE}/step-2-generate-card-dark-1.mp4`, light: `${VIDEO_BASE}/step-2-generate-card-light-1.mp4` },
-  },
-  {
-    icon: SquarePen,
-    label: "Generate notes as you go",
-    description: "Select existing cards and ask the AI to generate notes based on their content.",
-    variant: { current: 2, total: 3 },
-    video: { dark: `${VIDEO_BASE}/step-2-generate-card-dark-2.mp4`, light: `${VIDEO_BASE}/step-2-generate-card-light-2.mp4` },
-  },
-  {
-    icon: SquarePen,
-    label: "Generate notes as you go",
-    description: "Upload a PDF and have the AI automatically create summaries and study guides.",
-    variant: { current: 3, total: 3 },
+    label: "Upload a PDF, AI makes summaries & study guides",
     video: { dark: `${VIDEO_BASE}/step-2-generate-card-dark-3.mp4`, light: `${VIDEO_BASE}/step-2-generate-card-light-3.mp4` },
   },
   {
     icon: FileSearch,
-    label: "Ask AI about your documents",
-    description: "Select cards and chat with the AI to get answers grounded in your materials.",
+    label: "Select cards & chat with AI for answers from your materials",
     video: { dark: `${VIDEO_BASE}/step-3-pdf-ss-dark.mp4`, light: `${VIDEO_BASE}/step-3-pdf-ss-light.mp4` },
   },
   {
+    icon: SquarePen,
+    label: "Type a prompt, AI creates study materials",
+    video: { dark: `${VIDEO_BASE}/step-2-generate-card-dark-1.mp4`, light: `${VIDEO_BASE}/step-2-generate-card-light-1.mp4` },
+  },
+  {
+    icon: SquarePen,
+    label: "Select cards, AI generates notes from their content",
+    video: { dark: `${VIDEO_BASE}/step-2-generate-card-dark-2.mp4`, light: `${VIDEO_BASE}/step-2-generate-card-light-2.mp4` },
+  },
+  {
     icon: Youtube,
-    label: "Drop in lecture videos",
-    description: "Paste a YouTube link or drag it in to add lecture videos alongside your notes.",
+    label: "Paste or drag YouTube links next to your notes",
     video: { dark: `${VIDEO_BASE}/step-4-youtube-dark.mp4`, light: `${VIDEO_BASE}/step-4-youtube-light.mp4` },
   },
   {
+    icon: Move,
+    label: "Drag, resize & organize cards on your grid",
+    video: { dark: `${VIDEO_BASE}/step-1-arrange-dark.mp4`, light: `${VIDEO_BASE}/step-1-arrange-light.mp4` },
+  },
+  {
     icon: Share2,
-    label: "Collaborate with others",
-    description: "Share your workspace with classmates or teammates to work together in real time.",
+    label: "Share your workspace to collaborate in real time",
     video: { dark: `${VIDEO_BASE}/step-5-collab-dark.mp4`, light: `${VIDEO_BASE}/step-5-collab-light.mp4` },
   },
 ];
@@ -177,22 +176,33 @@ function useCarousel(open: boolean) {
   const step = STEPS[activeIndex];
   const videoSrc = step.video ? (isDark ? step.video.dark : step.video.light) : null;
 
-  // Compute next slide's video src for preloading
-  const nextStep = STEPS[(activeIndex + 1) % STEPS.length];
-  const nextVideoSrc = nextStep.video ? (isDark ? nextStep.video.dark : nextStep.video.light) : null;
+  // All video URLs for current theme (for preloading)
+  const allVideoSrcs = useMemo(
+    () =>
+      STEPS.filter((s): s is Step & { video: NonNullable<Step["video"]> } => !!s.video).map((s) =>
+        isDark ? s.video.dark : s.video.light
+      ),
+    [isDark]
+  );
 
-  // Preload the next video so transitions are instant
+  // Preload metadata only (lightweight) so switching steps loads on-demand
   useEffect(() => {
-    if (!open || !nextVideoSrc) return;
-    const preloadVideo = document.createElement("video");
-    preloadVideo.preload = "auto";
-    preloadVideo.src = nextVideoSrc;
-    preloadVideo.load();
+    if (!open || !mounted || allVideoSrcs.length === 0) return;
+    const preloaded: HTMLVideoElement[] = [];
+    for (const src of allVideoSrcs) {
+      const el = document.createElement("video");
+      el.preload = "metadata";
+      el.src = src;
+      el.load();
+      preloaded.push(el);
+    }
     return () => {
-      preloadVideo.src = "";
-      preloadVideo.load();
+      for (const v of preloaded) {
+        v.src = "";
+        v.load();
+      }
     };
-  }, [open, nextVideoSrc]);
+  }, [open, mounted, allVideoSrcs]);
 
   return { activeIndex, step, videoSrc, fading, videoLoaded, goTo, goPrev, goNext, handleVideoEnded, handleVideoCanPlay, pause };
 }
@@ -206,10 +216,16 @@ export function WorkspaceInstructionModal({
   onFallbackContinue,
   onUserInteracted,
   isGenerating,
+  progressText,
+  completedSteps = [],
+  totalSteps = 6,
+  generationComplete,
+  workspaceSlug,
+  onOpenWorkspace,
 }: WorkspaceInstructionModalProps) {
   const carousel = useCarousel(open);
   const { activeIndex, step, videoSrc, fading, videoLoaded, goTo, goPrev, goNext, handleVideoEnded, handleVideoCanPlay, pause } = carousel;
-  const Icon = step.icon;
+  const { resolvedTheme } = useTheme();
 
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -233,10 +249,10 @@ export function WorkspaceInstructionModal({
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
+        // Do not allow close while generating
+        if (isGenerating) return;
         if (mode === "first-open" && canClose) {
           onRequestClose?.();
-        } else if (mode === "autogen" && (!isGenerating || showFallback)) {
-          onFallbackContinue?.();
         }
       }
     }
@@ -250,7 +266,11 @@ export function WorkspaceInstructionModal({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[90] flex items-center justify-center bg-black/25 dark:bg-black/40 px-4 py-6 backdrop-blur-[20px] transition-opacity duration-300 ease-out",
+        "fixed inset-0 z-[90] flex items-center justify-center px-4 py-6 transition-opacity duration-300 ease-out",
+        // Minimal blur + lighter overlay when generating or generation complete so floating cards stay clear
+        isGenerating || (!!generationComplete && !!workspaceSlug)
+          ? "bg-black/5 dark:bg-black/15 backdrop-blur-0"
+          : "bg-black/25 dark:bg-black/40 backdrop-blur-[12px]",
         isClosing ? "opacity-0" : "opacity-100"
       )}
       role="dialog"
@@ -261,161 +281,173 @@ export function WorkspaceInstructionModal({
       <div
         onClick={() => { pause(); onUserInteracted?.(); }}
         className={cn(
-          "relative w-full max-w-[1100px] rounded-[28px] bg-white/60 dark:bg-white/[0.06] backdrop-blur-[24px] backdrop-saturate-[180%] shadow-[0_28px_80px_rgba(0,0,0,0.12),0_8px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.4)] dark:shadow-[0_28px_80px_rgba(0,0,0,0.5),0_8px_24px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-300 ease-out",
+          "relative w-full max-w-[1100px] rounded-[28px] shadow-[0_28px_80px_rgba(0,0,0,0.12),0_8px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.4)] dark:shadow-[0_28px_80px_rgba(0,0,0,0.5),0_8px_24px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-300 ease-out",
+          isGenerating || (!!generationComplete && !!workspaceSlug)
+            ? "bg-white/85 dark:bg-gray-900/75 backdrop-blur-md"
+            : "bg-white/80 dark:bg-gray-900/65 backdrop-blur-[24px] backdrop-saturate-[180%]",
           isClosing ? "opacity-0 scale-[0.97]" : "opacity-100 scale-100"
         )}
       >
 
-        <div className="relative z-[2] flex h-[620px] flex-col rounded-[24px] bg-transparent overflow-hidden">
-          {/* Generation status banner (autogen only) */}
-          {mode === "autogen" && (
-            <div className="flex items-center gap-2.5 rounded-t-[24px] bg-white/40 dark:bg-white/[0.04] backdrop-blur-lg px-5 py-2.5">
-              {!isGenerating ? (
-                <div className="h-2 w-2 rounded-full bg-green-500" />
-              ) : (
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              )}
-              <span className="text-sm font-medium text-primary">
-                {!isGenerating ? "Your workspace is ready" : "Generating your workspace..."}
-              </span>
+        <div className="relative z-[2] flex h-[690px] flex-col rounded-[24px] bg-transparent overflow-hidden">
+
+          {/* Generating banner at top — when isGenerating, shows progress and step indicator */}
+          {isGenerating && (
+            <div className="shrink-0 flex flex-col gap-2 px-5 py-4 bg-primary/10 dark:bg-gray-800/70 border-b border-white/10 dark:border-white/5">
+              <div className="flex items-center gap-3">
+                <DotLottieReact
+                  src={resolvedTheme === "light" ? "/thinkexlight.lottie" : "/logo.lottie"}
+                  loop
+                  autoplay
+                  mode="bounce"
+                  className="h-7 w-7 shrink-0"
+                />
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <h3 className="text-sm font-semibold text-sidebar-foreground">
+                    Your workspace is generating
+                  </h3>
+                  <p className="text-xs text-sidebar-foreground/80 truncate">
+                    {progressText || "Preparing..."}
+                  </p>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 rounded-full bg-white/20 dark:bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
+                    style={{
+                      width: `${totalSteps > 0 ? (completedSteps.length / totalSteps) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-sidebar-foreground/80 tabular-nums">
+                  {completedSteps.length}/{totalSteps}
+                </span>
+              </div>
             </div>
           )}
 
-          {/* Upper panel — video fills the space */}
-          <div className="relative min-h-0 flex-1 overflow-hidden bg-white/40 dark:bg-white/[0.04] backdrop-blur-lg">
-            <div className="absolute -left-20 -top-20 h-44 w-44 rounded-full bg-primary/15 blur-[80px]" />
-            <div className="absolute -bottom-20 -right-20 h-52 w-52 rounded-full bg-accent/25 blur-[80px]" />
-
-            {/* Left chevron */}
-            <button
-              type="button"
-              onClick={goPrev}
-              className="absolute left-0 top-0 z-10 h-full w-16 flex items-center justify-center text-sidebar-foreground mix-blend-difference transition-all duration-200"
-              aria-label="Previous step"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-
-            {/* Right chevron */}
-            <button
-              type="button"
-              onClick={goNext}
-              className="absolute right-0 top-0 z-10 h-full w-16 flex items-center justify-center text-sidebar-foreground mix-blend-difference transition-all duration-200"
-              aria-label="Next step"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </button>
-
-            {/* Video or icon fallback */}
-            <div
-              className={cn(
-                "relative h-full w-full transition-opacity",
-                fading ? "opacity-0" : "opacity-100"
-              )}
-              style={{ transitionDuration: `${FADE_MS}ms` }}
-            >
-              {/* Icon placeholder — shown until video is loaded */}
-              <div
-                className={cn(
-                  "absolute inset-0 flex items-center justify-center transition-opacity duration-300",
-                  videoSrc && videoLoaded ? "opacity-0" : "opacity-100"
-                )}
+          {/* Generation complete banner — when user interacted, show button instead of auto-redirect */}
+          {generationComplete && workspaceSlug && onOpenWorkspace && (
+            <div className="shrink-0 flex flex-col items-center justify-center gap-3 px-5 py-4 bg-primary/10 dark:bg-gray-800/70 border-b border-white/10 dark:border-white/5">
+              <h3 className="text-sm font-semibold text-sidebar-foreground">
+                Your workspace is ready
+              </h3>
+              <button
+                type="button"
+                onClick={onOpenWorkspace}
+                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_2px_8px_rgba(59,130,246,0.4)] transition-all duration-200 cursor-pointer"
               >
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-primary/[0.08] dark:bg-primary/[0.12] backdrop-blur-sm border border-white/[0.12] dark:border-white/[0.06] text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]">
-                  <Icon className="h-10 w-10" />
+                Open workspace
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Upper panel — video/carousel (always shown, including when generating) */}
+              <div className="relative min-h-0 flex-1 overflow-hidden bg-primary/10 dark:bg-gray-800/70">
+                <div className="absolute -left-20 -top-20 h-44 w-44 rounded-full bg-primary/15 blur-[80px]" />
+                <div className="absolute -bottom-20 -right-20 h-52 w-52 rounded-full bg-accent/25 blur-[80px]" />
+
+                {/* Left chevron */}
+                <button
+                  type="button"
+                  onClick={() => { goPrev(); onUserInteracted?.(); }}
+                  className="absolute left-0 top-0 z-10 h-full w-16 flex items-center justify-center text-sidebar-foreground mix-blend-difference transition-all duration-200 cursor-pointer"
+                  aria-label="Previous step"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+
+                {/* Right chevron */}
+                <button
+                  type="button"
+                  onClick={() => { goNext(); onUserInteracted?.(); }}
+                  className="absolute right-0 top-0 z-10 h-full w-16 flex items-center justify-center text-sidebar-foreground mix-blend-difference transition-all duration-200 cursor-pointer"
+                  aria-label="Next step"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+
+                {/* Video or icon fallback */}
+                <div
+                  className={cn(
+                    "relative h-full w-full transition-opacity",
+                    fading ? "opacity-0" : "opacity-100"
+                  )}
+                  style={{ transitionDuration: `${FADE_MS}ms` }}
+                >
+                  {/* Video — fades in once ready */}
+                  {videoSrc && (
+                    <video
+                      key={videoSrc}
+                      src={videoSrc}
+                      autoPlay
+                      muted
+                      playsInline
+                      preload="auto"
+                      onEnded={handleVideoEnded}
+                      onPlay={(e) => {
+                        e.currentTarget.playbackRate = 0.7;
+                        handleVideoCanPlay();
+                      }}
+                      className={cn(
+                        "absolute inset-0 h-full w-full object-cover transition-opacity duration-300",
+                        videoLoaded ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                  )}
                 </div>
               </div>
 
-              {/* Video — fades in over the icon once ready */}
-              {videoSrc && (
-                <video
-                  key={videoSrc}
-                  src={videoSrc}
-                  autoPlay
-                  muted
-                  playsInline
-                  preload="auto"
-                  onEnded={handleVideoEnded}
-                  onPlay={(e) => {
-                    e.currentTarget.playbackRate = 0.7;
-                    handleVideoCanPlay();
-                  }}
+              {/* Lower panel — text, dots, action buttons (always shown, including when generating) */}
+              <div className="relative flex flex-col items-center gap-1 bg-primary/10 dark:bg-gray-800/70 px-5 pb-4 pt-3 rounded-b-[24px]">
+                {/* Text block — fades with the video */}
+                <div
                   className={cn(
-                    "absolute inset-0 h-full w-full object-cover transition-opacity duration-300",
-                    videoLoaded ? "opacity-100" : "opacity-0"
+                    "flex flex-col items-center gap-1 transition-opacity",
+                    fading ? "opacity-0" : "opacity-100"
                   )}
-                />
-              )}
-            </div>
-          </div>
+                  style={{ transitionDuration: `${FADE_MS}ms` }}
+                >
+                  {/* Label */}
+                  <h3 className="text-2xl font-semibold text-sidebar-foreground text-center">
+                    {step.label}
+                  </h3>
+                </div>
 
-          {/* Lower panel — text, dots, action buttons */}
-          <div className="relative flex flex-col items-center gap-1 bg-white/40 dark:bg-white/[0.04] backdrop-blur-lg px-5 pb-4 pt-3 rounded-b-[24px]">
-            {/* Text block — fades with the video */}
-            <div
-              className={cn(
-                "flex flex-col items-center gap-1 transition-opacity",
-                fading ? "opacity-0" : "opacity-100"
-              )}
-              style={{ transitionDuration: `${FADE_MS}ms` }}
-            >
-              {/* Variant badge */}
-              {step.variant && (
-                <span className="inline-flex items-center rounded-full bg-primary/[0.08] dark:bg-primary/[0.15] backdrop-blur-sm border border-white/[0.1] px-3 py-1 text-sm font-medium text-primary">
-                  Method {step.variant.current} of {step.variant.total}
-                </span>
-              )}
+                {/* Dot navigation */}
+                <div className="flex items-center justify-center gap-2 pt-2">
+                  {STEPS.map((s, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => { goTo(index); onUserInteracted?.(); }}
+                      className={cn(
+                        "h-2 rounded-full transition-all duration-300",
+                        index === activeIndex
+                          ? "w-6 bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+                          : "w-2 bg-sidebar-foreground/25 hover:bg-sidebar-foreground/40"
+                      )}
+                      aria-label={`Go to slide ${index + 1}: ${s.label}`}
+                    />
+                  ))}
+                </div>
 
-              {/* Label */}
-              <h3 className="text-2xl font-semibold text-sidebar-foreground">
-                {step.label}
-              </h3>
+                {/* CTA — vertically centered in bottom bar */}
+                {mode === "first-open" && canClose && (
+                  <button
+                    type="button"
+                    onClick={onRequestClose}
+                    className="absolute right-5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium bg-white/25 dark:bg-white/10 backdrop-blur-md border border-white/20 dark:border-white/[0.08] text-sidebar-foreground hover:bg-white/35 dark:hover:bg-white/15 shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.3)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] transition-all duration-200"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Close
+                  </button>
+                )}
 
-              {/* Description */}
-              <p className="text-center whitespace-nowrap text-base text-sidebar-foreground/70">
-                {step.description}
-              </p>
-            </div>
-
-            {/* Dot navigation */}
-            <div className="flex items-center justify-center gap-2 pt-2">
-              {STEPS.map((s, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => goTo(index)}
-                  className={cn(
-                    "h-2 rounded-full transition-all duration-300",
-                    index === activeIndex
-                      ? "w-6 bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]"
-                      : "w-2 bg-sidebar-foreground/25 hover:bg-sidebar-foreground/40"
-                  )}
-                  aria-label={`Go to slide ${index + 1}${s.variant ? ` — ${s.label} method ${s.variant.current}` : ` — ${s.label}`}`}
-                />
-              ))}
-            </div>
-
-            {/* CTA — vertically centered in bottom bar */}
-            {mode === "first-open" && canClose && (
-              <button
-                type="button"
-                onClick={onRequestClose}
-                className="absolute right-5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium bg-white/25 dark:bg-white/10 backdrop-blur-md border border-white/20 dark:border-white/[0.08] text-sidebar-foreground hover:bg-white/35 dark:hover:bg-white/15 shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.3)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] transition-all duration-200"
-              >
-                <X className="h-3.5 w-3.5" />
-                Close
-              </button>
-            )}
-            {mode === "autogen" && (!isGenerating || showFallback) && (
-              <button
-                type="button"
-                onClick={onFallbackContinue}
-                className="absolute right-5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium bg-white/25 dark:bg-white/10 backdrop-blur-md border border-white/20 dark:border-white/[0.08] text-sidebar-foreground hover:bg-white/35 dark:hover:bg-white/15 shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.3)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.06)] transition-all duration-200"
-              >
-                Continue to workspace
-              </button>
-            )}
-          </div>
+              </div>
         </div>
       </div>
     </div>

@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-export type WorkspaceInstructionMode = "first-open" | "autogen";
+export type WorkspaceInstructionMode = "first-open";
 
-type CloseReason = "manual" | "autogen_complete" | "fallback_continue";
+type CloseReason = "manual" | "fallback_continue";
 
 interface AnalyticsClient {
   capture: (event: string, properties?: Record<string, unknown>) => void;
@@ -34,27 +34,19 @@ const FIRST_OPEN_UNLOCK_MS = 7000;
 
 export function useWorkspaceInstructionModal({
   workspaceId,
-  assistantIsRunning,
   analytics,
 }: UseWorkspaceInstructionModalParams): UseWorkspaceInstructionModalResult {
-  const searchParams = useSearchParams();
-  const createFrom = searchParams.get("createFrom");
-  const action = searchParams.get("action");
-  const isAutogenRoute = Boolean(createFrom) || action === "generate_study_materials";
-
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<WorkspaceInstructionMode | null>(null);
   const [canClose, setCanClose] = useState(false);
-  const [showFallback, setShowFallback] = useState(false);
-  const [generationComplete, setGenerationComplete] = useState(false);
+
+  // Remnants of autogen that are no longer used but kept to satisfy interface if needed, 
+  // though we should ideally clean the interface too. 
+  // For now, hardcode them to defaults.
+  const showFallback = false;
 
   const startTimeRef = useRef<number | null>(null);
   const shownSignatureRef = useRef<string | null>(null);
-  const seenRunningInCurrentAutogenRef = useRef(false);
-  const userInteractedRef = useRef(false);
-  const dismissedAutogenSignaturesRef = useRef<Set<string>>(new Set());
-
-  const autogenSignature = `${workspaceId ?? "none"}|${createFrom ?? ""}|${action ?? ""}`;
 
   const track = useCallback(
     (event: string, properties: Record<string, unknown>) => {
@@ -75,30 +67,19 @@ export function useWorkspaceInstructionModal({
         time_to_close_ms: timeToCloseMs,
       };
 
-      if (reason === "autogen_complete") {
-        track("workspace-instruction-modal-autoclosed", common);
-      }
       if (reason === "fallback_continue") {
         track("workspace-instruction-modal-fallback-continued", common);
-      }
-
-      track("workspace-instruction-modal-closed", common);
-
-      if (mode === "autogen") {
-        dismissedAutogenSignaturesRef.current.add(autogenSignature);
+      } else {
+        track("workspace-instruction-modal-closed", common);
       }
 
       setOpen(false);
       setMode(null);
       setCanClose(false);
-      setShowFallback(false);
-      setGenerationComplete(false);
-      seenRunningInCurrentAutogenRef.current = false;
-      userInteractedRef.current = false;
       startTimeRef.current = null;
       shownSignatureRef.current = null;
     },
-    [autogenSignature, mode, open, track, workspaceId]
+    [mode, open, track, workspaceId]
   );
 
   const close = useCallback(() => {
@@ -107,38 +88,21 @@ export function useWorkspaceInstructionModal({
   }, [canClose, closeInternal, mode, open]);
 
   const continueFromFallback = useCallback(() => {
-    if (!open || mode !== "autogen") return;
-    closeInternal("fallback_continue");
-  }, [closeInternal, mode, open]);
-
-  const markInteracted = useCallback(() => {
-    userInteractedRef.current = true;
+    // No-op since autogen is removed
   }, []);
 
+  const markInteracted = useCallback(() => {
+    // No-op
+  }, []);
+
+  // Handle First Open Logic
   useEffect(() => {
     if (!workspaceId) {
       setOpen(false);
       setMode(null);
       setCanClose(false);
-      setShowFallback(false);
-      seenRunningInCurrentAutogenRef.current = false;
       shownSignatureRef.current = null;
       startTimeRef.current = null;
-      return;
-    }
-
-    if (isAutogenRoute) {
-      if (!dismissedAutogenSignaturesRef.current.has(autogenSignature)) {
-        setOpen(true);
-        setMode("autogen");
-        setCanClose(false);
-        setShowFallback(false);
-        seenRunningInCurrentAutogenRef.current = false;
-      }
-      return;
-    }
-
-    if (open && mode === "autogen") {
       return;
     }
 
@@ -149,18 +113,17 @@ export function useWorkspaceInstructionModal({
         setOpen(true);
         setMode("first-open");
         setCanClose(false);
-        setShowFallback(false);
       }
     } catch {
       // localStorage unavailable (SSR, private browsing quota) — skip
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autogenSignature, isAutogenRoute, workspaceId]);
+  }, [workspaceId]);
 
+  // Tracking
   useEffect(() => {
     if (!open || !mode) return;
 
-    const signature = `${mode}|${workspaceId}|${autogenSignature}`;
+    const signature = `${mode}|${workspaceId}`;
     if (shownSignatureRef.current === signature) return;
 
     shownSignatureRef.current = signature;
@@ -169,11 +132,10 @@ export function useWorkspaceInstructionModal({
     track("workspace-instruction-modal-shown", {
       mode,
       workspace_id: workspaceId,
-      create_from_present: Boolean(createFrom),
-      action,
     });
-  }, [action, autogenSignature, createFrom, mode, open, track, workspaceId]);
+  }, [mode, open, track, workspaceId]);
 
+  // Timer to allow closing
   useEffect(() => {
     if (!open) return;
 
@@ -184,32 +146,12 @@ export function useWorkspaceInstructionModal({
     return () => window.clearTimeout(timeoutId);
   }, [open]);
 
-  
-  useEffect(() => {
-    if (!open || mode !== "autogen") return;
-
-    if (assistantIsRunning === true) {
-      seenRunningInCurrentAutogenRef.current = true;
-      return;
-    }
-
-    if (assistantIsRunning === false && seenRunningInCurrentAutogenRef.current) {
-      if (userInteractedRef.current) {
-        setGenerationComplete(true);
-      } else {
-        closeInternal("autogen_complete");
-      }
-    }
-  }, [assistantIsRunning, closeInternal, mode, open]);
-
-  const isGenerating = open && mode === "autogen" && !generationComplete;
-
   return {
     open,
     mode,
     canClose,
     showFallback,
-    isGenerating,
+    isGenerating: false, // Always false
     close,
     continueFromFallback,
     markInteracted,

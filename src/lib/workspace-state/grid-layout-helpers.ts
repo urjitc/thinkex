@@ -10,7 +10,7 @@ export const DEFAULT_CARD_DIMENSIONS: Record<CardType, { w: number; h: number }>
   flashcard: { w: 2, h: 5 },
   folder: { w: 1, h: 4 },
   youtube: { w: 4, h: 10 },
-  quiz: { w: 1, h: 4 },
+  quiz: { w: 2, h: 13 },
   image: { w: 4, h: 10 },
   audio: { w: 2, h: 10 },
 };
@@ -40,35 +40,6 @@ export function getLayoutForBreakpoint(item: Item, breakpoint: 'lg' | 'xxs'): La
 
   // New format - get the specific breakpoint
   return item.layout[breakpoint];
-}
-
-/**
- * Calculates dynamic card height based on title and subtitle
- */
-export function calculateCardHeight(
-  name: string,
-  subtitle: string
-): number {
-  const CHARS_PER_LINE_TITLE = 40;
-  const CHARS_PER_LINE_SUBTITLE = 50;
-  const TITLE_LINE_HEIGHT = 1.5;
-  const SUBTITLE_LINE_HEIGHT = 1;
-  const BASE_PADDING = 3;
-  const MIN_HEIGHT = 4;
-  const MAX_HEIGHT = 20;
-
-  const titleLength = name?.length || 0;
-  const titleLines = titleLength > 0 ? Math.ceil(titleLength / CHARS_PER_LINE_TITLE) : 1;
-  const titleHeight = titleLines * TITLE_LINE_HEIGHT;
-
-  const subtitleLength = subtitle?.length || 0;
-  const subtitleLines = subtitleLength > 0 ? Math.ceil(subtitleLength / CHARS_PER_LINE_SUBTITLE) : 0;
-  const subtitleHeight = subtitleLines * SUBTITLE_LINE_HEIGHT;
-
-  const calculatedHeight = BASE_PADDING + titleHeight + subtitleHeight;
-
-  // Simply return MIN_HEIGHT as requested by user
-  return MIN_HEIGHT;
 }
 
 export const DEFAULT_COLS = 4;
@@ -267,7 +238,7 @@ export function recompactLayout(items: Item[], cols: number): Item[] {
 
   return sortedItems.map((item) => {
     const existingLayout = getLayoutForBreakpoint(item, 'lg');
-    // Use default dimensions height as fallback instead of calculateCardHeight to ensure quiz cards get height 13
+    // Use default dimensions as fallback to ensure quiz cards get height 13
     const h = existingLayout?.h ?? DEFAULT_CARD_DIMENSIONS[item.type]?.h ?? 4;
     const dimensions = existingLayout
       ? { w: Math.min(existingLayout.w, cols), h }

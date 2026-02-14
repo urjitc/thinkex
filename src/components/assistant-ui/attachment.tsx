@@ -1,7 +1,7 @@
 "use client";
 
 import React, { PropsWithChildren, useEffect, useState, useRef, type FC } from "react";
-import { XIcon, FileText, Link as LinkIcon, Upload, Link2, SearchIcon, Plus, Code as CodeIcon, GalleryHorizontalEnd } from "lucide-react";
+import { XIcon, FileText, Link as LinkIcon, SearchIcon, Plus, Code as CodeIcon, GalleryHorizontalEnd, Loader2 } from "lucide-react";
 import { LuPaperclip } from "react-icons/lu";
 import { toast } from "sonner";
 import {
@@ -23,24 +23,12 @@ import {
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuShortcut,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { createUrlFile } from "@/lib/attachments/url-utils";
+import { useAttachmentUploadStore } from "@/lib/stores/attachment-upload-store";
 import { useUIStore } from "@/lib/stores/ui-store";
 import { FaCheck } from "react-icons/fa";
-import { focusComposerInput } from "@/lib/utils/composer-utils";
 
 const useFileSrc = (file: File | undefined) => {
   const [src, setSrc] = useState<string | undefined>(undefined);
@@ -256,6 +244,10 @@ const AttachmentThumb: FC = () => {
 const AttachmentUI: FC = () => {
   const aui = useAui();
   const isComposer = aui.attachment.source === "composer";
+  const attachmentId = useAuiState(({ attachment }) => (attachment as { id?: string })?.id);
+  const isUploading = useAttachmentUploadStore((s) =>
+    attachmentId != null && s.uploadingIds.has(attachmentId)
+  );
 
   const isImage = useAuiState(
     ({ attachment }) => (attachment as { type?: string })?.type === "image"
@@ -380,27 +372,42 @@ const AttachmentUI: FC = () => {
         )}
       >
         <div className="relative">
-          <AttachmentPreviewDialog>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  "aui-attachment-tile size-14 cursor-pointer overflow-hidden rounded-[14px] border bg-muted transition-opacity hover:opacity-75",
-                  isComposer &&
-                  "aui-attachment-tile-composer border-foreground/20",
-                )}
-                role="button"
-                id="attachment-tile"
-                aria-label={`${typeLabel} attachment`}
-              >
-                <AttachmentThumb />
-              </div>
-            </TooltipTrigger>
-          </AttachmentPreviewDialog>
-          {isComposer && <AttachmentRemove />}
+          {isComposer && isUploading ? (
+            <div
+              className={cn(
+                "aui-attachment-tile size-14 overflow-hidden rounded-[14px] border border-foreground/20 bg-muted/60 flex items-center justify-center",
+                isImage && "size-24"
+              )}
+            >
+              <Loader2 className="size-6 shrink-0 text-muted-foreground animate-spin" />
+            </div>
+          ) : (
+            <>
+              <AttachmentPreviewDialog>
+                <TooltipTrigger asChild>
+                  <div
+                    className={cn(
+                      "aui-attachment-tile size-14 cursor-pointer overflow-hidden rounded-[14px] border bg-muted transition-opacity hover:opacity-75",
+                      isComposer &&
+                      "aui-attachment-tile-composer border-foreground/20",
+                    )}
+                    role="button"
+                    id="attachment-tile"
+                    aria-label={`${typeLabel} attachment`}
+                  >
+                    <AttachmentThumb />
+                  </div>
+                </TooltipTrigger>
+              </AttachmentPreviewDialog>
+              {isComposer && <AttachmentRemove />}
+            </>
+          )}
         </div>
-        <div className="text-[11px] text-muted-foreground w-full truncate text-center px-1 leading-tight">
-          <AttachmentPrimitive.Name />
-        </div>
+        {!(isComposer && isUploading) && (
+          <div className="text-[11px] text-muted-foreground w-full truncate text-center px-1 leading-tight">
+            <AttachmentPrimitive.Name />
+          </div>
+        )}
       </AttachmentPrimitive.Root>
       <TooltipContent side="top">
         <AttachmentPrimitive.Name />
@@ -445,10 +452,6 @@ export const ComposerAttachments: FC = () => {
 
 
 export const ComposerAddAttachment: FC = () => {
-
-  const [showUrlDialog, setShowUrlDialog] = useState(false);
-  const [urlInput, setUrlInput] = useState("");
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const aui = useAui();
@@ -526,65 +529,27 @@ export const ComposerAddAttachment: FC = () => {
 
 
 
-  const handleUrlSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedUrl = urlInput.trim();
-    if (trimmedUrl) {
-      try {
-        const urlFile = createUrlFile(trimmedUrl);
-        aui.composer().addAttachment(urlFile);
-        setUrlInput("");
-        setShowUrlDialog(false);
-        focusComposerInput();
-      } catch (error) {
-        console.error("Failed to add URL attachment:", error);
-      }
-    }
-  };
-
   return (
     <>
       <div
         ref={containerRef}
         className="relative flex items-center gap-2 pt-6 pb-6 pl-6 pr-10 -mt-6 -mb-6 -ml-6 -mr-10 pointer-events-none"
       >
-        <DropdownMenu open={isDropdownOpen} onOpenChange={(open) => {
-          setIsDropdownOpen(open);
-          if (!open) {
-            focusComposerInput();
-          }
-        }}>
-          <div className="flex items-center gap-2 pointer-events-auto">
-            <DropdownMenuTrigger asChild>
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <Tooltip>
+            <TooltipTrigger asChild>
               <button
                 type="button"
+                onClick={() => fileInputRef.current?.click()}
                 className="aui-composer-add-attachment flex items-center gap-1.5 px-1.5 py-1 rounded-md bg-sidebar-accent hover:bg-accent transition-colors flex-shrink-0 text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer ml-1"
                 aria-label="Add Attachment"
               >
                 <LuPaperclip className="w-3.5 h-3.5" />
               </button>
-            </DropdownMenuTrigger>
-          </div>
-          <DropdownMenuContent
-            side="top"
-            align="start"
-            onCloseAutoFocus={(e) => {
-              e.preventDefault();
-            }}
-          >
-            <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1.5 font-normal">
-              Attachments
-            </DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => fileInputRef.current?.click()} className="cursor-pointer">
-              <Upload className="size-4" />
-              <span>Upload File</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setShowUrlDialog(true)} className="cursor-pointer">
-              <Link2 className="size-4" />
-              <span>Upload Link</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </TooltipTrigger>
+            <TooltipContent side="top">Add file</TooltipContent>
+          </Tooltip>
+        </div>
 
         {/* Hidden file input */}
         <input
@@ -596,41 +561,6 @@ export const ComposerAddAttachment: FC = () => {
           accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.csv,.json"
         />
       </div>
-
-      {/* URL Input Dialog */}
-      <Dialog open={showUrlDialog} onOpenChange={(open) => {
-        setShowUrlDialog(open);
-        if (!open) {
-          focusComposerInput();
-        }
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogTitle>Add URL</DialogTitle>
-          <form onSubmit={handleUrlSubmit} className="space-y-4">
-            <Input
-              type="url"
-              placeholder="https://example.com"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setShowUrlDialog(false);
-                  setUrlInput("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">Add URL</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
     </>
   );
 };

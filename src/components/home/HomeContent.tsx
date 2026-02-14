@@ -11,7 +11,7 @@ import { HeroGlow } from "./HeroGlow";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FolderPlus, ChevronDown, Upload } from "lucide-react";
+import { FolderPlus, ChevronDown } from "lucide-react";
 import { useCreateWorkspace } from "@/hooks/workspace/use-create-workspace";
 import {
   HoverCard,
@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
-import { useDropzone } from "react-dropzone";
-import { usePdfUpload } from "@/hooks/workspace/use-pdf-upload";
+import { HomeAttachmentsProvider, useHomeAttachments } from "@/contexts/HomeAttachmentsContext";
+import { LinkInputDialog } from "./LinkInputDialog";
 
 // Context for section visibility - allows child components to know when to focus
 const SectionVisibilityContext = createContext<{
@@ -30,6 +30,75 @@ const SectionVisibilityContext = createContext<{
 }>({ heroVisible: true, workspacesVisible: false });
 
 export const useSectionVisibility = () => useContext(SectionVisibilityContext);
+
+import { HomeActionCards } from "./HomeActionCards";
+import { RecordWorkspaceDialog, OPEN_RECORD_PARAM } from "@/components/modals/RecordWorkspaceDialog";
+
+const ACCEPT_FILES = "application/pdf,image/*,audio/*";
+
+interface HeroAttachmentsSectionProps {
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  showLinkDialog: boolean;
+  setShowLinkDialog: (open: boolean) => void;
+  handleCreateBlankWorkspace: () => void;
+  createWorkspacePending: boolean;
+  onRecord: () => void;
+  heroVisible: boolean;
+}
+
+function HeroAttachmentsSection({
+  fileInputRef,
+  showLinkDialog,
+  setShowLinkDialog,
+  handleCreateBlankWorkspace,
+  createWorkspacePending,
+  onRecord,
+  heroVisible,
+}: HeroAttachmentsSectionProps) {
+  const { addFiles, addLink, canAddMoreLinks, canAddYouTube } = useHomeAttachments();
+
+  const handleUpload = () => fileInputRef.current?.click();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      addFiles(Array.from(files));
+    }
+    e.target.value = "";
+  };
+
+  return (
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={ACCEPT_FILES}
+        multiple
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      <div className="flex justify-center w-full relative z-10 mb-2">
+        <HomeActionCards
+          onUpload={handleUpload}
+          onLink={() => setShowLinkDialog(true)}
+          onRecord={onRecord}
+          onStartFromScratch={handleCreateBlankWorkspace}
+          isLoading={createWorkspacePending}
+        />
+      </div>
+      <div className="flex justify-center w-full relative z-10">
+        <HomePromptInput shouldFocus={heroVisible} />
+      </div>
+      <LinkInputDialog
+        open={showLinkDialog}
+        onOpenChange={setShowLinkDialog}
+        onAdd={addLink}
+        canAddMoreLinks={canAddMoreLinks}
+        canAddYouTube={canAddYouTube}
+      />
+    </>
+  );
+}
 
 export function HomeContent() {
   const router = useRouter();
@@ -40,27 +109,10 @@ export function HomeContent() {
   const { workspaces, loadingWorkspaces } = useWorkspaceContext();
   const hasWorkspaces = !loadingWorkspaces && workspaces.length > 0;
   const createWorkspace = useCreateWorkspace();
-  const { uploadFiles, uploadedFiles, isUploading, removeFile, clearFiles } = usePdfUpload();
 
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
-    accept: {
-      'application/pdf': ['.pdf'],
-    },
-    multiple: true,
-    noClick: true,
-    onDrop: async (acceptedFiles) => {
-      if (acceptedFiles.length > 0) {
-        try {
-          const uploaded = await uploadFiles(acceptedFiles);
-          if (uploaded.length > 0) {
-            toast.success(`Uploaded ${uploaded.length} PDF${uploaded.length > 1 ? 's' : ''}`);
-          }
-        } catch {
-          toast.error("Failed to upload PDFs");
-        }
-      }
-    },
-  });
+  const [showRecordDialog, setShowRecordDialog] = useState(false);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [workspacesVisible, setWorkspacesVisible] = useState(false);
   const [showScrollHint, setShowScrollHint] = useState(false);
@@ -166,8 +218,44 @@ export function HomeContent() {
     );
   };
 
+  const handleRecordInNewWorkspace = () => {
+    if (createWorkspace.isPending) return;
+    setShowRecordDialog(false);
+    createWorkspace.mutate(
+      {
+        name: "Recording",
+        icon: null,
+        color: null,
+      },
+      {
+        onSuccess: ({ workspace }) => {
+          router.push(`/workspace/${workspace.slug}?${OPEN_RECORD_PARAM}=1`);
+        },
+        onError: (err) => {
+          const msg = err instanceof Error ? err.message : "Something went wrong";
+          toast.error("Could not create workspace", { description: msg });
+        },
+      }
+    );
+  };
+
+  const handleRecordInExistingWorkspace = (slug: string) => {
+    setShowRecordDialog(false);
+    router.push(`/workspace/${slug}?${OPEN_RECORD_PARAM}=1`);
+  };
+
   return (
     <>
+      <RecordWorkspaceDialog
+        open={showRecordDialog}
+        onOpenChange={setShowRecordDialog}
+        workspaces={workspaces}
+        loadingWorkspaces={loadingWorkspaces}
+        onSelectNew={handleRecordInNewWorkspace}
+        onSelectExisting={handleRecordInExistingWorkspace}
+        createWorkspacePending={createWorkspace.isPending}
+      />
+
       {/* Fixed Top Bar */}
       <HomeTopBar
         scrollY={scrollY}
@@ -212,26 +300,11 @@ export function HomeContent() {
           </button>
         </div>
 
-        {/* Hero Section - Full dropzone */}
+        {/* Hero Section */}
         <div
           ref={heroRef}
-          {...getRootProps()}
           className="relative z-10 h-[75vh] flex flex-col items-center justify-center text-center px-6"
         >
-          <input {...getInputProps()} />
-
-          {/* Full-page drag overlay */}
-          {isDragActive && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-              <div className="flex flex-col items-center gap-3 text-foreground">
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl border-2 border-dashed border-foreground/40 bg-muted/50">
-                  <Upload className="h-8 w-8" />
-                </div>
-                <p className="text-lg font-medium">Drop PDFs here</p>
-                <p className="text-sm text-muted-foreground">Files will be added to your new workspace</p>
-              </div>
-            </div>
-          )}
 
           <div className="w-full max-w-[760px] relative">
             {/* Hero Glow Effect */}
@@ -263,31 +336,18 @@ export function HomeContent() {
             <div className="mb-6 relative z-10">
               <DynamicTagline />
             </div>
-            <div className="flex justify-center w-full relative z-10">
-              <HomePromptInput
-                shouldFocus={heroVisible}
-                uploadedFiles={uploadedFiles}
-                isUploading={isUploading}
-                removeFile={removeFile}
-                clearFiles={clearFiles}
-                openFilePicker={open}
-                uploadFiles={uploadFiles}
-              />
-            </div>
 
-            {/* Start from scratch button */}
-            <div className="flex justify-center w-full relative z-10 mt-6">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCreateBlankWorkspace}
-                disabled={createWorkspace.isPending}
-                className="text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 gap-2 disabled:opacity-50"
-              >
-                <FolderPlus className="h-4 w-4" />
-                Or, start from scratch
-              </Button>
-            </div>
+            <HomeAttachmentsProvider>
+              <HeroAttachmentsSection
+                fileInputRef={fileInputRef}
+                showLinkDialog={showLinkDialog}
+                setShowLinkDialog={setShowLinkDialog}
+                handleCreateBlankWorkspace={handleCreateBlankWorkspace}
+                createWorkspacePending={createWorkspace.isPending}
+                onRecord={() => setShowRecordDialog(true)}
+                heroVisible={heroVisible}
+              />
+            </HomeAttachmentsProvider>
           </div>
         </div>
 

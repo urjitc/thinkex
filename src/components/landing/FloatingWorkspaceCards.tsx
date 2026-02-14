@@ -72,12 +72,15 @@ interface FloatingWorkspaceCardsProps {
     bottomGradientHeight?: string;
     className?: string;
     includeExtraCards?: boolean;
+    /** When true, cards are more visible (e.g. behind generate modal) */
+    clearerBackground?: boolean;
 }
 
 export function FloatingWorkspaceCards({
     bottomGradientHeight = '60%',
     className,
     includeExtraCards = false,
+    clearerBackground = false,
 }: FloatingWorkspaceCardsProps) {
     const { resolvedTheme } = useTheme();
     const cards = includeExtraCards ? [...BASE_CARDS, ...EXTRA_CARDS] : BASE_CARDS;
@@ -121,7 +124,9 @@ export function FloatingWorkspaceCards({
             <div
                 className={cn(
                     "absolute inset-0 w-[120%] -ml-[10%] -mt-[5%] columns-2 md:columns-3 lg:columns-6 gap-4 md:gap-6 lg:gap-8 transition-transform duration-800 ease-out pointer-events-none",
-                    resolvedTheme === 'dark' ? "opacity-30" : "opacity-50",
+                    clearerBackground
+                        ? (resolvedTheme === 'dark' ? "opacity-50" : "opacity-70")
+                        : (resolvedTheme === 'dark' ? "opacity-30" : "opacity-50"),
                     className
                 )}
                 style={{

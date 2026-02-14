@@ -47,6 +47,8 @@ import { uploadFileDirect } from "@/lib/uploads/client-upload";
 import { filterPasswordProtectedPdfs } from "@/lib/uploads/pdf-validation";
 import { emitPasswordProtectedPdf } from "@/components/modals/PasswordProtectedPdfDialog";
 import { useFolderUrl } from "@/hooks/ui/use-folder-url";
+import { OPEN_RECORD_PARAM } from "@/components/modals/RecordWorkspaceDialog";
+import { useAudioRecordingStore } from "@/lib/stores/audio-recording-store";
 
 // Main dashboard content component
 interface DashboardContentProps {
@@ -60,6 +62,7 @@ function DashboardContent({
   loadingWorkspaces,
   loadingCurrentWorkspace,
 }: DashboardContentProps) {
+  const router = useRouter();
   const posthog = usePostHog();
   const { data: session } = useSession();
 
@@ -100,6 +103,31 @@ function DashboardContent({
   useEffect(() => {
     clearPlayingYouTubeCards();
   }, [clearPlayingYouTubeCards]);
+
+  // Open audio recorder only when landing from home Record flow (?openRecord=1).
+  // Only RecordWorkspaceDialog (on home) adds this param; we clear it after opening once.
+  const searchParams = useSearchParams();
+  const openAudioDialog = useAudioRecordingStore((s) => s.openDialog);
+  const closeAudioDialog = useAudioRecordingStore((s) => s.closeDialog);
+  const prevWorkspaceIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!currentWorkspaceId) return;
+    const hasOpenRecordParam = searchParams.get(OPEN_RECORD_PARAM) === "1";
+
+    if (hasOpenRecordParam) {
+      openAudioDialog();
+      const url = new URL(window.location.href);
+      url.searchParams.delete(OPEN_RECORD_PARAM);
+      router.replace(url.pathname + url.search, { scroll: false });
+    }
+
+    // Close audio dialog when switching to a different workspace (dialog state is global and would otherwise persist)
+    if (prevWorkspaceIdRef.current !== null && prevWorkspaceIdRef.current !== currentWorkspaceId && !hasOpenRecordParam) {
+      closeAudioDialog();
+    }
+    prevWorkspaceIdRef.current = currentWorkspaceId;
+  }, [currentWorkspaceId, searchParams, openAudioDialog, closeAudioDialog, router]);
 
   // Workspace operations (emits events with optimistic updates)
   const operations = useWorkspaceOperations(currentWorkspaceId, state);
@@ -252,13 +280,7 @@ function DashboardContent({
     }
   );
 
-  // Expand chat when landing with ?createFrom=... (create workspace from home prompt)
-  const searchParams = useSearchParams();
-  useEffect(() => {
-    if (searchParams.get("createFrom")) {
-      setIsChatExpanded(true);
-    }
-  }, [searchParams, setIsChatExpanded]);
+
 
   // Reset JSON view when there are no items
   useEffect(() => {
