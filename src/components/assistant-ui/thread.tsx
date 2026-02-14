@@ -18,6 +18,8 @@ import {
   Sparkles,
   Bug,
   Brain,
+  Play,
+  Globe,
 } from "lucide-react";
 import { FaQuoteLeft, FaWandMagicSparkles, FaCheck } from "react-icons/fa6";
 import { LuSparkle } from "react-icons/lu";
@@ -300,31 +302,43 @@ const ThreadSuggestions: FC = () => {
   );
 
   return (
-    <div className="aui-thread-welcome-suggestions grid w-full gap-2 pb-4 @md:grid-cols-2">
+    <div className="aui-thread-welcome-suggestions grid w-full grid-cols-2 gap-2 pb-4 sm:grid-cols-3">
       {[
         {
-          title: "Read my PDF",
+          title: "Search",
+          icon: Globe,
+          iconClassName: "size-4 shrink-0 text-sky-500",
+          composerFill: "Search the web for ",
+        },
+        {
+          title: "Flashcards",
+          icon: PiCardsThreeBold,
+          iconClassName: "size-4 shrink-0 text-purple-400 rotate-180",
+          composerFill: "Make flashcards about ",
+        },
+        {
+          title: "YouTube",
+          icon: Play,
+          iconClassName: "size-4 shrink-0 text-red-500",
+          composerFill: "Find a YouTube video on ",
+        },
+        {
+          title: "PDF",
           icon: File,
           iconClassName: "size-4 shrink-0 text-red-400",
           composerFill: "Read my PDF and ",
         },
         {
-          title: "Take notes",
-          icon: FileText,
-          iconClassName: "size-4 shrink-0 text-blue-400",
-          composerFill: "Take notes based on ",
-        },
-        {
-          title: "Make flashcards",
-          icon: PiCardsThreeBold,
-          iconClassName: "size-4 shrink-0 text-purple-400 rotate-180",
-          composerFill: "Make flashcards from ",
-        },
-        {
-          title: "Start a quiz",
+          title: "Quiz",
           icon: Brain,
           iconClassName: "size-4 shrink-0 text-green-400",
-          composerFill: "Start a quiz to ",
+          composerFill: "Make a quiz on ",
+        },
+        {
+          title: "Note",
+          icon: FileText,
+          iconClassName: "size-4 shrink-0 text-blue-400",
+          composerFill: "Make a note on ",
         },
       ].map((suggestedAction, index) => {
         const Icon = suggestedAction.icon;
@@ -335,7 +349,7 @@ const ThreadSuggestions: FC = () => {
             exit={{ opacity: 0, y: 20 }}
             transition={{ delay: 0.05 * index }}
             key={`suggested-action-${suggestedAction.title}-${index}`}
-            className="aui-thread-welcome-suggestion-display [&:nth-child(n+3)]:hidden @md:[&:nth-child(n+3)]:block"
+            className="aui-thread-welcome-suggestion-display"
           >
             <Button
               type="button"
