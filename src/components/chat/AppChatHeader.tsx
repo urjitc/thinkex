@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { X, ChevronDown, Trash2, Edit2, Check, MessageSquarePlus } from "lucide-react";
 import { RiChatHistoryLine } from "react-icons/ri";
 import { LuMaximize, LuMinimize, LuPanelRightClose } from "react-icons/lu";
@@ -20,8 +22,6 @@ import { formatKeyboardShortcut } from "@/lib/utils/keyboard-shortcut";
 import { toast } from "sonner";
 import { ThreadListDropdown } from "@/components/assistant-ui/thread-list-dropdown";
 
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { useUIStore } from "@/lib/stores/ui-store";
 
 interface Conversation {
   id: string;
@@ -60,12 +60,6 @@ export function AppChatHeader({
   const [currentTitleEditValue, setCurrentTitleEditValue] = useState("");
   const currentTitleTextareaRef = useRef<HTMLTextAreaElement>(null);
   const aui = useAui();
-
-  // Get UI store state for sidebar behavior
-  const openPanelIds = useUIStore((state) => state.openPanelIds);
-  const maximizedItemId = useUIStore((state) => state.maximizedItemId);
-  const closeAllPanels = useUIStore((state) => state.closeAllPanels);
-  const isItemPanelOpen = openPanelIds.length > 0 && !maximizedItemId;
 
   // Get current thread title and state from assistant-ui
   // Using safe hook to handle race condition during thread switching (GitHub issue #2722)
@@ -201,23 +195,23 @@ export function AppChatHeader({
       {/* Conversation Switcher and Controls */}
       <div className="flex items-center justify-between py-2 px-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {/* Sidebar Trigger (only when maximized) */}
+          {/* ThinkEx logo when maximized (no sidebar button) */}
           {isMaximized && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <SidebarTrigger
-                  onClick={() => {
-                    // When item panel is open (minimized mode), close it before opening sidebar
-                    if (isItemPanelOpen) {
-                      closeAllPanels();
-                    }
-                  }}
+            <Link
+              href="/home"
+              className="group flex items-center shrink-0 rounded-md cursor-pointer mr-2"
+              aria-label="ThinkEx"
+            >
+              <div className="relative h-6 w-6 flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
+                <Image
+                  src="/newlogothinkex.svg"
+                  alt="ThinkEx Logo"
+                  width={24}
+                  height={24}
+                  className="object-contain"
                 />
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                Toggle Sidebar <kbd className="ml-1 pointer-events-none inline-flex h-5 select-none items-center gap-1 font-mono text-sm font-medium text-muted-foreground opacity-100">{formatKeyboardShortcut('S', true)}</kbd>
-              </TooltipContent>
-            </Tooltip>
+              </div>
+            </Link>
           )}
 
           {/* Current Thread Title */}
