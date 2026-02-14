@@ -47,6 +47,8 @@ import { uploadFileDirect } from "@/lib/uploads/client-upload";
 import { filterPasswordProtectedPdfs } from "@/lib/uploads/pdf-validation";
 import { emitPasswordProtectedPdf } from "@/components/modals/PasswordProtectedPdfDialog";
 import { useFolderUrl } from "@/hooks/ui/use-folder-url";
+import { OPEN_RECORD_PARAM } from "@/components/modals/RecordWorkspaceDialog";
+import { useAudioRecordingStore } from "@/lib/stores/audio-recording-store";
 
 // Main dashboard content component
 interface DashboardContentProps {
@@ -60,6 +62,7 @@ function DashboardContent({
   loadingWorkspaces,
   loadingCurrentWorkspace,
 }: DashboardContentProps) {
+  const router = useRouter();
   const posthog = usePostHog();
   const { data: session } = useSession();
 
@@ -100,6 +103,20 @@ function DashboardContent({
   useEffect(() => {
     clearPlayingYouTubeCards();
   }, [clearPlayingYouTubeCards]);
+
+  // Open audio recorder when navigating from home Record flow (?openRecord=1)
+  const searchParams = useSearchParams();
+  const openAudioDialog = useAudioRecordingStore((s) => s.openDialog);
+  useEffect(() => {
+    if (!currentWorkspaceId) return;
+    if (searchParams.get(OPEN_RECORD_PARAM) === "1") {
+      openAudioDialog();
+      // Remove param from URL without triggering a full navigation
+      const url = new URL(window.location.href);
+      url.searchParams.delete(OPEN_RECORD_PARAM);
+      router.replace(url.pathname + url.search, { scroll: false });
+    }
+  }, [currentWorkspaceId, searchParams, openAudioDialog, router]);
 
   // Workspace operations (emits events with optimistic updates)
   const operations = useWorkspaceOperations(currentWorkspaceId, state);

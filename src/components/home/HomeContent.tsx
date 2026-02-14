@@ -32,6 +32,7 @@ const SectionVisibilityContext = createContext<{
 export const useSectionVisibility = () => useContext(SectionVisibilityContext);
 
 import { HomeActionCards } from "./HomeActionCards";
+import { RecordWorkspaceDialog, OPEN_RECORD_PARAM } from "@/components/modals/RecordWorkspaceDialog";
 
 const ACCEPT_FILES = "application/pdf,image/*,audio/*";
 
@@ -41,7 +42,7 @@ interface HeroAttachmentsSectionProps {
   setShowLinkDialog: (open: boolean) => void;
   handleCreateBlankWorkspace: () => void;
   createWorkspacePending: boolean;
-  handleActionClick: (action: string) => void;
+  onRecord: () => void;
   heroVisible: boolean;
 }
 
@@ -51,7 +52,7 @@ function HeroAttachmentsSection({
   setShowLinkDialog,
   handleCreateBlankWorkspace,
   createWorkspacePending,
-  handleActionClick,
+  onRecord,
   heroVisible,
 }: HeroAttachmentsSectionProps) {
   const { addFiles, addLink, canAddMoreLinks, canAddYouTube } = useHomeAttachments();
@@ -80,7 +81,7 @@ function HeroAttachmentsSection({
         <HomeActionCards
           onUpload={handleUpload}
           onLink={() => setShowLinkDialog(true)}
-          onRecord={() => handleActionClick("Record")}
+          onRecord={onRecord}
           onStartFromScratch={handleCreateBlankWorkspace}
           isLoading={createWorkspacePending}
         />
@@ -109,12 +110,7 @@ export function HomeContent() {
   const hasWorkspaces = !loadingWorkspaces && workspaces.length > 0;
   const createWorkspace = useCreateWorkspace();
 
-  const handleActionClick = (action: string) => {
-    toast(`Clicked ${action}`, {
-      description: "This feature is coming soon!",
-    });
-  };
-
+  const [showRecordDialog, setShowRecordDialog] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -222,8 +218,44 @@ export function HomeContent() {
     );
   };
 
+  const handleRecordInNewWorkspace = () => {
+    if (createWorkspace.isPending) return;
+    setShowRecordDialog(false);
+    createWorkspace.mutate(
+      {
+        name: "Recording",
+        icon: null,
+        color: null,
+      },
+      {
+        onSuccess: ({ workspace }) => {
+          router.push(`/workspace/${workspace.slug}?${OPEN_RECORD_PARAM}=1`);
+        },
+        onError: (err) => {
+          const msg = err instanceof Error ? err.message : "Something went wrong";
+          toast.error("Could not create workspace", { description: msg });
+        },
+      }
+    );
+  };
+
+  const handleRecordInExistingWorkspace = (slug: string) => {
+    setShowRecordDialog(false);
+    router.push(`/workspace/${slug}?${OPEN_RECORD_PARAM}=1`);
+  };
+
   return (
     <>
+      <RecordWorkspaceDialog
+        open={showRecordDialog}
+        onOpenChange={setShowRecordDialog}
+        workspaces={workspaces}
+        loadingWorkspaces={loadingWorkspaces}
+        onSelectNew={handleRecordInNewWorkspace}
+        onSelectExisting={handleRecordInExistingWorkspace}
+        createWorkspacePending={createWorkspace.isPending}
+      />
+
       {/* Fixed Top Bar */}
       <HomeTopBar
         scrollY={scrollY}
@@ -312,7 +344,7 @@ export function HomeContent() {
                 setShowLinkDialog={setShowLinkDialog}
                 handleCreateBlankWorkspace={handleCreateBlankWorkspace}
                 createWorkspacePending={createWorkspace.isPending}
-                handleActionClick={handleActionClick}
+                onRecord={() => setShowRecordDialog(true)}
                 heroVisible={heroVisible}
               />
             </HomeAttachmentsProvider>
