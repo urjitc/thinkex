@@ -323,7 +323,10 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
             type="submit"
             variant="default"
             size="icon"
-            className="size-[34px] rounded-full p-1 absolute right-3 md:right-4 top-1/2 -translate-y-1/2"
+            className={cn(
+              "size-[34px] rounded-full p-1 absolute right-3 md:right-4",
+              isExpanded ? "bottom-3 md:bottom-4" : "top-1/2 -translate-y-1/2"
+            )}
             disabled={!value.trim() || isSubmitting}
             onClick={(e) => e.stopPropagation()}
             aria-label="Create workspace"
