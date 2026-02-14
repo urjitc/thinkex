@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Move, SquarePen, FileSearch, Youtube, Share2, ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
+import { Move, SquarePen, FileSearch, Youtube, Share2, ChevronLeft, ChevronRight, X, ArrowRight } from "lucide-react";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import type { WorkspaceInstructionMode } from "@/hooks/workspace/use-workspace-instruction-modal";
@@ -21,63 +22,55 @@ export interface WorkspaceInstructionModalProps {
   completedSteps?: string[];
   /** Total number of steps for progress indicator */
   totalSteps?: number;
+  /** When true and workspaceSlug is set, shows "Open workspace" button instead of auto-redirecting (used when user interacted during generation) */
+  generationComplete?: boolean;
+  workspaceSlug?: string | null;
+  onOpenWorkspace?: () => void;
 }
 
 interface Step {
   icon: typeof Move;
   label: string;
-  description: string;
-  /** When set, shows "Method X of Y" badge on the slide */
-  variant?: { current: number; total: number };
   video?: { dark: string; light: string };
 }
 
 const VIDEO_BASE = "https://uxcoymwbfcbvkgwbhttq.supabase.co/storage/v1/object/public/video";
 
+// Order front-loads cooler / less intuitive features so drop-off users still see the wow moments
 const STEPS: Step[] = [
   {
-    icon: Move,
-    label: "Arrange your materials",
-    description: "Drag, resize, and organize cards on your workspace grid to build your layout.",
-    video: { dark: `${VIDEO_BASE}/step-1-arrange-dark.mp4`, light: `${VIDEO_BASE}/step-1-arrange-light.mp4` },
-  },
-  {
     icon: SquarePen,
-    label: "Generate notes as you go",
-    description: "Type a prompt and let the AI create a complete set of study materials for you.",
-    variant: { current: 1, total: 3 },
-    video: { dark: `${VIDEO_BASE}/step-2-generate-card-dark-1.mp4`, light: `${VIDEO_BASE}/step-2-generate-card-light-1.mp4` },
-  },
-  {
-    icon: SquarePen,
-    label: "Generate notes as you go",
-    description: "Select existing cards and ask the AI to generate notes based on their content.",
-    variant: { current: 2, total: 3 },
-    video: { dark: `${VIDEO_BASE}/step-2-generate-card-dark-2.mp4`, light: `${VIDEO_BASE}/step-2-generate-card-light-2.mp4` },
-  },
-  {
-    icon: SquarePen,
-    label: "Generate notes as you go",
-    description: "Upload a PDF and have the AI automatically create summaries and study guides.",
-    variant: { current: 3, total: 3 },
+    label: "Upload a PDF, AI makes summaries & study guides",
     video: { dark: `${VIDEO_BASE}/step-2-generate-card-dark-3.mp4`, light: `${VIDEO_BASE}/step-2-generate-card-light-3.mp4` },
   },
   {
     icon: FileSearch,
-    label: "Ask AI about your documents",
-    description: "Select cards and chat with the AI to get answers grounded in your materials.",
+    label: "Select cards & chat with AI for answers from your materials",
     video: { dark: `${VIDEO_BASE}/step-3-pdf-ss-dark.mp4`, light: `${VIDEO_BASE}/step-3-pdf-ss-light.mp4` },
   },
   {
+    icon: SquarePen,
+    label: "Type a prompt, AI creates study materials",
+    video: { dark: `${VIDEO_BASE}/step-2-generate-card-dark-1.mp4`, light: `${VIDEO_BASE}/step-2-generate-card-light-1.mp4` },
+  },
+  {
+    icon: SquarePen,
+    label: "Select cards, AI generates notes from their content",
+    video: { dark: `${VIDEO_BASE}/step-2-generate-card-dark-2.mp4`, light: `${VIDEO_BASE}/step-2-generate-card-light-2.mp4` },
+  },
+  {
     icon: Youtube,
-    label: "Drop in lecture videos",
-    description: "Paste a YouTube link or drag it in to add lecture videos alongside your notes.",
+    label: "Paste or drag YouTube links next to your notes",
     video: { dark: `${VIDEO_BASE}/step-4-youtube-dark.mp4`, light: `${VIDEO_BASE}/step-4-youtube-light.mp4` },
   },
   {
+    icon: Move,
+    label: "Drag, resize & organize cards on your grid",
+    video: { dark: `${VIDEO_BASE}/step-1-arrange-dark.mp4`, light: `${VIDEO_BASE}/step-1-arrange-light.mp4` },
+  },
+  {
     icon: Share2,
-    label: "Collaborate with others",
-    description: "Share your workspace with classmates or teammates to work together in real time.",
+    label: "Share your workspace to collaborate in real time",
     video: { dark: `${VIDEO_BASE}/step-5-collab-dark.mp4`, light: `${VIDEO_BASE}/step-5-collab-light.mp4` },
   },
 ];
@@ -226,10 +219,13 @@ export function WorkspaceInstructionModal({
   progressText,
   completedSteps = [],
   totalSteps = 6,
+  generationComplete,
+  workspaceSlug,
+  onOpenWorkspace,
 }: WorkspaceInstructionModalProps) {
   const carousel = useCarousel(open);
   const { activeIndex, step, videoSrc, fading, videoLoaded, goTo, goPrev, goNext, handleVideoEnded, handleVideoCanPlay, pause } = carousel;
-  const Icon = step.icon;
+  const { resolvedTheme } = useTheme();
 
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -271,8 +267,8 @@ export function WorkspaceInstructionModal({
     <div
       className={cn(
         "fixed inset-0 z-[90] flex items-center justify-center px-4 py-6 transition-opacity duration-300 ease-out",
-        // Minimal blur + lighter overlay when generating so floating cards stay clear
-        isGenerating
+        // Minimal blur + lighter overlay when generating or generation complete so floating cards stay clear
+        isGenerating || (!!generationComplete && !!workspaceSlug)
           ? "bg-black/5 dark:bg-black/15 backdrop-blur-0"
           : "bg-black/25 dark:bg-black/40 backdrop-blur-[12px]",
         isClosing ? "opacity-0" : "opacity-100"
@@ -286,20 +282,26 @@ export function WorkspaceInstructionModal({
         onClick={() => { pause(); onUserInteracted?.(); }}
         className={cn(
           "relative w-full max-w-[1100px] rounded-[28px] shadow-[0_28px_80px_rgba(0,0,0,0.12),0_8px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.4)] dark:shadow-[0_28px_80px_rgba(0,0,0,0.5),0_8px_24px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-300 ease-out",
-          isGenerating
+          isGenerating || (!!generationComplete && !!workspaceSlug)
             ? "bg-white/85 dark:bg-gray-900/75 backdrop-blur-md"
             : "bg-white/80 dark:bg-gray-900/65 backdrop-blur-[24px] backdrop-saturate-[180%]",
           isClosing ? "opacity-0 scale-[0.97]" : "opacity-100 scale-100"
         )}
       >
 
-        <div className="relative z-[2] flex h-[620px] flex-col rounded-[24px] bg-transparent overflow-hidden">
+        <div className="relative z-[2] flex h-[690px] flex-col rounded-[24px] bg-transparent overflow-hidden">
 
           {/* Generating banner at top — when isGenerating, shows progress and step indicator */}
           {isGenerating && (
-            <div className="shrink-0 flex flex-col gap-2 px-5 py-4 bg-primary/10 dark:bg-primary/15 border-b border-white/10 dark:border-white/5">
+            <div className="shrink-0 flex flex-col gap-2 px-5 py-4 bg-primary/10 dark:bg-gray-800/70 border-b border-white/10 dark:border-white/5">
               <div className="flex items-center gap-3">
-                <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" aria-hidden />
+                <DotLottieReact
+                  src={resolvedTheme === "light" ? "/thinkexlight.lottie" : "/logo.lottie"}
+                  loop
+                  autoplay
+                  mode="bounce"
+                  className="h-7 w-7 shrink-0"
+                />
                 <div className="flex flex-col gap-0.5 min-w-0">
                   <h3 className="text-sm font-semibold text-sidebar-foreground">
                     Your workspace is generating
@@ -326,15 +328,32 @@ export function WorkspaceInstructionModal({
             </div>
           )}
 
+          {/* Generation complete banner — when user interacted, show button instead of auto-redirect */}
+          {generationComplete && workspaceSlug && onOpenWorkspace && (
+            <div className="shrink-0 flex flex-col items-center justify-center gap-3 px-5 py-4 bg-primary/10 dark:bg-gray-800/70 border-b border-white/10 dark:border-white/5">
+              <h3 className="text-sm font-semibold text-sidebar-foreground">
+                Your workspace is ready
+              </h3>
+              <button
+                type="button"
+                onClick={onOpenWorkspace}
+                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_2px_8px_rgba(59,130,246,0.4)] transition-all duration-200 cursor-pointer"
+              >
+                Open workspace
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           {/* Upper panel — video/carousel (always shown, including when generating) */}
-              <div className="relative min-h-0 flex-1 overflow-hidden bg-white/40 dark:bg-white/[0.04] backdrop-blur-lg">
+              <div className="relative min-h-0 flex-1 overflow-hidden bg-primary/10 dark:bg-gray-800/70">
                 <div className="absolute -left-20 -top-20 h-44 w-44 rounded-full bg-primary/15 blur-[80px]" />
                 <div className="absolute -bottom-20 -right-20 h-52 w-52 rounded-full bg-accent/25 blur-[80px]" />
 
                 {/* Left chevron */}
                 <button
                   type="button"
-                  onClick={goPrev}
+                  onClick={() => { goPrev(); onUserInteracted?.(); }}
                   className="absolute left-0 top-0 z-10 h-full w-16 flex items-center justify-center text-sidebar-foreground mix-blend-difference transition-all duration-200 cursor-pointer"
                   aria-label="Previous step"
                 >
@@ -344,7 +363,7 @@ export function WorkspaceInstructionModal({
                 {/* Right chevron */}
                 <button
                   type="button"
-                  onClick={goNext}
+                  onClick={() => { goNext(); onUserInteracted?.(); }}
                   className="absolute right-0 top-0 z-10 h-full w-16 flex items-center justify-center text-sidebar-foreground mix-blend-difference transition-all duration-200 cursor-pointer"
                   aria-label="Next step"
                 >
@@ -359,19 +378,7 @@ export function WorkspaceInstructionModal({
                   )}
                   style={{ transitionDuration: `${FADE_MS}ms` }}
                 >
-                  {/* Icon placeholder — shown until video is loaded */}
-                  <div
-                    className={cn(
-                      "absolute inset-0 flex items-center justify-center transition-opacity duration-300",
-                      videoSrc && videoLoaded ? "opacity-0" : "opacity-100"
-                    )}
-                  >
-                    <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-primary/[0.08] dark:bg-primary/[0.12] backdrop-blur-sm border border-white/[0.12] dark:border-white/[0.06] text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]">
-                      <Icon className="h-10 w-10" />
-                    </div>
-                  </div>
-
-                  {/* Video — fades in over the icon once ready */}
+                  {/* Video — fades in once ready */}
                   {videoSrc && (
                     <video
                       key={videoSrc}
@@ -395,7 +402,7 @@ export function WorkspaceInstructionModal({
               </div>
 
               {/* Lower panel — text, dots, action buttons (always shown, including when generating) */}
-              <div className="relative flex flex-col items-center gap-1 bg-white/40 dark:bg-white/[0.04] backdrop-blur-lg px-5 pb-4 pt-3 rounded-b-[24px]">
+              <div className="relative flex flex-col items-center gap-1 bg-primary/10 dark:bg-gray-800/70 px-5 pb-4 pt-3 rounded-b-[24px]">
                 {/* Text block — fades with the video */}
                 <div
                   className={cn(
@@ -404,22 +411,10 @@ export function WorkspaceInstructionModal({
                   )}
                   style={{ transitionDuration: `${FADE_MS}ms` }}
                 >
-                  {/* Variant badge */}
-                  {step.variant && (
-                    <span className="inline-flex items-center rounded-full bg-primary/[0.08] dark:bg-primary/[0.15] backdrop-blur-sm border border-white/[0.1] px-3 py-1 text-sm font-medium text-primary">
-                      Method {step.variant.current} of {step.variant.total}
-                    </span>
-                  )}
-
                   {/* Label */}
-                  <h3 className="text-2xl font-semibold text-sidebar-foreground">
+                  <h3 className="text-2xl font-semibold text-sidebar-foreground text-center">
                     {step.label}
                   </h3>
-
-                  {/* Description */}
-                  <p className="text-center whitespace-nowrap text-base text-sidebar-foreground/70">
-                    {step.description}
-                  </p>
                 </div>
 
                 {/* Dot navigation */}
@@ -428,14 +423,14 @@ export function WorkspaceInstructionModal({
                     <button
                       key={index}
                       type="button"
-                      onClick={() => goTo(index)}
+                      onClick={() => { goTo(index); onUserInteracted?.(); }}
                       className={cn(
                         "h-2 rounded-full transition-all duration-300",
                         index === activeIndex
                           ? "w-6 bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]"
                           : "w-2 bg-sidebar-foreground/25 hover:bg-sidebar-foreground/40"
                       )}
-                      aria-label={`Go to slide ${index + 1}${s.variant ? ` — ${s.label} method ${s.variant.current}` : ` — ${s.label}`}`}
+                      aria-label={`Go to slide ${index + 1}: ${s.label}`}
                     />
                   ))}
                 </div>

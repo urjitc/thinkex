@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, Suspense } from "react";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -34,6 +34,11 @@ function GenerateContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [progressText, setProgressText] = useState("Your workspace is generating...");
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+  const [userInteracted, setUserInteracted] = useState(false);
+  const [generationCompleteSlug, setGenerationCompleteSlug] = useState<string | null>(null);
+  const userInteractedRef = useRef(false);
+  const isRedirectingRef = useRef(false);
+  userInteractedRef.current = userInteracted;
 
   const runAutogen = useCallback(async () => {
     if (!prompt) return;
@@ -41,6 +46,9 @@ function GenerateContent() {
     setError(null);
     setIsLoading(true);
     setCompletedSteps([]);
+    setGenerationCompleteSlug(null);
+    setUserInteracted(false);
+    isRedirectingRef.current = false;
     setProgressText("Generating workspace title...");
 
     let fileUrls: Array<{ url: string; mediaType: string; filename?: string; fileSize?: number }> = [];
@@ -133,7 +141,13 @@ function GenerateContent() {
             } else if (ev.type === "complete" && ev.data?.workspace?.slug) {
               setProgressText(PROGRESS_LABELS.complete);
               await queryClient.invalidateQueries({ queryKey: ["workspaces"] });
-              router.replace(`/workspace/${ev.data.workspace.slug}`);
+              if (userInteractedRef.current) {
+                setGenerationCompleteSlug(ev.data.workspace.slug);
+                setIsLoading(false);
+              } else {
+                isRedirectingRef.current = true;
+                router.replace(`/workspace/${ev.data.workspace.slug}`);
+              }
               return;
             } else if (ev.type === "error" && ev.data?.message) {
               setError(ev.data.message);
@@ -150,7 +164,9 @@ function GenerateContent() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
-      setIsLoading(false);
+      if (!isRedirectingRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [prompt, router, queryClient]);
 
@@ -189,6 +205,14 @@ function GenerateContent() {
           progressText={progressText}
           completedSteps={completedSteps}
           totalSteps={PROGRESS_STEPS.length}
+          onUserInteracted={() => setUserInteracted(true)}
+          generationComplete={!!generationCompleteSlug}
+          workspaceSlug={generationCompleteSlug}
+          onOpenWorkspace={
+            generationCompleteSlug
+              ? () => router.replace(`/workspace/${generationCompleteSlug}`)
+              : undefined
+          }
         />
       {error && (
         <div className="flex flex-col items-center gap-4 p-6 bg-background/80 backdrop-blur-sm rounded-xl border border-border/50">
