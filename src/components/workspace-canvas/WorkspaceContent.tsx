@@ -212,10 +212,7 @@ export default function WorkspaceContent({
   }, [setOpenModalItemId]);
 
 
-  // Handle file upload click
-  const handleFileUploadClick = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
+  const emptyStateUploadInputId = "workspace-empty-file-upload";
 
   // Handle file selection
   const handleFileChange = useCallback(
@@ -320,20 +317,20 @@ export default function WorkspaceContent({
         <div className={`${selectedCardIdsArray.length > 0 ? 'pb-20' : ''} size-full workspace-grid-container px-4 sm:px-6`}>
           <EmptyState className="w-full min-w-0 max-w-full">
             <div className="mx-auto max-w-2xl w-full text-center px-4 sm:px-6 py-10 min-w-0">
-              {/* Hidden file input */}
               <input
+                id={emptyStateUploadInputId}
                 ref={fileInputRef}
                 type="file"
                 multiple
-                className="hidden"
+                className="sr-only"
                 onChange={handleFileChange}
                 accept="application/pdf,.pdf"
               />
 
-              {/* Drag and Drop Prompt */}
-              <div
-                onClick={handleFileUploadClick}
-                className="mb-8 p-8 rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/20 hover:border-solid hover:shadow-[inset_0_0_0_2px_hsl(var(--muted-foreground)/0.3)] hover:bg-muted/50 transition-all cursor-pointer group"
+              {/* Drag and Drop Prompt — native label for instant file picker */}
+              <label
+                htmlFor={emptyStateUploadInputId}
+                className="mb-8 p-8 rounded-xl border-2 border-dashed border-muted-foreground/30 bg-muted/20 hover:border-solid hover:shadow-[inset_0_0_0_2px_hsl(var(--muted-foreground)/0.3)] hover:bg-muted/50 transition-all cursor-pointer group block"
               >
                 <Upload className="size-12 mx-auto mb-4 text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all duration-200" />
                 <h3 className="text-base font-medium text-foreground mb-2">
@@ -341,7 +338,7 @@ export default function WorkspaceContent({
                     ? `This folder is empty`
                     : "Drag and drop PDFs here"}
                 </h3>
-              </div>
+              </label>
 
               {/* Divider */}
               <div className="relative my-8">

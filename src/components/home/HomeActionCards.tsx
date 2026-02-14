@@ -7,19 +7,40 @@ interface ActionCardProps {
     subtitle: string;
     onClick?: () => void;
     isLoading?: boolean;
+    /** When set, renders as label for native file picker—avoids JS round-trip and OS delay feels shorter */
+    htmlFor?: string;
 }
 
-function ActionCard({ icon, title, subtitle, onClick, isLoading }: ActionCardProps) {
+function ActionCard({ icon, title, subtitle, onClick, isLoading, htmlFor }: ActionCardProps) {
+    const sharedClassName = cn(
+        "flex items-center gap-3 p-4 h-16 w-full rounded-2xl border bg-sidebar backdrop-blur-xl hover:bg-accent hover:text-accent-foreground transition-all text-left cursor-pointer",
+        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "disabled:pointer-events-none disabled:opacity-50"
+    );
+
+    if (htmlFor && !isLoading) {
+        return (
+            <label
+                htmlFor={htmlFor}
+                className={sharedClassName}
+            >
+                <div className="text-foreground/70 flex-shrink-0">
+                    {icon}
+                </div>
+                <div className="flex flex-col">
+                    <div className="font-medium text-sm text-foreground">{title}</div>
+                    <div className="text-xs text-muted-foreground">{subtitle}</div>
+                </div>
+            </label>
+        );
+    }
+
     return (
         <button
             type="button"
             onClick={onClick}
             disabled={isLoading}
-            className={cn(
-                "flex items-center gap-3 p-4 h-16 w-full rounded-2xl border bg-sidebar backdrop-blur-xl hover:bg-accent hover:text-accent-foreground transition-all text-left cursor-pointer",
-                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2",
-                "disabled:pointer-events-none disabled:opacity-50"
-            )}
+            className={sharedClassName}
         >
             <div className="text-foreground/70 flex-shrink-0">
                 {icon}
@@ -38,9 +59,11 @@ interface HomeActionCardsProps {
     onRecord: () => void;
     onStartFromScratch: () => void;
     isLoading?: boolean;
+    /** ID of the hidden file input—enables native label click for instant file picker */
+    uploadInputId?: string;
 }
 
-export function HomeActionCards({ onUpload, onLink, onRecord, onStartFromScratch, isLoading }: HomeActionCardsProps) {
+export function HomeActionCards({ onUpload, onLink, onRecord, onStartFromScratch, isLoading, uploadInputId }: HomeActionCardsProps) {
     return (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-[760px]">
             <ActionCard
@@ -49,6 +72,7 @@ export function HomeActionCards({ onUpload, onLink, onRecord, onStartFromScratch
                 subtitle="PDF, Image, Audio"
                 onClick={onUpload}
                 isLoading={isLoading}
+                htmlFor={uploadInputId}
             />
             <ActionCard
                 icon={<LinkIcon className="h-6 w-6" />}

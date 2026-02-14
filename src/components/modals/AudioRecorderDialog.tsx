@@ -322,20 +322,19 @@ export function AudioRecorderDialog({
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload Audio File
+                <Button asChild variant="outline" className="gap-2">
+                  <label htmlFor="audio-recorder-file-upload" className="cursor-pointer">
+                    <Upload className="h-4 w-4" />
+                    Upload Audio File
+                  </label>
                 </Button>
                 <input
+                  id="audio-recorder-file-upload"
                   ref={fileInputRef}
                   type="file"
                   accept={ACCEPTED_EXTENSIONS}
                   onChange={handleFileSelect}
-                  className="hidden"
+                  className="sr-only"
                 />
                 <p className="text-xs text-muted-foreground text-center">
                   MP3, WAV, OGG, AAC, FLAC, AIFF, WebM, M4A

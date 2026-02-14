@@ -529,6 +529,8 @@ export const ComposerAddAttachment: FC = () => {
 
 
 
+  const uploadInputId = "composer-file-upload";
+
   return (
     <>
       <div
@@ -538,24 +540,23 @@ export const ComposerAddAttachment: FC = () => {
         <div className="flex items-center gap-2 pointer-events-auto">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
+              <label
+                htmlFor={uploadInputId}
                 className="aui-composer-add-attachment flex items-center gap-1.5 px-1.5 py-1 rounded-md bg-sidebar-accent hover:bg-accent transition-colors flex-shrink-0 text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer ml-1"
                 aria-label="Add Attachment"
               >
                 <LuPaperclip className="w-3.5 h-3.5" />
-              </button>
+              </label>
             </TooltipTrigger>
             <TooltipContent side="top">Add file</TooltipContent>
           </Tooltip>
         </div>
 
-        {/* Hidden file input */}
         <input
+          id={uploadInputId}
           ref={fileInputRef}
           type="file"
-          className="hidden"
+          className="sr-only"
           onChange={handleFileChange}
           multiple={true}
           accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.csv,.json"

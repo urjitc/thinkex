@@ -19,6 +19,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { HomeAttachmentsProvider, useHomeAttachments } from "@/contexts/HomeAttachmentsContext";
 import { LinkInputDialog } from "./LinkInputDialog";
@@ -58,6 +59,7 @@ function HeroAttachmentsSection({
   const { addFiles, addLink, canAddMoreLinks, canAddYouTube } = useHomeAttachments();
 
   const handleUpload = () => fileInputRef.current?.click();
+  const uploadInputId = "home-file-upload";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -69,12 +71,13 @@ function HeroAttachmentsSection({
 
   return (
     <>
-      <input
+      <Input
+        id={uploadInputId}
         ref={fileInputRef}
         type="file"
         accept={ACCEPT_FILES}
         multiple
-        className="hidden"
+        className="sr-only"
         onChange={handleFileChange}
       />
       <div className="flex justify-center w-full relative z-10 mb-2">
@@ -84,6 +87,7 @@ function HeroAttachmentsSection({
           onRecord={onRecord}
           onStartFromScratch={handleCreateBlankWorkspace}
           isLoading={createWorkspacePending}
+          uploadInputId={uploadInputId}
         />
       </div>
       <div className="flex justify-center w-full relative z-10">
