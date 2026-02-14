@@ -7,7 +7,6 @@ import { DynamicBlockNoteEditor } from "@/components/editor/DynamicBlockNoteEdit
 import { plainTextToBlocks, type Block } from "@/components/editor/BlockNoteEditor";
 import FlashcardContent from "./FlashcardContent";
 import YouTubeCardContent from "./YouTubeCardContent";
-import { SourcesDisplay } from "./SourcesDisplay";
 import ImageCardContent from "./ImageCardContent";
 import { AudioCardContent } from "./AudioCardContent";
 
@@ -62,6 +61,7 @@ export function CardRenderer(props: {
           cardId={item.id}
           lastSource={item.lastSource}
           autofocus={true}
+          sources={noteData.sources}
           onChange={(blocks) => {
             onUpdateData(() => ({
               blockContent: blocks,
@@ -69,12 +69,6 @@ export function CardRenderer(props: {
             }));
           }}
         />
-        {/* Sources section - only shown if sources exist */}
-        {noteData.sources && noteData.sources.length > 0 && (
-          <div className="px-4 pb-3 mt-2">
-            <SourcesDisplay sources={noteData.sources} />
-          </div>
-        )}
       </>
     );
   }

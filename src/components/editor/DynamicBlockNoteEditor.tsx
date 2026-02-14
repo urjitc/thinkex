@@ -19,10 +19,11 @@ interface DynamicBlockNoteEditorProps {
   cardId?: string; // Optional card ID for selection tracking
   lastSource?: 'user' | 'agent';
   autofocus?: boolean | "start" | "end"; // Auto-focus the editor when it opens
+  sources?: Array<{ url: string; title: string }>;
 }
 
-export function DynamicBlockNoteEditor({ initialContent, onChange, readOnly, cardName, cardId, lastSource, autofocus }: DynamicBlockNoteEditorProps) {
-  return <BlockNoteEditor initialContent={initialContent} onChange={onChange} readOnly={readOnly} cardName={cardName} cardId={cardId} lastSource={lastSource} autofocus={autofocus} />;
+export function DynamicBlockNoteEditor({ initialContent, onChange, readOnly, cardName, cardId, lastSource, autofocus, sources }: DynamicBlockNoteEditorProps) {
+  return <BlockNoteEditor initialContent={initialContent} onChange={onChange} readOnly={readOnly} cardName={cardName} cardId={cardId} lastSource={lastSource} autofocus={autofocus} sources={sources} />;
 }
 
 export default DynamicBlockNoteEditor;

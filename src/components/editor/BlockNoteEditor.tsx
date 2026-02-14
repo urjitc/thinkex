@@ -29,6 +29,7 @@ interface BlockNoteEditorProps {
   cardId?: string; // Optional card ID for selection tracking
   lastSource?: 'user' | 'agent';
   autofocus?: boolean | "start" | "end"; // Auto-focus the editor when it opens
+  sources?: Array<{ url: string; title: string }>; // Optional sources to display below editor
 }
 
 // Helper function to convert plain text to BlockNote blocks
@@ -50,7 +51,7 @@ function plainTextToBlocks(text: string): Block[] {
 let activeEditorInitializations = 0;
 let maxConcurrentInitializations = 0;
 
-export default function BlockNoteEditor({ initialContent, onChange, readOnly, cardName, cardId, lastSource, autofocus }: BlockNoteEditorProps) {
+export default function BlockNoteEditor({ initialContent, onChange, readOnly, cardName, cardId, lastSource, autofocus, sources }: BlockNoteEditorProps) {
   const isInitialMount = useRef(true);
   const previousInitialContent = useRef<string | undefined>(undefined);
   const posthog = usePostHog();
@@ -385,6 +386,28 @@ export default function BlockNoteEditor({ initialContent, onChange, readOnly, ca
             }
           />
         </BlockNoteView>
+        {/* Sources section - simple clickable links below editor content */}
+        {sources && sources.length > 0 && (
+          <div className="px-14 pb-6 pt-8 border-t border-border/40">
+            <div className="text-xs font-semibold text-muted-foreground/70 mb-3 uppercase tracking-wider">
+              Sources
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {sources.map((source, index) => (
+                <a
+                  key={index}
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary/80 hover:text-primary hover:underline flex items-start gap-2 group py-0.5"
+                >
+                  <span className="text-muted-foreground/50 group-hover:text-primary/60 transition-colors mt-0.5">•</span>
+                  <span className="flex-1 break-words">{source.title}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </MathEditProvider>
   );
