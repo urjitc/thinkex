@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { google } from "@ai-sdk/google";
-import { generateText, Output } from "ai";
+import { generateText, generateObject, Output } from "ai";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { desc, eq, sql } from "drizzle-orm";
@@ -106,6 +106,61 @@ function isAllowedFileUrl(url: string | undefined): boolean {
   }
 }
 
+/** Schema for main agent distillation when user has attachments */
+const DISTILLED_SCHEMA = z.object({
+  metadata: z.object({
+    title: z.string().describe("A short, concise workspace title (max 5-6 words)"),
+    icon: z.string().describe("A HeroIcon name that represents the topic"),
+    color: z.string().describe("A hex color code that fits the topic theme"),
+  }),
+  contentSummary: z
+    .string()
+    .describe("Comprehensive summary of the content for creating study note and flashcards. Include key concepts, facts, and structure. 200-800 words."),
+  quizTopic: z.string().describe("Topic string for quiz generation, with references if relevant"),
+  youtubeSearchTerm: z.string().describe("Search query for finding a related YouTube video"),
+});
+
+type DistilledOutput = z.infer<typeof DISTILLED_SCHEMA>;
+
+/** Main agent: reads full message (PDFs, video, links) once, outputs metadata + distilled prompts */
+async function runDistillationAgent(
+  prompt: string,
+  fileUrls: FileUrlItem[],
+  links: string[]
+): Promise<DistilledOutput> {
+  const { object } = await generateObject({
+    model: google("gemini-2.5-flash"),
+    schema: DISTILLED_SCHEMA,
+    system: `You are a helpful assistant. The user has provided content (prompt, files, links). Your job is to:
+1. Generate workspace metadata: a short title, an icon name from the list, and a hex color.
+2. Write a comprehensive content summary (200-800 words) capturing key concepts, facts, and structure for creating notes and materials.
+3. Produce a quiz topic string (can include "References: ..." if links are relevant).
+4. Produce a YouTube search term to find a related video on the topic.
+
+Available icons (must be one of these): ${AVAILABLE_ICONS.join(", ")}`,
+    messages: [buildUserMessage(prompt, fileUrls, links)] as const,
+  });
+
+  let title = object.metadata.title.trim();
+  if (title.length > MAX_TITLE_LENGTH) title = title.substring(0, MAX_TITLE_LENGTH).trim();
+  if (!title) title = "New Workspace";
+
+  let icon = object.metadata.icon;
+  if (!icon || !AVAILABLE_ICONS.includes(icon)) icon = "FolderIcon";
+
+  let color = object.metadata.color;
+  if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+    color = CANVAS_CARD_COLORS[Math.floor(Math.random() * CANVAS_CARD_COLORS.length)];
+  }
+
+  return {
+    metadata: { title, icon, color },
+    contentSummary: object.contentSummary,
+    quizTopic: object.quizTopic,
+    youtubeSearchTerm: object.youtubeSearchTerm,
+  };
+}
+
 /** System prompt for note + flashcard generation. Aligns with formatWorkspaceContext FORMATTING (markdown, math, mermaid). */
 const NOTE_FLASHCARD_SYSTEM = `You generate a study note and a flashcard deck for ThinkEx. Both must be on the same topic and use consistent formatting.
 
@@ -131,14 +186,10 @@ function streamEvent(ev: StreamEvent): string {
 }
 
 /**
- * Generate workspace metadata (title, icon, color) from a prompt
+ * Generate workspace metadata (title, icon, color) from a text prompt.
+ * Used when user has no attachments (!hasParts).
  */
-async function generateWorkspaceMetadata(
-  prompt: string,
-  fileUrls?: FileUrlItem[],
-  links?: string[]
-) {
-  const hasParts = (fileUrls?.length ?? 0) > 0 || (links?.length ?? 0) > 0;
+async function generateWorkspaceMetadata(prompt: string) {
   const { output } = await generateText({
     model: google("gemini-2.5-flash-lite"),
     output: Output.object({
@@ -151,13 +202,11 @@ async function generateWorkspaceMetadata(
       }),
     }),
     system: `You are a helpful assistant that generates workspace metadata.
-Given a user's prompt (and any attached files/links), generate:
+Given a user's prompt, generate:
 1. A short, concise workspace title (max 5-6 words)
 2. An appropriate HeroIcon name from: ${AVAILABLE_ICONS.join(", ")}
-3. A hex color code that matches the topic theme (e.g. #3B82F6)`,
-    ...(hasParts
-      ? { messages: [buildUserMessage(prompt, fileUrls, links)] as const }
-      : { prompt: `User prompt: "${prompt}"\n\nGenerate workspace title, icon, and color.` }),
+3. A hex color code that fits the topic theme (e.g. #3B82F6)`,
+    prompt: `User prompt: "${prompt}"\n\nGenerate workspace title, icon, and color.`,
   });
 
   let title = output.title.trim();
@@ -228,8 +277,34 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // 1. Generate metadata and stream immediately
-        const { title, icon, color } = await generateWorkspaceMetadata(prompt, fileUrls, links);
+        // 1. Get metadata (and distilled prompts when user has attachments)
+        const hasParts = (fileUrls?.length ?? 0) > 0 || (links?.length ?? 0) > 0;
+        let title: string;
+        let icon: string;
+        let color: string;
+        let contentSummary: string;
+        let quizTopic: string;
+        let youtubeSearchTerm: string;
+
+        if (hasParts) {
+          const distilled = await runDistillationAgent(prompt, fileUrls ?? [], links ?? []);
+          title = distilled.metadata.title;
+          icon = distilled.metadata.icon;
+          color = distilled.metadata.color;
+          contentSummary = distilled.contentSummary;
+          quizTopic = distilled.quizTopic;
+          youtubeSearchTerm = distilled.youtubeSearchTerm;
+        } else {
+          const meta = await generateWorkspaceMetadata(prompt);
+          title = meta.title;
+          icon = meta.icon;
+          color = meta.color;
+          contentSummary = prompt;
+          const nonYtLinks = links?.filter((l) => !isYouTubeUrl(l)) ?? [];
+          quizTopic = nonYtLinks.length > 0 ? `${prompt}\n\nReferences: ${nonYtLinks.join(", ")}` : prompt;
+          youtubeSearchTerm = prompt;
+        }
+
         send({ type: "metadata", data: { title, icon, color } });
 
         // 2. Create workspace
@@ -303,10 +378,9 @@ export async function POST(request: NextRequest) {
         }
 
         // 3. Generate content in parallel. Note + flashcard share one Gemini call; quiz and youtube are separate.
-        const hasParts = (fileUrls?.length ?? 0) > 0 || (links?.length ?? 0) > 0;
         const noteAndFlashcardFn = async () => {
           const { output } = await generateText({
-            model: google("gemini-2.5-flash-lite"),
+            model: google("gemini-2.5-flash"),
             system: NOTE_FLASHCARD_SYSTEM,
             output: Output.object({
               name: "NoteAndFlashcards",
@@ -325,15 +399,13 @@ export async function POST(request: NextRequest) {
                 }),
               }),
             }),
-            ...(hasParts
-              ? { messages: [buildUserMessage(prompt, fileUrls, links)] as const }
-              : {
-                  prompt: `Create study materials about: "${prompt}".
+            prompt: `Create study materials about the following content:
+
+${contentSummary}
 
 Return:
 1. note: a short title and markdown content for a study note.
 2. flashcards: a title and 5-8 flashcard pairs (front, back) on the same topic.`,
-                }),
           });
 
           await workspaceWorker("create", {
@@ -356,11 +428,6 @@ Return:
         };
 
         const youtubeUrlFromLinks = links?.find(isYouTubeUrl);
-        const nonYtLinks = links?.filter((l) => !isYouTubeUrl(l)) ?? [];
-        const quizTopic =
-          nonYtLinks.length > 0
-            ? `${prompt}\n\nReferences: ${nonYtLinks.join(", ")}`
-            : prompt;
 
         const tasks: Array<{ step: "quiz" | "youtube"; fn: () => Promise<unknown> }> = [
           {
@@ -388,7 +455,7 @@ Return:
                   layout: AUTOGEN_LAYOUTS.youtube,
                 });
               }
-              const videos = await searchVideos(prompt, 3);
+              const videos = await searchVideos(youtubeSearchTerm, 3);
               const video = videos[0];
               if (!video) return { success: false, message: "No videos found" };
               return workspaceWorker("create", {

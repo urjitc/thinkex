@@ -137,7 +137,7 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
                     result: {
                       url,
                       mediaType,
-                      filename: filename || i.file.name,
+                      filename: i.file.name,
                       fileSize: i.file.size,
                     },
                   }
