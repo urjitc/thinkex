@@ -38,6 +38,8 @@ function loadYouTubeAPI(): Promise<void> {
 interface UseYouTubePlayerOptions {
   videoId: string | null;
   playlistId?: string | null;
+  /** Start playback from this time in seconds (restores progress) */
+  startSeconds?: number;
   /** Called when the player fires a state-change event */
   onStateChange?: (state: YT.PlayerState) => void;
   /** Called when the player is ready */
@@ -59,6 +61,7 @@ interface UseYouTubePlayerOptions {
 export function useYouTubePlayer({
   videoId,
   playlistId,
+  startSeconds,
   onStateChange,
   onReady,
   onError,
@@ -92,6 +95,7 @@ export function useYouTubePlayer({
         origin: window.location.origin,
         playsinline: 1,
         rel: 0,
+        ...(typeof startSeconds === "number" && startSeconds > 0 ? { start: Math.floor(startSeconds) } : {}),
         ...playerVars,
       };
 

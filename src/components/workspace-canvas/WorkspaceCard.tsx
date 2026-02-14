@@ -278,11 +278,6 @@ function WorkspaceCard({
   }, []);
 
   // Check if card is being dragged by checking parent element for dragging class
-  // State to track if YouTube video is playing
-  const playingYouTubeCardIds = useUIStore(state => state.playingYouTubeCardIds);
-  const setCardPlaying = useUIStore(state => state.setCardPlaying);
-  const isYouTubePlaying = playingYouTubeCardIds.has(item.id);
-
   useEffect(() => {
     if (!articleRef.current || item.type !== 'youtube') return;
 
@@ -554,16 +549,7 @@ function WorkspaceCard({
       return;
     }
 
-    // For YouTube cards, handle click to play
-    if (item.type === 'youtube') {
-      // If we got here, it wasn't a drag (checked above)
-      // So treat this as a click to play
-      e.stopPropagation();
-      if (!isYouTubePlaying) {
-        setCardPlaying(item.id, true);
-      }
-      return;
-    }
+    // YouTube cards open in panel (same as notes/PDFs) - no special handling, fall through
 
     // If this card is already open in panel mode, close it instead of re-opening
     if (isOpenInPanel) {
@@ -580,7 +566,7 @@ function WorkspaceCard({
 
     // Default: open in focus mode (maximized modal)
     onOpenModal(item.id);
-  }, [isEditingTitle, isOpenInPanel, item.id, item.type, onOpenModal, setOpenModalItemId, openPanelIds, isYouTubePlaying, setCardPlaying, maximizedItemId, viewMode, openPanel]);
+  }, [isEditingTitle, isOpenInPanel, item.id, item.type, onOpenModal, openPanelIds, maximizedItemId, viewMode, openPanel, closePanel]);
 
   return (
     <ContextMenu>
@@ -589,7 +575,7 @@ function WorkspaceCard({
           <article
             ref={articleRef}
             id={`item-${item.id}`}
-            data-youtube-playing={isYouTubePlaying}
+            data-youtube-card
             data-item-type={item.type}
             data-has-preview={shouldShowPreview}
             className={`relative rounded-md scroll-mt-4 size-full flex flex-col overflow-hidden transition-all duration-200 cursor-pointer ${item.type === 'youtube' || item.type === 'image' || (item.type === 'pdf' && shouldShowPreview)
@@ -982,8 +968,8 @@ function WorkspaceCard({
               // Use the YouTubeCardContent component which handles play/adjust state
               return <YouTubeCardContent
                 item={item}
-                isPlaying={isYouTubePlaying}
-                onTogglePlay={(playing) => setCardPlaying(item.id, playing)}
+                isPlaying={false}
+                onTogglePlay={() => {}}
               />;
             })()}
 

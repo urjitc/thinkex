@@ -58,6 +58,7 @@ export interface FolderData {
 export interface YouTubeData {
   url: string; // YouTube video URL
   thumbnail?: string; // Optional thumbnail URL from oEmbed API
+  progress?: number; // Where user left off (seconds)
 }
 
 export interface ImageData {

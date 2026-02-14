@@ -1,8 +1,7 @@
 "use client";
 
-import { useUIStore } from "@/lib/stores/ui-store";
 import type { Item, ItemData, NoteData, PdfData, FlashcardData, YouTubeData, ImageData } from "@/lib/workspace-state/types";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { DynamicBlockNoteEditor } from "@/components/editor/DynamicBlockNoteEditor";
 import { plainTextToBlocks, type Block } from "@/components/editor/BlockNoteEditor";
 import FlashcardContent from "./FlashcardContent";
@@ -19,10 +18,6 @@ export function CardRenderer(props: {
   layoutKey?: string | number;
 }) {
   const { item, onUpdateData } = props;
-
-  const playingYouTubeCardIds = useUIStore(state => state.playingYouTubeCardIds);
-  const setCardPlaying = useUIStore(state => state.setCardPlaying);
-  const isYouTubePlaying = playingYouTubeCardIds.has(item.id);
 
   if (item.type === "note") {
     const noteData = item.data as NoteData;
@@ -99,8 +94,8 @@ export function CardRenderer(props: {
     return (
       <YouTubeCardContent
         item={item}
-        isPlaying={isYouTubePlaying}
-        onTogglePlay={(playing) => setCardPlaying(item.id, playing)}
+        isPlaying={false}
+        onTogglePlay={() => {}}
       />
     );
   }

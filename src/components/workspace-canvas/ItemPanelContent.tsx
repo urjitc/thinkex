@@ -8,6 +8,7 @@ import { formatKeyboardShortcut } from "@/lib/utils/keyboard-shortcut";
 import ItemHeader from "@/components/workspace-canvas/ItemHeader";
 import CardRenderer from "@/components/workspace-canvas/CardRenderer";
 import LazyAppPdfViewer from "@/components/pdf/LazyAppPdfViewer";
+import { YouTubePanelContent } from "@/components/workspace-canvas/YouTubePanelContent";
 import { PdfPanelHeader } from "@/components/pdf/PdfPanelHeader";
 import { getCardColorCSS, getCardAccentColor, getWhiteTintedColor } from "@/lib/workspace-state/colors";
 import type { Item, ItemData, PdfData } from "@/lib/workspace-state/types";
@@ -41,6 +42,7 @@ export function ItemPanelContent({
     const isDesktop = true;
 
     const isPdf = item.type === 'pdf';
+    const isYouTube = item.type === 'youtube';
     const pdfData = item.data as PdfData;
 
     // PDF-specific state
@@ -142,14 +144,14 @@ export function ItemPanelContent({
                 transformOrigin: 'center',
             }}
         >
-            {/* Header - PDF has integrated controls, others use standard header.
+            {/* Header - PDF has integrated controls, YouTube and others use standard header.
                 When maximized, the header is integrated into the WorkspaceHeader, so we hide it here. */}
             {!isPdf && !isMaximized && renderStandardHeader()}
 
             {/* Content */}
             <div
-                className={`${isPdf ? "flex-1 flex flex-col min-h-0" : "flex-1 overflow-y-auto modal-scrollable flex flex-col"}`}
-                style={!isPdf ? {
+                className={`${isPdf || isYouTube ? "flex-1 flex flex-col min-h-0" : "flex-1 overflow-y-auto modal-scrollable flex flex-col"}`}
+                style={!isPdf && !isYouTube ? {
                     ['--scrollbar-color' as string]: item.color
                         ? getWhiteTintedColor(item.color, 0.7, 0.2)
                         : "rgba(255, 255, 255, 0.2)",
@@ -181,6 +183,12 @@ export function ItemPanelContent({
                             )}
                         />
                     </div>
+                ) : isYouTube ? (
+                    <YouTubePanelContent
+                        item={item}
+                        onUpdateItemData={onUpdateItemData}
+                        isMaximized={isMaximized}
+                    />
                 ) : (
                     <CardRenderer
                         key={item.id}
