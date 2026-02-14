@@ -648,7 +648,8 @@ const Composer: FC<ComposerProps> = ({ items }) => {
         e.preventDefault();
 
         // Wait for attachment uploads before sending (same UX as home input)
-        if (useAttachmentUploadStore.getState().hasUploading()) {
+        if (useAttachmentUploadStore.getState().uploadingIds.size > 0) {
+          toast.info("Please wait for uploads to finish before sending");
           return;
         }
 
@@ -748,7 +749,7 @@ interface ComposerActionProps {
 const ComposerAction: FC<ComposerActionProps> = ({ items }) => {
   const { data: session } = useSession();
   useAui();
-  const hasUploading = useAttachmentUploadStore((s) => s.hasUploading());
+  const hasUploading = useAttachmentUploadStore((s) => s.uploadingIds.size > 0);
   const isAnonymous = session?.user?.isAnonymous ?? false;
   const selectedCardIdsArray = useUIStore(
     useShallow(selectSelectedCardIdsArray)
@@ -1606,7 +1607,7 @@ const truncateText = (text: string, maxLength: number = 30) => {
 
 const EditComposer: FC = () => {
   const aui = useAui();
-  const hasUploading = useAttachmentUploadStore((s) => s.hasUploading());
+  const hasUploading = useAttachmentUploadStore((s) => s.uploadingIds.size > 0);
   const messageAttachments = useAuiState(
     useShallow(({ message }) => (message as { attachments?: unknown[] })?.attachments || [])
   );
@@ -1741,7 +1742,8 @@ const EditComposer: FC = () => {
         onSubmit={(e) => {
           e.preventDefault();
 
-          if (useAttachmentUploadStore.getState().hasUploading()) {
+          if (useAttachmentUploadStore.getState().uploadingIds.size > 0) {
+            toast.info("Please wait for uploads to finish before sending");
             return;
           }
 

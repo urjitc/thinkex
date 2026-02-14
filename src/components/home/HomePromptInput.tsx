@@ -53,6 +53,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
     clearAll,
     hasUploading,
     awaitAllUploads,
+    getFileItems,
   } = useHomeAttachments();
 
   const [value, setValue] = useState("");
@@ -182,7 +183,14 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
         await awaitAllUploads();
       }
 
-      const fileUrls = fileItems
+      const latestFileItems = getFileItems();
+      if (latestFileItems.some((i) => i.status === "error")) {
+        toast.error("Please remove failed uploads or try again");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const fileUrls = latestFileItems
         .filter((i) => i.status === "ready" && i.result)
         .map((i) => i.result!);
 

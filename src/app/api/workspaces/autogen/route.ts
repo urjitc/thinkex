@@ -496,7 +496,15 @@ Return:
           itemsForLayout.push({ type: "pdf", layout: position });
         }
 
-        await workspaceWorker("bulkCreate", { workspaceId, items: createParams });
+        const bulkResult = await workspaceWorker("bulkCreate", { workspaceId, items: createParams });
+
+        if (!(bulkResult as { success?: boolean }).success) {
+          const errMsg =
+            (bulkResult as { message?: string }).message ??
+            "Failed to create workspace items";
+          send({ type: "error", data: { message: errMsg } });
+          return;
+        }
 
         send({
           type: "complete",

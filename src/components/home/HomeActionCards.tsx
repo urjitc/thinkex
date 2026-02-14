@@ -48,18 +48,21 @@ export function HomeActionCards({ onUpload, onLink, onRecord, onStartFromScratch
                 title="Upload"
                 subtitle="PDF, Image, Audio"
                 onClick={onUpload}
+                isLoading={isLoading}
             />
             <ActionCard
                 icon={<LinkIcon className="h-6 w-6" />}
                 title="Link"
                 subtitle="YouTube, Website"
                 onClick={onLink}
+                isLoading={isLoading}
             />
             <ActionCard
                 icon={<Mic className="h-6 w-6" />}
                 title="Record"
                 subtitle="Lectures, Meetings"
                 onClick={onRecord}
+                isLoading={isLoading}
             />
             <ActionCard
                 icon={isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : <FolderPlus className="h-6 w-6" />}

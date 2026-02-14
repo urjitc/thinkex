@@ -245,7 +245,9 @@ const AttachmentUI: FC = () => {
   const aui = useAui();
   const isComposer = aui.attachment.source === "composer";
   const attachmentId = useAuiState(({ attachment }) => (attachment as { id?: string })?.id);
-  const isUploading = useAttachmentUploadStore((s) => attachmentId != null && s.isUploading(attachmentId));
+  const isUploading = useAttachmentUploadStore((s) =>
+    attachmentId != null && s.uploadingIds.has(attachmentId)
+  );
 
   const isImage = useAuiState(
     ({ attachment }) => (attachment as { type?: string })?.type === "image"

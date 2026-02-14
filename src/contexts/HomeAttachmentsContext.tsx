@@ -7,6 +7,7 @@ import {
   useCallback,
   useMemo,
   useRef,
+  useEffect,
   type ReactNode,
 } from "react";
 import { toast } from "sonner";
@@ -51,6 +52,8 @@ interface HomeAttachmentsContextValue {
   hasUploading: boolean;
   /** Waits for all in-flight uploads to complete. Resolves when done. */
   awaitAllUploads: () => Promise<void>;
+  /** Returns the latest file items (use after awaitAllUploads to check post-upload state). */
+  getFileItems: () => FileItem[];
 }
 
 const HomeAttachmentsContext = createContext<HomeAttachmentsContextValue | null>(
@@ -61,6 +64,7 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
   const [fileItems, setFileItems] = useState<FileItem[]>([]);
   const [links, setLinks] = useState<string[]>([]);
   const uploadPromisesRef = useRef<Map<string, Promise<void>>>(new Map());
+  const fileItemsRef = useRef<FileItem[]>([]);
 
   const files = useMemo(() => fileItems.map((i) => i.file), [fileItems]);
   const totalFileSize = useMemo(
@@ -77,19 +81,12 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
   const canAddYouTube = !hasYouTubeLink;
   const hasUploading = fileItems.some((i) => i.status === "uploading");
 
+  useEffect(() => {
+    fileItemsRef.current = fileItems;
+  }, [fileItems]);
+
   const addFiles = useCallback(async (newFiles: File[]) => {
     if (newFiles.length === 0) return;
-
-    const currentSize = fileItems.reduce((sum, i) => sum + i.file.size, 0);
-    const newSize = newFiles.reduce((sum, f) => sum + f.size, 0);
-    const total = currentSize + newSize;
-
-    if (total > MAX_TOTAL_FILE_BYTES) {
-      toast.error(
-        `Total file size exceeds ${MAX_TOTAL_FILE_BYTES / (1024 * 1024)}MB limit`
-      );
-      return;
-    }
 
     const pdfFiles = newFiles.filter(
       (f) =>
@@ -116,7 +113,19 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
       status: "uploading",
     }));
 
-    setFileItems((prev) => [...prev, ...newItems]);
+    setFileItems((prev) => {
+      const currentSize = prev.reduce((sum, i) => sum + i.file.size, 0);
+      const newSize = newItems.reduce((sum, i) => sum + i.file.size, 0);
+      if (currentSize + newSize > MAX_TOTAL_FILE_BYTES) {
+        toast.error(
+          `Total file size exceeds ${MAX_TOTAL_FILE_BYTES / (1024 * 1024)}MB limit`
+        );
+        return prev;
+      }
+      const next = [...prev, ...newItems];
+      fileItemsRef.current = next;
+      return next;
+    });
     toast.success(`Added ${newItems.length} file${newItems.length > 1 ? "s" : ""} — uploading...`);
 
     newItems.forEach((item) => {
@@ -125,11 +134,11 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
         (item.file.name.endsWith(".pdf") ? "application/pdf" : "application/octet-stream");
 
       const promise = uploadFileDirect(item.file)
-        .then(({ url, filename }) => {
+        .then(({ url }) => {
           setFileItems((prev) => {
             const existing = prev.find((i) => i.id === item.id);
             if (!existing) return prev;
-            return prev.map((i) =>
+            const next = prev.map((i) =>
               i.id === item.id
                 ? {
                     ...i,
@@ -143,13 +152,15 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
                   }
                 : i
             );
+            fileItemsRef.current = next;
+            return next;
           });
         })
         .catch((err) => {
           setFileItems((prev) => {
             const existing = prev.find((i) => i.id === item.id);
             if (!existing) return prev;
-            return prev.map((i) =>
+            const next = prev.map((i) =>
               i.id === item.id
                 ? {
                     ...i,
@@ -158,6 +169,8 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
                   }
                 : i
             );
+            fileItemsRef.current = next;
+            return next;
           });
           toast.error(`Failed to upload ${item.file.name}`);
         })
@@ -167,13 +180,15 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
 
       uploadPromisesRef.current.set(item.id, promise);
     });
-  }, [fileItems]);
+  }, []);
 
   const removeFile = useCallback((index: number) => {
     setFileItems((prev) => {
       const item = prev[index];
       if (item) uploadPromisesRef.current.delete(item.id);
-      return prev.filter((_, i) => i !== index);
+      const next = prev.filter((_, i) => i !== index);
+      fileItemsRef.current = next;
+      return next;
     });
   }, []);
 
@@ -213,6 +228,7 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
 
   const clearAll = useCallback(() => {
     uploadPromisesRef.current.clear();
+    fileItemsRef.current = [];
     setFileItems([]);
     setLinks([]);
   }, []);
@@ -221,6 +237,8 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
     const promises = Array.from(uploadPromisesRef.current.values());
     return Promise.all(promises).then(() => {});
   }, []);
+
+  const getFileItems = useCallback(() => fileItemsRef.current, []);
 
   const value = useMemo<HomeAttachmentsContextValue>(
     () => ({
@@ -238,6 +256,7 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
       canAddYouTube,
       hasUploading,
       awaitAllUploads,
+      getFileItems,
     }),
     [
       fileItems,
@@ -254,6 +273,7 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
       canAddYouTube,
       hasUploading,
       awaitAllUploads,
+      getFileItems,
     ]
   );
 

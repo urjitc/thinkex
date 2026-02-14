@@ -58,10 +58,11 @@ export class SupabaseAttachmentAdapter implements AttachmentAdapter {
 
     // Start upload immediately in background (optimistic)
     getUploadStore().addUploading(id);
-    const uploadPromise = uploadFileDirect(file).then((r) => {
-      getUploadStore().removeUploading(id);
-      return r.url;
-    });
+    const uploadPromise = uploadFileDirect(file)
+      .then((r) => r.url)
+      .finally(() => {
+        getUploadStore().removeUploading(id);
+      });
     this.pendingUploads.set(id, uploadPromise);
 
     return {

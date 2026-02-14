@@ -38,10 +38,17 @@ function GenerateContent() {
   const [generationCompleteSlug, setGenerationCompleteSlug] = useState<string | null>(null);
   const userInteractedRef = useRef(false);
   const isRedirectingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
   userInteractedRef.current = userInteracted;
 
   const runAutogen = useCallback(async () => {
     if (!prompt) return;
+
+    abortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    const signal = abortController.signal;
 
     setError(null);
     setIsLoading(true);
@@ -68,28 +75,32 @@ function GenerateContent() {
       // Ignore parse errors
     }
 
+    const applyIfNotAborted = <T extends (...args: never[]) => void>(fn: T) => {
+      if (!signal.aborted) fn();
+    };
+
     try {
       const res = await fetch("/api/workspaces/autogen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-          ...(fileUrls.length > 0 && { fileUrls }),
-          ...(links.length > 0 && { links }),
-        }),
+        body: JSON.stringify({ prompt, ...(fileUrls.length > 0 && { fileUrls }), ...(links.length > 0 && { links }) }),
+        signal,
       });
+
+      if (signal.aborted) return;
 
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Failed to create workspace");
+        applyIfNotAborted(() => setError(data.error || "Failed to create workspace"));
         return;
       }
 
       const reader = res.body.getReader();
+      readerRef.current = reader;
       const decoder = new TextDecoder();
       let buffer = "";
 
-      while (true) {
+      while (!signal.aborted) {
         const { done, value } = await reader.read();
         if (done) break;
 
@@ -98,6 +109,7 @@ function GenerateContent() {
         buffer = lines.pop() || "";
 
         for (const line of lines) {
+          if (signal.aborted) break;
           if (!line.trim()) continue;
           try {
             const ev = JSON.parse(line) as {
@@ -115,42 +127,46 @@ function GenerateContent() {
               const p = ev.data.partial as Record<string, unknown>;
               const stage = ev.data.stage as string;
               if (stage === "metadata" && typeof p.title === "string" && p.title) {
-                setProgressText(`Workspace: ${p.title}${p.icon || p.color ? "..." : ""}`);
+                applyIfNotAborted(() => setProgressText(`Workspace: ${p.title}${p.icon || p.color ? "..." : ""}`));
               } else if (stage === "distillation" && p.metadata && typeof (p.metadata as Record<string, unknown>).title === "string") {
                 const t = (p.metadata as Record<string, unknown>).title as string;
-                if (t) setProgressText(`Workspace: ${t}...`);
+                if (t) applyIfNotAborted(() => setProgressText(`Workspace: ${t}...`));
               } else if (stage === "noteFlashcards") {
                 const note = p.note as Record<string, unknown> | undefined;
                 const fc = p.flashcards as Record<string, unknown> | undefined;
                 if (typeof note?.title === "string" && note.title) {
-                  setProgressText(`Creating note: ${note.title}...`);
+                  applyIfNotAborted(() => setProgressText(`Creating note: ${note.title}...`));
                 } else if (typeof fc?.title === "string" && fc.title) {
-                  setProgressText(`Creating flashcards: ${fc.title}...`);
+                  applyIfNotAborted(() => setProgressText(`Creating flashcards: ${fc.title}...`));
                 }
               }
             } else if (ev.type === "metadata") {
-              setCompletedSteps((s) => [...s, "metadata"]);
-              setProgressText(PROGRESS_LABELS.workspace);
+              setCompletedSteps((s) => (s.includes("metadata") ? s : [...s, "metadata"]));
+              applyIfNotAborted(() => setProgressText(PROGRESS_LABELS.workspace));
             } else if (ev.type === "workspace") {
-              setCompletedSteps((s) => [...s, "workspace"]);
-              setProgressText("Creating your note, quiz, flashcards, and video...");
+              setCompletedSteps((s) => (s.includes("workspace") ? s : [...s, "workspace"]));
+              applyIfNotAborted(() => setProgressText("Creating your note, quiz, flashcards, and video..."));
             } else if (ev.type === "progress" && ev.data?.step) {
               const step = ev.data.step;
-              setCompletedSteps((s) => [...s, step]);
-              setProgressText(PROGRESS_LABELS[step] ?? `Creating ${step}...`);
+              setCompletedSteps((s) => (s.includes(step) ? s : [...s, step]));
+              applyIfNotAborted(() => setProgressText(PROGRESS_LABELS[step] ?? `Creating ${step}...`));
             } else if (ev.type === "complete" && ev.data?.workspace?.slug) {
-              setProgressText(PROGRESS_LABELS.complete);
-              await queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+              readerRef.current = null;
+              applyIfNotAborted(() => setProgressText(PROGRESS_LABELS.complete));
+              if (!signal.aborted) await queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+              if (signal.aborted) return;
               if (userInteractedRef.current) {
-                setGenerationCompleteSlug(ev.data.workspace.slug);
-                setIsLoading(false);
+                const slug = ev.data.workspace.slug ?? null;
+                applyIfNotAborted(() => setGenerationCompleteSlug(slug));
+                applyIfNotAborted(() => setIsLoading(false));
               } else {
                 isRedirectingRef.current = true;
-                router.replace(`/workspace/${ev.data.workspace.slug}`);
+                router.replace(`/workspace/${ev.data!.workspace!.slug}`);
               }
               return;
             } else if (ev.type === "error" && ev.data?.message) {
-              setError(ev.data.message);
+              readerRef.current = null;
+              applyIfNotAborted(() => setError(ev.data!.message!));
               return;
             }
           } catch (_) {
@@ -159,11 +175,17 @@ function GenerateContent() {
         }
       }
 
+      if (signal.aborted) return;
+      readerRef.current = null;
+
       // Stream ended without complete event
-      setError("Invalid response from server");
+      applyIfNotAborted(() => setError("Invalid response from server"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      if ((err as Error).name === "AbortError") return;
+      applyIfNotAborted(() => setError(err instanceof Error ? err.message : "Something went wrong"));
     } finally {
+      readerRef.current = null;
+      abortControllerRef.current = null;
       if (!isRedirectingRef.current) {
         setIsLoading(false);
       }
@@ -176,6 +198,10 @@ function GenerateContent() {
       return;
     }
     runAutogen();
+    return () => {
+      abortControllerRef.current?.abort();
+      readerRef.current?.cancel().catch(() => {});
+    };
   }, [prompt, router, runAutogen]);
 
   useEffect(() => {

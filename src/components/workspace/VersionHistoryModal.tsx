@@ -146,7 +146,9 @@ function getEventDescription(event: WorkspaceEvent, items?: any[]): string {
     case 'ITEMS_MOVED_TO_FOLDER': {
       const count = event.payload.itemIds?.length ?? 0;
       const n = event.payload.folderId ? 'moved into folder' : 'removed from folder';
-      return count <= 1 ? `Item ${n}` : `${count} items ${n}`;
+      if (count === 0) return `No items ${n}`;
+      if (count === 1) return `Item ${n}`;
+      return `${count} items ${n}`;
     }
     case 'FOLDER_CREATED_WITH_ITEMS': {
       const name = event.payload.folder?.name;
@@ -197,6 +199,8 @@ interface VersionHistoryContentProps {
   items?: any[];
   workspaceId: string | null;
   isOpen: boolean;
+  snapshots?: SnapshotInfo[];
+  isLoadingSnapshots?: boolean;
 }
 
 export function VersionHistoryContent({
@@ -206,16 +210,14 @@ export function VersionHistoryContent({
   items,
   workspaceId,
   isOpen,
+  snapshots: snapshotsProp = [],
+  isLoadingSnapshots: isLoadingSnapshotsProp = false,
 }: VersionHistoryContentProps) {
   const { data: session } = useSession();
   const user = session?.user;
   const [showNotSupportedDialog, setShowNotSupportedDialog] = useState(false);
-
-  // Fetch all snapshots when modal is open (lazy loading for version history)
-  const { data: snapshots = [], isLoading: isLoadingSnapshots } = useWorkspaceSnapshots(
-    workspaceId,
-    isOpen // Only fetch when open
-  );
+  const snapshots = snapshotsProp;
+  const isLoadingSnapshots = isLoadingSnapshotsProp;
 
   // Function to get display name - uses stored userName from event, or falls back to userId
   const getUserDisplayName = (event: WorkspaceEvent): string => {
@@ -421,7 +423,7 @@ export function VersionHistoryModal({
   items,
   workspaceId,
 }: VersionHistoryModalProps) {
-  const { data: snapshots = [] } = useWorkspaceSnapshots(workspaceId, isOpen);
+  const { data: snapshots = [], isLoading: isLoadingSnapshots } = useWorkspaceSnapshots(workspaceId, isOpen);
 
   return (
     <>
@@ -452,6 +454,8 @@ export function VersionHistoryModal({
               items={items}
               workspaceId={workspaceId}
               isOpen={isOpen}
+              snapshots={snapshots}
+              isLoadingSnapshots={isLoadingSnapshots}
             />
           </div>
         </DialogContent>

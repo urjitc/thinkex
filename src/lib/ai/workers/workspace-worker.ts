@@ -349,9 +349,12 @@ export async function workspaceWorker(
 
                 logger.info(`📝 [WORKSPACE-WORKER] Created ${item.type}:`, item.name);
 
-                // Include card count for flashcard decks
-                const cardCount = item.type === "flashcard" && params.flashcardData?.cards
-                    ? params.flashcardData.cards.length
+                // Include card count for flashcard decks (use created item.data.cards, not params)
+                const flashcardCards = item.type === "flashcard" && item.data && "cards" in item.data
+                    ? (item.data as { cards: unknown[] }).cards
+                    : undefined;
+                const cardCount = Array.isArray(flashcardCards)
+                    ? flashcardCards.filter((c: unknown) => c != null && typeof c === "object").length
                     : undefined;
 
                 return {

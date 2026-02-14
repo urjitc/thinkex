@@ -20,7 +20,12 @@ function truncate(str: string, maxLen: number) {
 function getLinkDisplay(url: string) {
   try {
     const u = new URL(url);
-    if (isYouTubeUrl(url)) return `YouTube: ${u.searchParams.get("v") || "video"}`;
+    if (isYouTubeUrl(url)) {
+      const videoId =
+        u.searchParams.get("v") ??
+        (u.hostname === "youtu.be" ? u.pathname.slice(1).split("/")[0]?.trim() || null : null);
+      return `YouTube: ${videoId || "video"}`;
+    }
     return u.hostname;
   } catch {
     return truncate(url, 30);

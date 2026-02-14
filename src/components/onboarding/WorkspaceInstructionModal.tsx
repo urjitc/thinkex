@@ -185,13 +185,13 @@ function useCarousel(open: boolean) {
     [isDark]
   );
 
-  // Preload all step videos when modal opens so switching steps is instant
+  // Preload metadata only (lightweight) so switching steps loads on-demand
   useEffect(() => {
     if (!open || !mounted || allVideoSrcs.length === 0) return;
     const preloaded: HTMLVideoElement[] = [];
     for (const src of allVideoSrcs) {
       const el = document.createElement("video");
-      el.preload = "auto";
+      el.preload = "metadata";
       el.src = src;
       el.load();
       preloaded.push(el);
