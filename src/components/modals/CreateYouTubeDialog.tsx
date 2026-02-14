@@ -130,10 +130,10 @@ export function CreateYouTubeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent onKeyDown={handleKeyDown}>
         <DialogHeader>
-          <DialogTitle>Add YouTube Video</DialogTitle>
-          <DialogDescription>
-            Enter a YouTube URL to embed a video in your workspace.
-          </DialogDescription>
+        <DialogTitle>Add YouTube Video or Playlist</DialogTitle>
+        <DialogDescription>
+          Enter a YouTube URL to embed a video or playlist in your workspace.
+        </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -142,7 +142,7 @@ export function CreateYouTubeDialog({
             <Input
               id="youtube-url"
               type="url"
-              placeholder="https://www.youtube.com/watch?v=..."
+              placeholder="https://www.youtube.com/watch?v=... or /playlist?list=..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               autoFocus

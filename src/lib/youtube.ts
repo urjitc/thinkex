@@ -92,3 +92,70 @@ export async function searchVideos(query: string, maxResults = 5): Promise<Video
         throw error;
     }
 }
+
+interface PlaylistSnippet {
+    title: string;
+    thumbnails: {
+        default?: { url: string };
+        medium?: { url: string };
+        high?: { url: string };
+        maxres?: { url: string };
+    };
+}
+
+interface PlaylistListResponse {
+    items?: Array<{ snippet: PlaylistSnippet }>;
+}
+
+/**
+ * Fetch playlist metadata (title, thumbnail) using YouTube Data API v3
+ */
+export async function getPlaylistMetadata(playlistId: string): Promise<{ title: string; thumbnail: string | null }> {
+    const apiKey = process.env.YOUTUBE_API_KEY;
+
+    if (!apiKey) {
+        logger.warn("⚠️ [YOUTUBE] API key not found, cannot fetch playlist metadata");
+        return { title: "YouTube Playlist", thumbnail: null };
+    }
+
+    try {
+        const url = new URL("https://www.googleapis.com/youtube/v3/playlists");
+        url.searchParams.append("part", "snippet");
+        url.searchParams.append("id", playlistId);
+        url.searchParams.append("key", apiKey);
+
+        const response = await fetch(url.toString(), {
+            method: "GET",
+            headers: { Accept: "application/json" },
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            logger.error(`❌ [YOUTUBE] Playlist API Error: ${response.status}`, errorText);
+            return { title: "YouTube Playlist", thumbnail: null };
+        }
+
+        const data = (await response.json()) as PlaylistListResponse;
+        const item = data.items?.[0];
+
+        if (!item?.snippet) {
+            return { title: "YouTube Playlist", thumbnail: null };
+        }
+
+        const thumbnails = item.snippet.thumbnails;
+        const thumbnail =
+            thumbnails?.medium?.url ??
+            thumbnails?.high?.url ??
+            thumbnails?.default?.url ??
+            thumbnails?.maxres?.url ??
+            null;
+
+        return {
+            title: item.snippet.title || "YouTube Playlist",
+            thumbnail,
+        };
+    } catch (error) {
+        logger.error("❌ [YOUTUBE] Playlist metadata fetch failed:", error);
+        return { title: "YouTube Playlist", thumbnail: null };
+    }
+}

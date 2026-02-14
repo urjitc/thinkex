@@ -100,16 +100,22 @@ export function useYouTubePlayer({
       };
 
       // If playlist-only (no video), configure list params
+      // Use 'videoseries' as placeholder videoId - required for playlist-only embeds per YouTube docs
+      let effectiveVideoId: string | undefined;
       if (!videoId && playlistId) {
         vars.listType = "playlist";
         vars.list = playlistId;
+        effectiveVideoId = "videoseries";
       } else if (videoId && playlistId) {
         // Video within a playlist context
         vars.list = playlistId;
+        effectiveVideoId = videoId;
+      } else {
+        effectiveVideoId = videoId ?? undefined;
       }
 
       const player = new YT.Player(containerRef.current, {
-        videoId: videoId || undefined,
+        videoId: effectiveVideoId,
         playerVars: vars,
         events: {
           onReady: (event) => {

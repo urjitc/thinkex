@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractYouTubeVideoId, extractYouTubePlaylistId } from "@/lib/utils/youtube-url";
+import { getPlaylistMetadata } from "@/lib/youtube";
 
 /**
  * GET /api/youtube/metadata
@@ -29,6 +30,15 @@ export async function GET(request: NextRequest) {
         { error: "Invalid YouTube URL" },
         { status: 400 }
       );
+    }
+
+    // oEmbed only supports video URLs - use YouTube Data API for playlists
+    if (!videoId && playlistId) {
+      const playlistMeta = await getPlaylistMetadata(playlistId);
+      return NextResponse.json({
+        title: playlistMeta.title,
+        thumbnail: playlistMeta.thumbnail,
+      });
     }
 
     // Use YouTube oEmbed API (no API key required)
