@@ -113,6 +113,7 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
       status: "uploading",
     }));
 
+    let didAdd = false;
     setFileItems((prev) => {
       const currentSize = prev.reduce((sum, i) => sum + i.file.size, 0);
       const newSize = newItems.reduce((sum, i) => sum + i.file.size, 0);
@@ -122,10 +123,13 @@ export function HomeAttachmentsProvider({ children }: { children: ReactNode }) {
         );
         return prev;
       }
+      didAdd = true;
       const next = [...prev, ...newItems];
       fileItemsRef.current = next;
       return next;
     });
+    if (!didAdd) return;
+
     toast.success(`Added ${newItems.length} file${newItems.length > 1 ? "s" : ""} — uploading...`);
 
     newItems.forEach((item) => {
