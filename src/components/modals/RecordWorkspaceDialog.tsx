@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderPlus, FolderOpen, Mic } from "lucide-react";
+import { FolderPlus, Mic } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -71,21 +71,14 @@ export function RecordWorkspaceDialog({
           </button>
 
           {workspaces.length > 0 && (
-            <>
-              <div className="flex items-center gap-2 px-2 py-1.5">
-                <FolderOpen className="size-4 text-blue-400 flex-shrink-0" />
-                <span className="text-xs text-muted-foreground">
-                  Recent workspaces
-                </span>
-              </div>
-              <div className="rounded-md border border-sidebar-border/50 bg-sidebar/50 overflow-hidden">
+            <div className="rounded-md border border-sidebar-border/50 bg-sidebar/50 overflow-hidden">
                 <ScrollArea className="h-[200px]">
                   <div className="flex flex-col py-1">
                     {workspaces.map((ws) => (
                       <button
                         key={ws.id}
                         type="button"
-                        onClick={() => onSelectExisting(ws.slug)}
+                        onClick={() => ws.slug && onSelectExisting(ws.slug)}
                         className={cn(
                           "flex items-center gap-2 w-full px-2 py-1.5 text-left",
                           "hover:bg-sidebar-accent/50 rounded mx-1",
@@ -109,7 +102,6 @@ export function RecordWorkspaceDialog({
                   </div>
                 </ScrollArea>
               </div>
-            </>
           )}
 
           {!loadingWorkspaces && workspaces.length === 0 && (
