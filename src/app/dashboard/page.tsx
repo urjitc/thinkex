@@ -105,14 +105,15 @@ function DashboardContent({
   }, [clearPlayingYouTubeCards]);
 
   // Open audio recorder only when landing from home Record flow (?openRecord=1).
-  // Only RecordWorkspaceDialog (on home) adds this param; we clear it after opening once.
+  // Wait until workspace content is loaded so we open once, without double-opening on re-renders.
   const searchParams = useSearchParams();
   const openAudioDialog = useAudioRecordingStore((s) => s.openDialog);
   const closeAudioDialog = useAudioRecordingStore((s) => s.closeDialog);
   const prevWorkspaceIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!currentWorkspaceId) return;
+    if (!currentWorkspaceId || isLoadingWorkspace) return;
+
     const hasOpenRecordParam = searchParams.get(OPEN_RECORD_PARAM) === "1";
 
     if (hasOpenRecordParam) {
@@ -127,7 +128,7 @@ function DashboardContent({
       closeAudioDialog();
     }
     prevWorkspaceIdRef.current = currentWorkspaceId;
-  }, [currentWorkspaceId, searchParams, openAudioDialog, closeAudioDialog, router]);
+  }, [currentWorkspaceId, isLoadingWorkspace, searchParams, openAudioDialog, closeAudioDialog, router]);
 
   // Workspace operations (emits events with optimistic updates)
   const operations = useWorkspaceOperations(currentWorkspaceId, state);
