@@ -104,19 +104,30 @@ function DashboardContent({
     clearPlayingYouTubeCards();
   }, [clearPlayingYouTubeCards]);
 
-  // Open audio recorder when navigating from home Record flow (?openRecord=1)
+  // Open audio recorder only when landing from home Record flow (?openRecord=1).
+  // Only RecordWorkspaceDialog (on home) adds this param; we clear it after opening once.
   const searchParams = useSearchParams();
   const openAudioDialog = useAudioRecordingStore((s) => s.openDialog);
+  const closeAudioDialog = useAudioRecordingStore((s) => s.closeDialog);
+  const prevWorkspaceIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!currentWorkspaceId) return;
-    if (searchParams.get(OPEN_RECORD_PARAM) === "1") {
+    const hasOpenRecordParam = searchParams.get(OPEN_RECORD_PARAM) === "1";
+
+    if (hasOpenRecordParam) {
       openAudioDialog();
-      // Remove param from URL without triggering a full navigation
       const url = new URL(window.location.href);
       url.searchParams.delete(OPEN_RECORD_PARAM);
       router.replace(url.pathname + url.search, { scroll: false });
     }
-  }, [currentWorkspaceId, searchParams, openAudioDialog, router]);
+
+    // Close audio dialog when switching to a different workspace (dialog state is global and would otherwise persist)
+    if (prevWorkspaceIdRef.current !== null && prevWorkspaceIdRef.current !== currentWorkspaceId && !hasOpenRecordParam) {
+      closeAudioDialog();
+    }
+    prevWorkspaceIdRef.current = currentWorkspaceId;
+  }, [currentWorkspaceId, searchParams, openAudioDialog, closeAudioDialog, router]);
 
   // Workspace operations (emits events with optimistic updates)
   const operations = useWorkspaceOperations(currentWorkspaceId, state);
