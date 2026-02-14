@@ -94,10 +94,33 @@ function GenerateContent() {
           try {
             const ev = JSON.parse(line) as {
               type: string;
-              data?: { message?: string; workspace?: { slug?: string }; step?: string };
+              data?: {
+                message?: string;
+                workspace?: { slug?: string };
+                step?: string;
+                stage?: string;
+                partial?: Record<string, unknown>;
+              };
             };
 
-            if (ev.type === "metadata") {
+            if (ev.type === "partial" && ev.data?.partial) {
+              const p = ev.data.partial as Record<string, unknown>;
+              const stage = ev.data.stage as string;
+              if (stage === "metadata" && typeof p.title === "string" && p.title) {
+                setProgressText(`Workspace: ${p.title}${p.icon || p.color ? "..." : ""}`);
+              } else if (stage === "distillation" && p.metadata && typeof (p.metadata as Record<string, unknown>).title === "string") {
+                const t = (p.metadata as Record<string, unknown>).title as string;
+                if (t) setProgressText(`Workspace: ${t}...`);
+              } else if (stage === "noteFlashcards") {
+                const note = p.note as Record<string, unknown> | undefined;
+                const fc = p.flashcards as Record<string, unknown> | undefined;
+                if (typeof note?.title === "string" && note.title) {
+                  setProgressText(`Creating note: ${note.title}...`);
+                } else if (typeof fc?.title === "string" && fc.title) {
+                  setProgressText(`Creating flashcards: ${fc.title}...`);
+                }
+              }
+            } else if (ev.type === "metadata") {
               setCompletedSteps((s) => [...s, "metadata"]);
               setProgressText(PROGRESS_LABELS.workspace);
             } else if (ev.type === "workspace") {

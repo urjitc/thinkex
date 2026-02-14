@@ -13,6 +13,115 @@ import { executeWorkspaceOperation } from "./common";
 import { loadWorkspaceState } from "@/lib/workspace/state-loader";
 import type { WorkspaceEvent } from "@/lib/workspace/events";
 
+/** Create params for a single item (used by create and bulkCreate). Exported for autogen. */
+export type CreateItemParams = {
+    title?: string;
+    content?: string;
+    itemType?: "note" | "flashcard" | "quiz" | "youtube" | "image" | "audio" | "pdf";
+    pdfData?: { fileUrl: string; filename: string; fileSize?: number };
+    flashcardData?: { cards?: { front: string; back: string }[] };
+    quizData?: QuizData;
+    youtubeData?: { url: string };
+    imageData?: { url: string; altText?: string; caption?: string };
+    audioData?: { fileUrl: string; filename: string; fileSize?: number; mimeType?: string; duration?: number };
+    deepResearchData?: { prompt: string; interactionId: string };
+    sources?: Array<{ title: string; url: string; favicon?: string }>;
+    folderId?: string;
+    layout?: { x: number; y: number; w: number; h: number };
+};
+
+/**
+ * Build an Item from create params. Used by both create and bulkCreate.
+ */
+async function buildItemFromCreateParams(p: CreateItemParams): Promise<Item> {
+    const itemId = generateItemId();
+    const itemType = p.itemType || "note";
+
+    let itemData: any;
+
+    if (itemType === "flashcard") {
+        if (!p.flashcardData?.cards) throw new Error("Flashcard data required for flashcard creation");
+        const cardsWithIds = await Promise.all(
+            p.flashcardData.cards.map(async (card) => {
+                if (!card || typeof card !== "object") return null;
+                const [frontBlocks, backBlocks] = await Promise.all([
+                    markdownToBlocks(card.front || ""),
+                    markdownToBlocks(card.back || ""),
+                ]);
+                return {
+                    id: generateItemId(),
+                    front: card.front || "",
+                    back: card.back || "",
+                    frontBlocks,
+                    backBlocks,
+                };
+            })
+        ).then((arr) => arr.filter((c): c is NonNullable<typeof c> => c !== null));
+        itemData = { cards: cardsWithIds };
+    } else if (itemType === "youtube") {
+        if (!p.youtubeData?.url) throw new Error("YouTube data required for youtube card creation");
+        itemData = { url: p.youtubeData.url };
+    } else if (itemType === "image") {
+        if (!p.imageData?.url) throw new Error("Image data required for image card creation");
+        itemData = { url: p.imageData.url, altText: p.imageData.altText, caption: p.imageData.caption };
+    } else if (itemType === "audio") {
+        if (!p.audioData?.fileUrl) throw new Error("Audio data required for audio card creation");
+        itemData = {
+            fileUrl: p.audioData.fileUrl,
+            filename: p.audioData.filename || "Recording",
+            fileSize: p.audioData.fileSize,
+            mimeType: p.audioData.mimeType,
+            duration: p.audioData.duration,
+            processingStatus: "processing",
+        };
+    } else if (itemType === "pdf") {
+        if (!p.pdfData?.fileUrl) throw new Error("PDF data required for pdf card creation");
+        itemData = {
+            fileUrl: p.pdfData.fileUrl,
+            filename: p.pdfData.filename || "document.pdf",
+            fileSize: p.pdfData.fileSize,
+        };
+    } else if (itemType === "quiz") {
+        if (!p.quizData) throw new Error("Quiz data required for quiz creation");
+        itemData = p.quizData;
+    } else {
+        const blockContent = p.content ? await markdownToBlocks(p.content) : undefined;
+        itemData = {
+            field1: p.content || "",
+            blockContent,
+            ...(p.deepResearchData && {
+                deepResearch: {
+                    prompt: p.deepResearchData.prompt,
+                    interactionId: p.deepResearchData.interactionId,
+                    status: "researching",
+                    thoughts: [],
+                },
+            }),
+            ...(p.sources?.length && { sources: p.sources }),
+        };
+    }
+
+    const defaultNames: Record<string, string> = {
+        youtube: "YouTube Video",
+        image: "Image",
+        quiz: "New Quiz",
+        flashcard: "New Flashcard Deck",
+        audio: "Audio Recording",
+        pdf: "PDF Document",
+    };
+
+    return {
+        id: itemId,
+        type: itemType,
+        name: p.title || defaultNames[itemType] || "New Note",
+        subtitle: "",
+        data: itemData,
+        color: getRandomCardColor(),
+        folderId: p.folderId,
+        ...(p.layout && { layout: p.layout }),
+    };
+}
+
 /**
  * Parse the PostgreSQL result from append_workspace_event
  * Returns { version: number, conflict: boolean }
@@ -67,9 +176,11 @@ function parseAppendResult(rawResult: string | any): { version: number; conflict
  * Operations are serialized per workspace to prevent version conflicts
  */
 export async function workspaceWorker(
-    action: "create" | "update" | "delete" | "updateFlashcard" | "updateQuiz" | "updatePdfContent",
+    action: "create" | "bulkCreate" | "update" | "delete" | "updateFlashcard" | "updateQuiz" | "updatePdfContent",
     params: {
         workspaceId: string;
+        /** For bulkCreate: array of create params (no workspaceId). Items are built and appended as one BULK_ITEMS_CREATED event. */
+        items?: CreateItemParams[];
         title?: string;
         content?: string; // For notes
         itemId?: string;
@@ -118,9 +229,9 @@ export async function workspaceWorker(
         layout?: { x: number; y: number; w: number; h: number };
     }
 ): Promise<{ success: boolean; message: string; itemId?: string; cardsAdded?: number; cardCount?: number; event?: WorkspaceEvent; version?: number }> {
-    // For "create" operations, allow parallel execution (bypass queue)
+    // For "create" and "bulkCreate" operations, allow parallel execution (bypass queue)
     // For "update" and "delete" operations, serialize via queue
-    const allowParallel = action === "create";
+    const allowParallel = action === "create" || action === "bulkCreate";
 
     return executeWorkspaceOperation(params.workspaceId, async () => {
         try {
@@ -170,152 +281,8 @@ export async function workspaceWorker(
 
             // Handle different actions
             if (action === "create") {
-                const itemId = generateItemId();
-                const itemType = params.itemType || "note";
-
-                let itemData: any;
-
-                if (itemType === "flashcard") {
-                    logger.debug("🎴 [WORKSPACE-WORKER] Creating flashcard deck with data:", {
-                        hasFlashcardData: !!params.flashcardData,
-                        hasCards: !!params.flashcardData?.cards,
-                        cardsType: typeof params.flashcardData?.cards,
-                        cardsIsArray: Array.isArray(params.flashcardData?.cards),
-                    });
-
-                    if (!params.flashcardData || !params.flashcardData.cards) {
-                        logger.error("❌ [WORKSPACE-WORKER] Flashcard data missing cards");
-                        throw new Error("Flashcard data required for flashcard creation");
-                    }
-
-                    // Generate IDs for each card in the deck
-                    const cardsWithIdsOrNull = await Promise.all(params.flashcardData.cards.map(async (card, index) => {
-                        if (!card || typeof card !== 'object') {
-                            logger.error(`❌ [WORKSPACE-WORKER] Invalid card at index ${index}:`, card);
-                            return null; // Skip invalid cards
-                        }
-
-                        // Parse markdown/math into blocks for the frontend editor
-                        // This ensures LaTeX like $$...$$ is converted to inlineMath blocks
-                        const frontBlocks = await markdownToBlocks(card.front || "");
-                        const backBlocks = await markdownToBlocks(card.back || "");
-
-                        return {
-                            id: generateItemId(),
-                            front: card.front || "",
-                            back: card.back || "",
-                            frontBlocks,
-                            backBlocks
-                        };
-                    }));
-
-                    // Filter out null entries (invalid cards)
-                    const cardsWithIds = cardsWithIdsOrNull.filter((card): card is NonNullable<typeof card> => card !== null);
-
-                    itemData = {
-                        cards: cardsWithIds
-                    };
-                } else if (itemType === "youtube") {
-                    // YouTube type
-                    if (!params.youtubeData || !params.youtubeData.url) {
-                        throw new Error("YouTube data required for youtube card creation");
-                    }
-                    itemData = {
-                        url: params.youtubeData.url
-                    };
-                } else if (itemType === "image") {
-                    // Image type
-                    if (!params.imageData || !params.imageData.url) {
-                        throw new Error("Image data required for image card creation");
-                    }
-                    itemData = {
-                        url: params.imageData.url, // Main URL
-                        // Store alt/caption in a flexible way if types allow, 
-                        // or just rely on Item name for title/caption.
-                        // based on NoteData structure, 'data' is basically any object.
-                        altText: params.imageData.altText,
-                        caption: params.imageData.caption
-                    };
-                } else if (itemType === "audio") {
-                    // Audio type
-                    if (!params.audioData || !params.audioData.fileUrl) {
-                        throw new Error("Audio data required for audio card creation");
-                    }
-                    itemData = {
-                        fileUrl: params.audioData.fileUrl,
-                        filename: params.audioData.filename || "Recording",
-                        fileSize: params.audioData.fileSize,
-                        mimeType: params.audioData.mimeType,
-                        duration: params.audioData.duration,
-                        processingStatus: "processing",
-                    };
-                } else if (itemType === "pdf") {
-                    // PDF type
-                    if (!params.pdfData || !params.pdfData.fileUrl) {
-                        throw new Error("PDF data required for pdf card creation");
-                    }
-                    itemData = {
-                        fileUrl: params.pdfData.fileUrl,
-                        filename: params.pdfData.filename || "document.pdf",
-                        fileSize: params.pdfData.fileSize,
-                    };
-                } else if (itemType === "quiz") {
-                    // Quiz type
-                    if (!params.quizData) {
-                        throw new Error("Quiz data required for quiz creation");
-                    }
-
-                    logger.debug("🎯 [WORKSPACE-WORKER] Creating quiz with data:", {
-                        title: params.quizData.title,
-                        difficulty: params.quizData.difficulty,
-                        questionCount: params.quizData.questions?.length,
-                    });
-
-                    itemData = params.quizData;
-                } else {
-                    // "note" type
-                    // Convert markdown to blocks on the server
-                    const blockContent = params.content
-                        ? await markdownToBlocks(params.content)
-                        : undefined;
-
-                    itemData = {
-                        field1: params.content || "", // Keep for backwards compatibility and search
-                        blockContent: blockContent, // Always store blocks
-                    };
-
-                    // If this is a deep research note, attach the metadata
-                    if (params.deepResearchData) {
-                        itemData.deepResearch = {
-                            prompt: params.deepResearchData.prompt,
-                            interactionId: params.deepResearchData.interactionId,
-                            status: "researching",
-                            thoughts: [],
-                        };
-                    }
-
-                    // If sources are provided, attach them
-                    if (params.sources && params.sources.length > 0) {
-                        itemData.sources = params.sources;
-                        logger.debug("📚 [WORKSPACE-WORKER] Attaching sources to note:", {
-                            count: params.sources.length,
-                            sources: params.sources,
-                        });
-                    }
-                }
-
-                const item: Item = {
-                    id: itemId,
-                    type: itemType,
-                    name: params.title || (itemType === "youtube" ? "YouTube Video" : itemType === "image" ? "Image" : itemType === "quiz" ? "New Quiz" : itemType === "flashcard" ? "New Flashcard Deck" : itemType === "audio" ? "Audio Recording" : itemType === "pdf" ? "PDF Document" : "New Note"),
-                    subtitle: "",
-                    data: itemData,
-                    color: getRandomCardColor(),
-                    folderId: params.folderId,
-                    ...(params.layout && { layout: params.layout }),
-                };
-
-                const event = createEvent("ITEM_CREATED", { id: itemId, item }, userId);
+                const item = await buildItemFromCreateParams(params);
+                const event = createEvent("ITEM_CREATED", { id: item.id, item }, userId);
 
                 // For create operations, retry on version conflicts since creates are independent
                 // The database uses FOR UPDATE which serializes, but parallel creates may still
@@ -352,7 +319,7 @@ export async function workspaceWorker(
           `);
 
                     if (!eventResult || eventResult.length === 0) {
-                        throw new Error(`Failed to create ${itemType}`);
+                        throw new Error(`Failed to create ${item.type}`);
                     }
 
                     appendResult = parseAppendResult(eventResult[0].result);
@@ -380,19 +347,62 @@ export async function workspaceWorker(
                     throw new Error("Workspace was modified by another user, please try again");
                 }
 
-                logger.info(`📝 [WORKSPACE-WORKER] Created ${itemType}:`, item.name);
+                logger.info(`📝 [WORKSPACE-WORKER] Created ${item.type}:`, item.name);
 
                 // Include card count for flashcard decks
-                const cardCount = itemType === "flashcard" && params.flashcardData?.cards
+                const cardCount = item.type === "flashcard" && params.flashcardData?.cards
                     ? params.flashcardData.cards.length
                     : undefined;
 
                 return {
                     success: true,
-                    itemId,
-                    message: `Created ${itemType} "${item.name}" successfully`,
+                    itemId: item.id,
+                    message: `Created ${item.type} "${item.name}" successfully`,
                     cardCount,
                     event,
+                    version: appendResult.version,
+                };
+            }
+
+            if (action === "bulkCreate") {
+                if (!params.items?.length) {
+                    throw new Error("bulkCreate requires a non-empty items array");
+                }
+
+                const items = await Promise.all(params.items.map((p) => buildItemFromCreateParams(p)));
+                const event = createEvent("BULK_ITEMS_CREATED", { items }, userId);
+
+                const currentVersionResult = await db.execute(sql`
+                    SELECT get_workspace_version(${params.workspaceId}::uuid) as version
+                `);
+                const baseVersion = Number(currentVersionResult[0]?.version) || 0;
+
+                const eventResult = await db.execute(sql`
+                    SELECT append_workspace_event(
+                        ${params.workspaceId}::uuid,
+                        ${event.id}::text,
+                        ${event.type}::text,
+                        ${JSON.stringify(event.payload)}::jsonb,
+                        ${event.timestamp}::bigint,
+                        ${event.userId}::text,
+                        ${baseVersion}::integer,
+                        NULL::text
+                    ) as result
+                `);
+
+                if (!eventResult || eventResult.length === 0) {
+                    throw new Error("Failed to bulk create items");
+                }
+
+                const appendResult = parseAppendResult(eventResult[0].result);
+                if (appendResult.conflict) {
+                    throw new Error("Workspace was modified by another user, please try again");
+                }
+
+                logger.info(`📝 [WORKSPACE-WORKER] Bulk created ${items.length} items`);
+                return {
+                    success: true,
+                    message: `Bulk created ${items.length} items successfully`,
                     version: appendResult.version,
                 };
             }

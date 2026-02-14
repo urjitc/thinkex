@@ -1,16 +1,16 @@
 import { NextRequest } from "next/server";
 import { google } from "@ai-sdk/google";
-import { generateText, generateObject, Output } from "ai";
+import { streamText, Output } from "ai";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { desc, eq, sql } from "drizzle-orm";
 import { requireAuthWithUserInfo } from "@/lib/api/workspace-helpers";
 import { db, workspaces } from "@/lib/db/client";
 import { generateSlug } from "@/lib/workspace/slug";
-import { workspaceWorker, quizWorker } from "@/lib/ai/workers";
+import { workspaceWorker, quizWorker, type CreateItemParams } from "@/lib/ai/workers";
 import { searchVideos } from "@/lib/youtube";
-import { loadWorkspaceState } from "@/lib/workspace/state-loader";
 import { findNextAvailablePosition } from "@/lib/workspace-state/grid-layout-helpers";
+import type { Item } from "@/lib/workspace-state/types";
 import { CANVAS_CARD_COLORS } from "@/lib/workspace-state/colors";
 
 const MAX_TITLE_LENGTH = 60;
@@ -122,15 +122,17 @@ const DISTILLED_SCHEMA = z.object({
 
 type DistilledOutput = z.infer<typeof DISTILLED_SCHEMA>;
 
-/** Main agent: reads full message (PDFs, video, links) once, outputs metadata + distilled prompts */
+/** Main agent: reads full message (PDFs, video, links) once, outputs metadata + distilled prompts. Streams partial output when onPartial provided. */
 async function runDistillationAgent(
   prompt: string,
   fileUrls: FileUrlItem[],
-  links: string[]
+  links: string[],
+  onPartial?: (partial: Partial<DistilledOutput>) => void
 ): Promise<DistilledOutput> {
-  const { object } = await generateObject({
+  let output: DistilledOutput | undefined;
+  const { partialOutputStream } = streamText({
     model: google("gemini-2.5-flash"),
-    schema: DISTILLED_SCHEMA,
+    output: Output.object({ schema: DISTILLED_SCHEMA }),
     system: `You are a helpful assistant. The user has provided content (prompt, files, links). Your job is to:
 1. Generate workspace metadata: a short title, an icon name from the list, and a hex color.
 2. Write a comprehensive content summary (200-800 words) capturing key concepts, facts, and structure for creating notes and materials.
@@ -139,25 +141,33 @@ async function runDistillationAgent(
 
 Available icons (must be one of these): ${AVAILABLE_ICONS.join(", ")}`,
     messages: [buildUserMessage(prompt, fileUrls, links)] as const,
+    onError: ({ error }) => console.error("[Distillation] stream error:", error),
   });
 
-  let title = object.metadata.title.trim();
+  for await (const partial of partialOutputStream) {
+    output = partial as DistilledOutput;
+    onPartial?.(partial as Partial<DistilledOutput>);
+  }
+
+  if (!output) throw new Error("Failed to generate distillation output");
+
+  let title = output.metadata.title.trim();
   if (title.length > MAX_TITLE_LENGTH) title = title.substring(0, MAX_TITLE_LENGTH).trim();
   if (!title) title = "New Workspace";
 
-  let icon = object.metadata.icon;
+  let icon = output.metadata.icon;
   if (!icon || !AVAILABLE_ICONS.includes(icon)) icon = "FolderIcon";
 
-  let color = object.metadata.color;
+  let color = output.metadata.color;
   if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
     color = CANVAS_CARD_COLORS[Math.floor(Math.random() * CANVAS_CARD_COLORS.length)];
   }
 
   return {
     metadata: { title, icon, color },
-    contentSummary: object.contentSummary,
-    quizTopic: object.quizTopic,
-    youtubeSearchTerm: object.youtubeSearchTerm,
+    contentSummary: output.contentSummary,
+    quizTopic: output.quizTopic,
+    youtubeSearchTerm: output.youtubeSearchTerm,
   };
 }
 
@@ -176,6 +186,7 @@ Output a complete note (title + markdown content) and 5–8 flashcard pairs (fro
 
 type StreamEvent =
   | { type: "metadata"; data: { title: string; icon: string; color: string } }
+  | { type: "partial"; data: { stage: "metadata" | "distillation" | "noteFlashcards"; partial: unknown } }
   | { type: "workspace"; data: { id: string; slug: string; name: string } }
   | { type: "progress"; data: { step: "note" | "quiz" | "flashcards" | "youtube"; status: "done" } }
   | { type: "complete"; data: { workspace: { id: string; slug: string; name: string } } }
@@ -185,21 +196,24 @@ function streamEvent(ev: StreamEvent): string {
   return JSON.stringify(ev) + "\n";
 }
 
-/**
- * Generate workspace metadata (title, icon, color) from a text prompt.
- * Used when user has no attachments (!hasParts).
- */
-async function generateWorkspaceMetadata(prompt: string) {
-  const { output } = await generateText({
+const METADATA_SCHEMA = z.object({
+  title: z.string().describe("A short, concise workspace title (max 5-6 words)"),
+  icon: z.string().describe("A HeroIcon name that represents the topic"),
+  color: z.string().describe("A hex color code that fits the topic theme"),
+});
+
+/** Generate workspace metadata (title, icon, color) from a text prompt. Used when user has no attachments (!hasParts). Streams partial when onPartial provided. */
+async function generateWorkspaceMetadata(
+  prompt: string,
+  onPartial?: (partial: Partial<{ title: string; icon: string; color: string }>) => void
+) {
+  let output: { title: string; icon: string; color: string } | undefined;
+  const { partialOutputStream } = streamText({
     model: google("gemini-2.5-flash-lite"),
     output: Output.object({
       name: "WorkspaceMetadata",
       description: "Workspace title, icon, and color for a topic",
-      schema: z.object({
-        title: z.string().describe("A short, concise workspace title (max 5-6 words)"),
-        icon: z.string().describe("A HeroIcon name that represents the topic"),
-        color: z.string().describe("A hex color code that fits the topic theme"),
-      }),
+      schema: METADATA_SCHEMA,
     }),
     system: `You are a helpful assistant that generates workspace metadata.
 Given a user's prompt, generate:
@@ -207,7 +221,15 @@ Given a user's prompt, generate:
 2. An appropriate HeroIcon name from: ${AVAILABLE_ICONS.join(", ")}
 3. A hex color code that fits the topic theme (e.g. #3B82F6)`,
     prompt: `User prompt: "${prompt}"\n\nGenerate workspace title, icon, and color.`,
+    onError: ({ error }) => console.error("[Metadata] stream error:", error),
   });
+
+  for await (const partial of partialOutputStream) {
+    output = partial as { title: string; icon: string; color: string };
+    onPartial?.(partial as Partial<{ title: string; icon: string; color: string }>);
+  }
+
+  if (!output) throw new Error("Failed to generate workspace metadata");
 
   let title = output.title.trim();
   if (title.length > MAX_TITLE_LENGTH) title = title.substring(0, MAX_TITLE_LENGTH).trim();
@@ -287,7 +309,12 @@ export async function POST(request: NextRequest) {
         let youtubeSearchTerm: string;
 
         if (hasParts) {
-          const distilled = await runDistillationAgent(prompt, fileUrls ?? [], links ?? []);
+          const distilled = await runDistillationAgent(
+            prompt,
+            fileUrls ?? [],
+            links ?? [],
+            (partial) => send({ type: "partial", data: { stage: "distillation", partial } })
+          );
           title = distilled.metadata.title;
           icon = distilled.metadata.icon;
           color = distilled.metadata.color;
@@ -295,7 +322,10 @@ export async function POST(request: NextRequest) {
           quizTopic = distilled.quizTopic;
           youtubeSearchTerm = distilled.youtubeSearchTerm;
         } else {
-          const meta = await generateWorkspaceMetadata(prompt);
+          const meta = await generateWorkspaceMetadata(
+            prompt,
+            (partial) => send({ type: "partial", data: { stage: "metadata", partial } })
+          );
           title = meta.title;
           icon = meta.icon;
           color = meta.color;
@@ -377,27 +407,25 @@ export async function POST(request: NextRequest) {
           console.error("Error creating WORKSPACE_CREATED event:", eventError);
         }
 
-        // 3. Generate content in parallel. Note + flashcard share one Gemini call; quiz and youtube are separate.
+        // 3. Generate content in parallel. Stream progress as each completes. Defer DB writes to bulk create.
+        const NOTE_FLASHCARD_SCHEMA = z.object({
+          note: z.object({ title: z.string(), content: z.string() }),
+          flashcards: z.object({
+            title: z.string(),
+            cards: z.array(z.object({ front: z.string(), back: z.string() })).min(5).max(12),
+          }),
+        });
+
         const noteAndFlashcardFn = async () => {
-          const { output } = await generateText({
+          type NoteFlashcardOutput = z.infer<typeof NOTE_FLASHCARD_SCHEMA>;
+          let output: NoteFlashcardOutput | undefined;
+          const { partialOutputStream } = streamText({
             model: google("gemini-2.5-flash"),
             system: NOTE_FLASHCARD_SYSTEM,
             output: Output.object({
               name: "NoteAndFlashcards",
               description: "Study note and flashcard deck for the same topic",
-              schema: z.object({
-                note: z.object({
-                  title: z.string(),
-                  content: z.string(),
-                }),
-                flashcards: z.object({
-                  title: z.string(),
-                  cards: z.array(z.object({
-                    front: z.string(),
-                    back: z.string(),
-                  })).min(5).max(12),
-                }),
-              }),
+              schema: NOTE_FLASHCARD_SCHEMA,
             }),
             prompt: `Create study materials about the following content:
 
@@ -406,104 +434,69 @@ ${contentSummary}
 Return:
 1. note: a short title and markdown content for a study note.
 2. flashcards: a title and 5-8 flashcard pairs (front, back) on the same topic.`,
+            onError: ({ error }) => console.error("[NoteFlashcards] stream error:", error),
           });
 
-          await workspaceWorker("create", {
-            workspaceId,
-            title: output.note.title,
-            content: output.note.content,
-            itemType: "note",
-            layout: AUTOGEN_LAYOUTS.note,
-          });
+          for await (const partial of partialOutputStream) {
+            output = partial as NoteFlashcardOutput;
+            send({ type: "partial", data: { stage: "noteFlashcards", partial } });
+          }
+
+          if (!output?.note || !output?.flashcards) throw new Error("Failed to generate note and flashcards");
+
           send({ type: "progress", data: { step: "note", status: "done" } });
-
-          await workspaceWorker("create", {
-            workspaceId,
-            title: output.flashcards.title,
-            itemType: "flashcard",
-            flashcardData: { cards: output.flashcards.cards },
-            layout: AUTOGEN_LAYOUTS.flashcard,
-          });
           send({ type: "progress", data: { step: "flashcards", status: "done" } });
+          return {
+            note: { title: output.note.title, content: output.note.content, layout: AUTOGEN_LAYOUTS.note },
+            flashcards: { title: output.flashcards.title, cards: output.flashcards.cards, layout: AUTOGEN_LAYOUTS.flashcard },
+          };
         };
 
         const youtubeUrlFromLinks = links?.find(isYouTubeUrl);
 
-        const tasks: Array<{ step: "quiz" | "youtube"; fn: () => Promise<unknown> }> = [
-          {
-            step: "quiz",
-            fn: async () => {
-              const quiz = await quizWorker({ topic: quizTopic, questionCount: 5 });
-              return workspaceWorker("create", {
-                workspaceId,
-                title: quiz.title,
-                itemType: "quiz",
-                quizData: { questions: quiz.questions },
-                layout: AUTOGEN_LAYOUTS.quiz,
-              });
-            },
-          },
-          {
-            step: "youtube",
-            fn: async () => {
-              if (youtubeUrlFromLinks) {
-                return workspaceWorker("create", {
-                  workspaceId,
-                  title: "YouTube Video",
-                  itemType: "youtube",
-                  youtubeData: { url: youtubeUrlFromLinks },
-                  layout: AUTOGEN_LAYOUTS.youtube,
-                });
-              }
-              const videos = await searchVideos(youtubeSearchTerm, 3);
-              const video = videos[0];
-              if (!video) return { success: false, message: "No videos found" };
-              return workspaceWorker("create", {
-                workspaceId,
-                title: video.title,
-                itemType: "youtube",
-                youtubeData: { url: video.url },
-                layout: AUTOGEN_LAYOUTS.youtube,
-              });
-            },
-          },
-        ];
-
-        // Run note+flashcard (one Gemini call) alongside quiz and youtube
-        await Promise.all([
+        const [noteFlashcardResult, quizResult, youtubeResult] = await Promise.all([
           noteAndFlashcardFn(),
-          ...tasks.map(async ({ step, fn }) => {
-            await fn();
-            send({ type: "progress", data: { step, status: "done" } });
-          }),
+          (async () => {
+            const quiz = await quizWorker({ topic: quizTopic, questionCount: 5 });
+            send({ type: "progress", data: { step: "quiz", status: "done" } });
+            return { title: quiz.title, questions: quiz.questions, layout: AUTOGEN_LAYOUTS.quiz };
+          })(),
+          (async () => {
+            if (youtubeUrlFromLinks) {
+              send({ type: "progress", data: { step: "youtube", status: "done" } });
+              return { title: "YouTube Video", url: youtubeUrlFromLinks, layout: AUTOGEN_LAYOUTS.youtube };
+            }
+            const videos = await searchVideos(youtubeSearchTerm, 3);
+            const video = videos[0];
+            if (!video) return null;
+            send({ type: "progress", data: { step: "youtube", status: "done" } });
+            return { title: video.title, url: video.url, layout: AUTOGEN_LAYOUTS.youtube };
+          })(),
         ]);
 
-        // Create PDF workspace items for uploaded PDFs
+        // Build create params for bulk create
+        const createParams: CreateItemParams[] = [
+          { title: noteFlashcardResult.note.title, content: noteFlashcardResult.note.content, itemType: "note", layout: noteFlashcardResult.note.layout },
+          { title: noteFlashcardResult.flashcards.title, itemType: "flashcard", flashcardData: { cards: noteFlashcardResult.flashcards.cards }, layout: noteFlashcardResult.flashcards.layout },
+          { title: quizResult.title, itemType: "quiz", quizData: { questions: quizResult.questions }, layout: quizResult.layout },
+          ...(youtubeResult ? [{ title: youtubeResult.title, itemType: "youtube" as const, youtubeData: { url: youtubeResult.url }, layout: youtubeResult.layout }] : []),
+        ];
+
         const pdfFileUrls = (fileUrls ?? []).filter((f) => f.mediaType === "application/pdf");
-        if (pdfFileUrls.length > 0) {
-          const state = await loadWorkspaceState(workspaceId);
-          let currentItems = [...(state.items ?? [])];
-          for (const pdf of pdfFileUrls) {
-            const position = findNextAvailablePosition(currentItems, "pdf", 4, "", "", AUTOGEN_LAYOUTS.pdf.w, AUTOGEN_LAYOUTS.pdf.h);
-            const title = (pdf.filename ?? "document").replace(/\.pdf$/i, "");
-            await workspaceWorker("create", {
-              workspaceId,
-              title,
-              itemType: "pdf",
-              pdfData: { fileUrl: pdf.url, filename: pdf.filename ?? "document.pdf", fileSize: pdf.fileSize },
-              layout: position,
-            });
-            currentItems = [
-              ...currentItems,
-              {
-                id: `temp-${pdf.url}`,
-                type: "pdf" as const,
-                name: title,
-                layout: { lg: position },
-              },
-            ] as typeof currentItems;
-          }
+        const itemsForLayout: Pick<Item, "type" | "layout">[] = [
+          { type: "note", layout: noteFlashcardResult.note.layout },
+          { type: "flashcard", layout: noteFlashcardResult.flashcards.layout },
+          { type: "quiz", layout: quizResult.layout },
+          ...(youtubeResult ? [{ type: "youtube" as const, layout: youtubeResult.layout }] : []),
+        ];
+        for (const pdf of pdfFileUrls) {
+          const position = findNextAvailablePosition(itemsForLayout as Item[], "pdf", 4, "", "", AUTOGEN_LAYOUTS.pdf.w, AUTOGEN_LAYOUTS.pdf.h);
+          const title = (pdf.filename ?? "document").replace(/\.pdf$/i, "");
+          createParams.push({ title, itemType: "pdf", pdfData: { fileUrl: pdf.url, filename: pdf.filename ?? "document.pdf", fileSize: pdf.fileSize }, layout: position });
+          itemsForLayout.push({ type: "pdf", layout: position });
         }
+
+        await workspaceWorker("bulkCreate", { workspaceId, items: createParams });
 
         send({
           type: "complete",
