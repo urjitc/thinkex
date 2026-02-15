@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     const audioMimeType = mimeType || guessMimeType(filename || fileUrl);
 
     // Download the audio file from storage
-    const audioResponse = await fetch(fileUrl);
+    const audioResponse = await fetch(fileUrl, { redirect: "error" });
     if (!audioResponse.ok) {
       return NextResponse.json(
         { error: "Failed to download audio" },
