@@ -61,7 +61,7 @@ export function IconPicker({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           className={cn(
-            "w-auto max-w-fit p-6 border-white/20 bg-black/40 backdrop-blur-2xl shadow-2xl",
+            "w-auto max-w-fit p-6 bg-popover border-border shadow-2xl",
             className
           )}
           onClick={(e) => e.stopPropagation()}
