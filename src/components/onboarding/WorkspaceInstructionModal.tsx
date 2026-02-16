@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Move, SquarePen, FileSearch, Youtube, Share2, ChevronLeft, ChevronRight, X, ArrowRight } from "lucide-react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { useTheme } from "next-themes";
@@ -176,20 +176,24 @@ function useCarousel(open: boolean) {
   const step = STEPS[activeIndex];
   const videoSrc = step.video ? (isDark ? step.video.dark : step.video.light) : null;
 
-  // All video URLs for current theme (for preloading)
-  const allVideoSrcs = useMemo(
-    () =>
-      STEPS.filter((s): s is Step & { video: NonNullable<Step["video"]> } => !!s.video).map((s) =>
-        isDark ? s.video.dark : s.video.light
-      ),
-    [isDark]
-  );
-
-  // Preload metadata only (lightweight) so switching steps loads on-demand
+  // Preload only next and previous video (metadata only) for faster step switching
   useEffect(() => {
-    if (!open || !mounted || allVideoSrcs.length === 0) return;
+    if (!open || !mounted) return;
+    const prevIndex = (activeIndex - 1 + STEPS.length) % STEPS.length;
+    const nextIndex = (activeIndex + 1) % STEPS.length;
+    const toPreload: string[] = [];
+    const prevStep = STEPS[prevIndex];
+    const nextStep = STEPS[nextIndex];
+    if (prevStep?.video) {
+      toPreload.push(isDark ? prevStep.video.dark : prevStep.video.light);
+    }
+    if (nextStep?.video && nextIndex !== prevIndex) {
+      const src = isDark ? nextStep.video.dark : nextStep.video.light;
+      if (!toPreload.includes(src)) toPreload.push(src);
+    }
+    if (toPreload.length === 0) return;
     const preloaded: HTMLVideoElement[] = [];
-    for (const src of allVideoSrcs) {
+    for (const src of toPreload) {
       const el = document.createElement("video");
       el.preload = "metadata";
       el.src = src;
@@ -202,7 +206,7 @@ function useCarousel(open: boolean) {
         v.load();
       }
     };
-  }, [open, mounted, allVideoSrcs]);
+  }, [open, mounted, activeIndex, isDark]);
 
   return { activeIndex, step, videoSrc, fading, videoLoaded, goTo, goPrev, goNext, handleVideoEnded, handleVideoCanPlay, pause };
 }
