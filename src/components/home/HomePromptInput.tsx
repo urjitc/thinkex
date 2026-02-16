@@ -13,6 +13,12 @@ import {
   MAX_TOTAL_FILE_BYTES,
 } from "@/contexts/HomeAttachmentsContext";
 import { HomeAttachmentCards } from "./HomeAttachmentCards";
+
+const URL_REGEX = /https?:\/\/[^\s]+/g;
+
+function trimTrailingPunctuation(url: string): string {
+  return url.replace(/[)\]\.,;:!?]+$/, "");
+}
 import { toast } from "sonner";
 
 const PLACEHOLDER_OPTIONS = [
@@ -47,6 +53,7 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
   const {
     fileItems,
     links,
+    addLink,
     removeFile,
     removeLink,
     totalFileSize,
@@ -144,9 +151,22 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
     }
   }, [shouldFocus]);
 
-  // Handle user typing
+  // Handle user typing — extract pasted/typed URLs into link attachments
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setValue(e.target.value);
+    const raw = e.target.value;
+    const matches = raw.match(URL_REGEX) ?? [];
+    const urls = [...new Set(matches.map((u) => trimTrailingPunctuation(u)))];
+    if (urls.length === 0) {
+      setValue(raw);
+      return;
+    }
+    let cleaned = raw;
+    for (const url of urls) {
+      if (!links.includes(url)) addLink(url);
+      cleaned = cleaned.split(url).join(" ");
+    }
+    cleaned = cleaned.replace(/\s+/g, " ").trim();
+    setValue(cleaned);
   };
 
   // Auto-resize effect
