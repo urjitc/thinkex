@@ -140,7 +140,7 @@ export function DashboardLayout({
                 {/* Left: header + sidebar + workspace */}
                 <ResizablePanel
                   id="split-workspace"
-                  defaultSize="50%"
+                  defaultSize={`${Math.round((1 - PANEL_DEFAULTS.ITEM_PANEL_SPLIT_RATIO) * 100)}%`}
                   minSize="25%"
                   maxSize="70%"
                 >
@@ -176,7 +176,7 @@ export function DashboardLayout({
                 {/* Right: item panel (full height) */}
                 <ResizablePanel
                   id="split-item-panel"
-                  defaultSize="50%"
+                  defaultSize={`${Math.round(PANEL_DEFAULTS.ITEM_PANEL_SPLIT_RATIO * 100)}%`}
                   minSize="30%"
                 >
                   {panelContent}
