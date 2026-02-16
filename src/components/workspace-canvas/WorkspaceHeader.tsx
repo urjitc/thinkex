@@ -184,6 +184,7 @@ export function WorkspaceHeader({
   // Get active folder from UI store
   const activeFolderId = useUIStore((state) => state.activeFolderId);
   const openPanel = useUIStore((state) => state.openPanel);
+  const viewMode = useUIStore((state) => state.viewMode);
 
   // Build folder path for breadcrumbs
   const folderPath = useMemo(() => {
@@ -735,7 +736,7 @@ export function WorkspaceHeader({
 
 
 
-            {activeItems.length > 0 && (
+            {activeItems.length > 0 && viewMode !== 'workspace+panel' && (
               <div className="flex items-center gap-1.5 text-xs text-sidebar-foreground/70 min-w-0">
                 <span className="text-sidebar-foreground/50 mx-1 font-bold text-sm">/</span>
 
