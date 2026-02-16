@@ -278,13 +278,7 @@ export default function CreateWorkspaceModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className="sm:max-w-[600px] border-white/20 bg-black/40 backdrop-blur-2xl shadow-2xl"
-        style={{
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-        }}
-      >
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create New Workspace</DialogTitle>
           <DialogDescription>
@@ -351,7 +345,7 @@ export default function CreateWorkspaceModal({
                 {/* Color Picker Dialog */}
                 <Dialog open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
                   <DialogContent
-                    className="w-auto max-w-fit p-6 border-white/20 bg-black/40 backdrop-blur-2xl shadow-2xl"
+                    className="w-auto max-w-fit p-6"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <DialogHeader>
@@ -414,7 +408,7 @@ export default function CreateWorkspaceModal({
                   {pendingInvites.map((invite) => (
                     <div
                       key={invite.email}
-                      className="flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-sm"
+                      className="flex items-center justify-between p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-sm"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="truncate">{invite.email}</span>
