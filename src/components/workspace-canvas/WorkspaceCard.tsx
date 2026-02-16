@@ -244,10 +244,10 @@ function WorkspaceCard({
   // Measure card width to determine if we should show preview
   const cardWidth = useElementWidth(articleRef);
 
-  // Show preview if card is wider than ~250px (roughly when w > 1 in grid)
+  // Show preview if card is wider than ~320px (roughly when w > 1 in grid)
   // This threshold works for single-column minimized cards vs wider cards
   // OPTIMIZED: Treat undefined (initial) as wide enough to prevent flicker on mount
-  const shouldShowPreview = cardWidth === undefined || cardWidth > 250;
+  const shouldShowPreview = cardWidth === undefined || cardWidth > 320;
 
   // PERFORMANCE: Track visibility for PDF virtualization
   // Only mount PDF content when card is visible in viewport
