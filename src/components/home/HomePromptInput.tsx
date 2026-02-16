@@ -46,9 +46,13 @@ const PLACEHOLDER_OPTIONS = [
 
 interface HomePromptInputProps {
   shouldFocus?: boolean;
+  /** Pre-fill the input with this text (e.g. from clipboard paste) */
+  initialValue?: string;
+  /** Called after initial value is applied (so parent can clear it) */
+  onInitialValueApplied?: () => void;
 }
 
-export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
+export function HomePromptInput({ shouldFocus, initialValue, onInitialValueApplied }: HomePromptInputProps) {
   const router = useRouter();
   const {
     fileItems,
@@ -151,22 +155,30 @@ export function HomePromptInput({ shouldFocus }: HomePromptInputProps) {
     }
   }, [shouldFocus]);
 
-  // Handle user typing — extract pasted/typed URLs into link attachments
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const raw = e.target.value;
+  // Extract URLs from text and add as link attachments; return cleaned text
+  const processTextForLinks = (raw: string): string => {
     const matches = raw.match(URL_REGEX) ?? [];
     const urls = [...new Set(matches.map((u) => trimTrailingPunctuation(u)))];
-    if (urls.length === 0) {
-      setValue(raw);
-      return;
-    }
+    if (urls.length === 0) return raw;
     let cleaned = raw;
     for (const url of urls) {
       if (!links.includes(url)) addLink(url);
       cleaned = cleaned.split(url).join(" ");
     }
-    cleaned = cleaned.replace(/\s+/g, " ").trim();
-    setValue(cleaned);
+    return cleaned.replace(/\s+/g, " ").trim();
+  };
+
+  // Apply initial value (e.g. from clipboard paste) — run link detection too
+  useEffect(() => {
+    if (initialValue !== undefined && initialValue !== "") {
+      setValue(processTextForLinks(initialValue));
+      onInitialValueApplied?.();
+    }
+  }, [initialValue, onInitialValueApplied]);
+
+  // Handle user typing — extract pasted/typed URLs into link attachments
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setValue(processTextForLinks(e.target.value));
   };
 
   // Auto-resize effect

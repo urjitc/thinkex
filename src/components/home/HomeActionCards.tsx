@@ -1,4 +1,4 @@
-import { Upload, Link as LinkIcon, Mic, FolderPlus, Loader2 } from "lucide-react";
+import { Upload, Link as LinkIcon, ClipboardPaste, Mic, FolderPlus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ActionCardProps {
@@ -13,24 +13,27 @@ interface ActionCardProps {
 
 function ActionCard({ icon, title, subtitle, onClick, isLoading, htmlFor }: ActionCardProps) {
     const sharedClassName = cn(
-        "flex items-center gap-3 p-4 h-16 w-full rounded-2xl border bg-sidebar backdrop-blur-xl hover:bg-accent hover:text-accent-foreground transition-all text-left cursor-pointer",
+        "flex flex-col items-start gap-2 p-4 min-h-[88px] w-full rounded-2xl border bg-sidebar backdrop-blur-xl hover:bg-accent hover:text-accent-foreground transition-all text-left cursor-pointer",
         "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2",
         "disabled:pointer-events-none disabled:opacity-50"
     );
 
+    const content = (
+        <>
+            <div className="text-foreground/70 flex-shrink-0">
+                {icon}
+            </div>
+            <div className="flex flex-col items-start">
+                <div className="font-medium text-sm text-foreground">{title}</div>
+                <div className="text-xs text-muted-foreground">{subtitle}</div>
+            </div>
+        </>
+    );
+
     if (htmlFor && !isLoading) {
         return (
-            <label
-                htmlFor={htmlFor}
-                className={sharedClassName}
-            >
-                <div className="text-foreground/70 flex-shrink-0">
-                    {icon}
-                </div>
-                <div className="flex flex-col">
-                    <div className="font-medium text-sm text-foreground">{title}</div>
-                    <div className="text-xs text-muted-foreground">{subtitle}</div>
-                </div>
+            <label htmlFor={htmlFor} className={sharedClassName}>
+                {content}
             </label>
         );
     }
@@ -42,13 +45,7 @@ function ActionCard({ icon, title, subtitle, onClick, isLoading, htmlFor }: Acti
             disabled={isLoading}
             className={sharedClassName}
         >
-            <div className="text-foreground/70 flex-shrink-0">
-                {icon}
-            </div>
-            <div className="flex flex-col">
-                <div className="font-medium text-sm text-foreground">{title}</div>
-                <div className="text-xs text-muted-foreground">{subtitle}</div>
-            </div>
+            {content}
         </button>
     );
 }
@@ -56,6 +53,7 @@ function ActionCard({ icon, title, subtitle, onClick, isLoading, htmlFor }: Acti
 interface HomeActionCardsProps {
     onUpload: () => void;
     onLink: () => void;
+    onPasteText: () => void;
     onRecord: () => void;
     onStartFromScratch: () => void;
     isLoading?: boolean;
@@ -63,9 +61,9 @@ interface HomeActionCardsProps {
     uploadInputId?: string;
 }
 
-export function HomeActionCards({ onUpload, onLink, onRecord, onStartFromScratch, isLoading, uploadInputId }: HomeActionCardsProps) {
+export function HomeActionCards({ onUpload, onLink, onPasteText, onRecord, onStartFromScratch, isLoading, uploadInputId }: HomeActionCardsProps) {
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-[760px]">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 w-full max-w-[760px]">
             <ActionCard
                 icon={<Upload className="h-6 w-6" />}
                 title="Upload"
@@ -79,6 +77,13 @@ export function HomeActionCards({ onUpload, onLink, onRecord, onStartFromScratch
                 title="Link"
                 subtitle="YouTube, Website"
                 onClick={onLink}
+                isLoading={isLoading}
+            />
+            <ActionCard
+                icon={<ClipboardPaste className="h-6 w-6" />}
+                title="Paste text"
+                subtitle="From clipboard"
+                onClick={onPasteText}
                 isLoading={isLoading}
             />
             <ActionCard

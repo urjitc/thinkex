@@ -45,6 +45,11 @@ interface HeroAttachmentsSectionProps {
   createWorkspacePending: boolean;
   onRecord: () => void;
   heroVisible: boolean;
+  showPromptInput: boolean;
+  onRequestShowPromptInput: () => void;
+  pastedText: string | null;
+  onPastedText: (text: string) => void;
+  onClearPastedText: () => void;
 }
 
 function HeroAttachmentsSection({
@@ -55,18 +60,43 @@ function HeroAttachmentsSection({
   createWorkspacePending,
   onRecord,
   heroVisible,
+  showPromptInput,
+  onRequestShowPromptInput,
+  pastedText,
+  onPastedText,
+  onClearPastedText,
 }: HeroAttachmentsSectionProps) {
   const { addFiles, addLink, canAddMoreLinks, canAddYouTube } = useHomeAttachments();
 
   const handleUpload = () => fileInputRef.current?.click();
+
   const uploadInputId = "home-file-upload";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       addFiles(Array.from(files));
+      onRequestShowPromptInput();
     }
     e.target.value = "";
+  };
+
+  const handleAddLink = (url: string) => {
+    addLink(url);
+    onRequestShowPromptInput();
+  };
+
+  const handlePasteText = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      onRequestShowPromptInput();
+      if (text.trim()) {
+        onPastedText(text.trim());
+      }
+    } catch {
+      onRequestShowPromptInput();
+      toast.error("Could not read clipboard. Check permissions or try pasting manually.");
+    }
   };
 
   return (
@@ -84,19 +114,26 @@ function HeroAttachmentsSection({
         <HomeActionCards
           onUpload={handleUpload}
           onLink={() => setShowLinkDialog(true)}
+          onPasteText={handlePasteText}
           onRecord={onRecord}
           onStartFromScratch={handleCreateBlankWorkspace}
           isLoading={createWorkspacePending}
           uploadInputId={uploadInputId}
         />
       </div>
-      <div className="flex justify-center w-full relative z-10">
-        <HomePromptInput shouldFocus={heroVisible} />
-      </div>
+      {showPromptInput && (
+        <div className="flex justify-center w-full relative z-10">
+          <HomePromptInput
+            shouldFocus={heroVisible}
+            initialValue={pastedText ?? undefined}
+            onInitialValueApplied={onClearPastedText}
+          />
+        </div>
+      )}
       <LinkInputDialog
         open={showLinkDialog}
         onOpenChange={setShowLinkDialog}
-        onAdd={addLink}
+        onAdd={handleAddLink}
         canAddMoreLinks={canAddMoreLinks}
         canAddYouTube={canAddYouTube}
       />
@@ -116,6 +153,8 @@ export function HomeContent() {
 
   const [showRecordDialog, setShowRecordDialog] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [showPromptInput, setShowPromptInput] = useState(false);
+  const [pastedText, setPastedText] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [workspacesVisible, setWorkspacesVisible] = useState(false);
@@ -350,6 +389,11 @@ export function HomeContent() {
                 createWorkspacePending={createWorkspace.isPending}
                 onRecord={() => setShowRecordDialog(true)}
                 heroVisible={heroVisible}
+                showPromptInput={showPromptInput}
+                onRequestShowPromptInput={() => setShowPromptInput(true)}
+                pastedText={pastedText}
+                onPastedText={setPastedText}
+                onClearPastedText={() => setPastedText(null)}
               />
             </HomeAttachmentsProvider>
           </div>
