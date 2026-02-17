@@ -600,7 +600,7 @@ function WorkspaceCard({
             {!isOpenInPanel && (
               <div className={`absolute top-3 right-3 z-20 flex items-center gap-2 ${isEditingTitle ? '' : 'opacity-0 group-hover:opacity-100'}`}>
                 {/* Scroll Lock/Unlock Button - Hidden for YouTube, image, quiz, and narrow note/PDF cards */}
-                {item.type !== 'youtube' && item.type !== 'image' && item.type !== 'quiz' && !(item.type === 'note' && !shouldShowPreview) && !(item.type === 'pdf' && !shouldShowPreview) && (
+                {item.type !== 'youtube' && item.type !== 'image' && item.type !== 'quiz' && !(item.type === 'note' && !shouldShowPreview) && !(item.type === 'pdf' && !shouldShowPreview) && !(item.type === 'audio' && !shouldShowPreview) && (
                   <button
                     type="button"
                     aria-label={isScrollLocked ? 'Click to unlock scroll' : 'Click to lock scroll'}
@@ -773,7 +773,7 @@ function WorkspaceCard({
               </DialogContent>
             </Dialog>
 
-            <div className={(item.type === 'note' || item.type === 'pdf') && !shouldShowPreview ? "flex-1 flex flex-col" : "flex-shrink-0"}>
+            <div className={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz' || item.type === 'audio') && !shouldShowPreview ? "flex-1 flex flex-col" : "flex-shrink-0"}>
               {/* Hide header for template items awaiting generation */}
               {item.type !== 'youtube' && item.type !== 'image' && !(item.type === 'pdf' && shouldShowPreview) && item.name !== "Update me" && (
                 <>
@@ -785,11 +785,11 @@ function WorkspaceCard({
                     onNameChange={handleNameChange}
                     onNameCommit={handleNameCommit}
                     onSubtitleChange={handleSubtitleChange}
-                    readOnly={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview}
+                    readOnly={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz' || item.type === 'audio') && !shouldShowPreview}
                     noMargin={true}
                     onTitleFocus={handleTitleFocus}
                     onTitleBlur={handleTitleBlur}
-                    allowWrap={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview}
+                    allowWrap={(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz' || item.type === 'audio') && !shouldShowPreview}
                   />
 
 
@@ -802,11 +802,17 @@ function WorkspaceCard({
                   )}
                 </>
               )}
-              {/* Subtle type label for narrow cards without preview */}
-              {/* Subtle type label for narrow cards without preview */}
-              {(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz') && !shouldShowPreview && (
-                <span className={cn(item.type === 'note' ? 'Note' : item.type === 'pdf' ? 'PDF' : 'Quiz', "text-[10px] uppercase tracking-wider mt-auto", resolvedTheme === 'dark' ? "text-muted-foreground/60" : "text-muted-foreground/40")}>
-                  {item.type === 'note' ? 'Note' : item.type === 'pdf' ? 'PDF' : 'Quiz'}
+              {/* Subtle type label for narrow cards without preview; hover shows "EXPAND OR CLICK TO VIEW" */}
+              {(item.type === 'note' || item.type === 'pdf' || item.type === 'quiz' || item.type === 'audio') && !shouldShowPreview && (
+                <span className={cn("block text-[10px] uppercase tracking-wider mt-auto w-max", resolvedTheme === 'dark' ? "text-muted-foreground/60" : "text-muted-foreground/40")}>
+                  <span className="relative inline-block">
+                    <span className="transition-opacity duration-150 group-hover:opacity-0">
+                      {item.type === 'note' ? 'Note' : item.type === 'pdf' ? 'PDF' : item.type === 'quiz' ? 'Quiz' : 'Recording'}
+                    </span>
+                    <span className="absolute left-0 top-0 whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                      Expand or click to view
+                    </span>
+                  </span>
                 </span>
               )}
             </div>
