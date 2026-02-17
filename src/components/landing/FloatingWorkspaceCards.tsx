@@ -112,14 +112,6 @@ export function FloatingWorkspaceCards({
 
     return (
         <div className="absolute inset-0 w-full h-full pointer-events-none select-none z-0">
-            {/* Breathing animation keyframes */}
-            <style jsx>{`
-                @keyframes floatingCardBreathe {
-                    0%, 100% { transform: scale(1); }
-                    50% { transform: scale(1.02); }
-                }
-            `}</style>
-
             {/* Cards layer - darkened */}
             <div
                 className={cn(
@@ -138,7 +130,6 @@ export function FloatingWorkspaceCards({
                         key={index}
                         data={card}
                         className="w-full mb-6 md:mb-8"
-                        breatheDelay={index * 0.3}
                     />
                 ))}
             </div>

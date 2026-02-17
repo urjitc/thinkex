@@ -25,16 +25,10 @@ export interface FloatingCardData {
 interface FloatingCardProps {
     data: FloatingCardData;
     className?: string;
-    breatheDelay?: number;
 }
 
-export function FloatingCard({ data, className, breatheDelay = 0 }: FloatingCardProps) {
+export function FloatingCard({ data, className }: FloatingCardProps) {
     const { resolvedTheme } = useTheme();
-    // Animation style for breathing effect
-    const animationStyle: React.CSSProperties = {
-        animation: 'floatingCardBreathe 8s ease-in-out infinite',
-        animationDelay: `${breatheDelay}s`,
-    };
 
     // Base card styles using the color utilities
     const baseColor = data.color || '#3B82F6'; // Default blue
@@ -46,7 +40,6 @@ export function FloatingCard({ data, className, breatheDelay = 0 }: FloatingCard
         return (
             <div
                 className={cn("relative group mb-4 break-inside-avoid", className)}
-                style={animationStyle}
             >
                 <div
                     className="relative w-full aspect-[1.3] rounded-md overflow-hidden select-none"
@@ -85,7 +78,6 @@ export function FloatingCard({ data, className, breatheDelay = 0 }: FloatingCard
         return (
             <div
                 className={cn("relative group mb-4 break-inside-avoid", className)}
-                style={animationStyle}
             >
                 <div
                     className="w-full aspect-[1.2] rounded-md border p-4 flex flex-col overflow-hidden select-none shadow-sm"
@@ -136,7 +128,6 @@ export function FloatingCard({ data, className, breatheDelay = 0 }: FloatingCard
         return (
             <div
                 className={cn("relative group mb-4 break-inside-avoid", className)}
-                style={animationStyle}
             >
                 <div className="relative w-full aspect-[1.4] select-none" style={{ marginBottom: '6px' }}>
                     {/* Stack Tabs - behind */}
@@ -187,7 +178,6 @@ export function FloatingCard({ data, className, breatheDelay = 0 }: FloatingCard
         return (
             <div
                 className={cn("relative group mb-4 break-inside-avoid", className)}
-                style={animationStyle}
             >
                 <div
                     className="w-full aspect-[0.8] rounded-md border p-4 flex flex-col overflow-hidden select-none shadow-sm"
@@ -221,7 +211,6 @@ export function FloatingCard({ data, className, breatheDelay = 0 }: FloatingCard
         return (
             <div
                 className={cn("relative group mb-4 break-inside-avoid", className)}
-                style={animationStyle}
             >
                 <div
                     className="w-full aspect-[0.75] rounded-md border p-0 flex flex-col overflow-hidden select-none shadow-sm"
@@ -255,7 +244,6 @@ export function FloatingCard({ data, className, breatheDelay = 0 }: FloatingCard
         return (
             <div
                 className={cn("relative group mb-4 break-inside-avoid", className)}
-                style={animationStyle}
             >
                 <div className="relative w-full aspect-video rounded-md overflow-hidden border shadow-sm select-none" style={{ borderColor: borderColor, backgroundColor: bodyBgColor }}>
                     {data.thumbnailUrl ? (
