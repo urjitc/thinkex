@@ -13,7 +13,7 @@ interface ActionCardProps {
 
 function ActionCard({ icon, title, subtitle, onClick, isLoading, htmlFor }: ActionCardProps) {
     const sharedClassName = cn(
-        "flex flex-col items-start gap-2 p-4 min-h-[88px] w-full rounded-2xl border bg-sidebar backdrop-blur-xl hover:bg-accent hover:text-accent-foreground hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-left cursor-pointer",
+        "flex flex-col items-start gap-2 p-4 min-h-[88px] w-full rounded-2xl border bg-white backdrop-blur-xl hover:bg-neutral-100 hover:text-foreground hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-left cursor-pointer",
         "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2",
         "disabled:pointer-events-none disabled:opacity-50"
     );
