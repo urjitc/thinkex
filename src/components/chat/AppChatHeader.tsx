@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { X, ChevronDown, Trash2, Edit2, Check, MessageSquarePlus } from "lucide-react";
 import { RiChatHistoryLine } from "react-icons/ri";
@@ -21,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { formatKeyboardShortcut } from "@/lib/utils/keyboard-shortcut";
 import { toast } from "sonner";
 import { ThreadListDropdown } from "@/components/assistant-ui/thread-list-dropdown";
+import { ThinkExLogo } from "@/components/ui/thinkex-logo";
 
 
 interface Conversation {
@@ -203,13 +203,7 @@ export function AppChatHeader({
               aria-label="ThinkEx"
             >
               <div className="relative h-6 w-6 flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
-                <Image
-                  src="/newlogothinkex.svg"
-                  alt="ThinkEx Logo"
-                  width={24}
-                  height={24}
-                  className="object-contain"
-                />
+                <ThinkExLogo size={24} />
               </div>
             </Link>
           )}

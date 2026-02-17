@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Menu, Github } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -17,6 +16,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { signOut } from "@/lib/auth-client";
 import { AccountModal } from "@/components/auth/AccountModal";
+import { ThinkExLogo } from "@/components/ui/thinkex-logo";
 
 export function Navbar() {
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -92,14 +92,7 @@ export function Navbar() {
             {/* Logo/Brand */}
             <Link href="#hero" className="flex items-center gap-2 group z-10">
               <div className="relative h-8 w-8 flex items-center justify-center transition-transform group-hover:scale-105">
-                <Image
-                  src="/newlogothinkex.svg"
-                  alt="ThinkEx Logo"
-                  width={32}
-                  height={32}
-                  className="object-contain"
-                  priority
-                />
+                <ThinkExLogo size={32} priority />
               </div>
               <span className="text-2xl font-normal text-foreground">ThinkEx</span>
             </Link>

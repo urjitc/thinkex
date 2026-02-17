@@ -1,13 +1,13 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Github, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { UserProfileDropdown } from "./UserProfileDropdown";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ThinkExLogo } from "@/components/ui/thinkex-logo";
 
 interface HomeTopBarProps {
   scrollY: number;
@@ -48,13 +48,7 @@ export function HomeTopBar({ scrollY, searchQuery, onSearchChange, shouldFocusSe
       {/* Left: Logo */}
       <Link href="/home" className="flex items-center gap-2 group">
         <div className="relative h-6 w-6 flex items-center justify-center transition-transform group-hover:scale-105">
-          <Image
-            src="/newlogothinkex.svg"
-            alt="ThinkEx Logo"
-            width={24}
-            height={24}
-            className="object-contain"
-          />
+          <ThinkExLogo size={24} />
         </div>
         <span className="text-lg font-medium whitespace-nowrap">ThinkEx</span>
       </Link>

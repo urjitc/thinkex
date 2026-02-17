@@ -2,7 +2,6 @@
 
 import type React from "react";
 import { useState, useRef, useEffect, useCallback } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Search, X, ChevronDown, FolderOpen, Plus, Upload, FileText, Folder as FolderIcon, Settings, Share2, Play, Brain, File, Newspaper, ImageIcon, Mic, PanelRight } from "lucide-react";
@@ -11,6 +10,7 @@ import { PiCardsThreeBold } from "react-icons/pi";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { ThinkExLogo } from "@/components/ui/thinkex-logo";
 
 import { formatKeyboardShortcut } from "@/lib/utils/keyboard-shortcut";
 import WorkspaceSaveIndicator from "@/components/workspace/WorkspaceSaveIndicator";
@@ -470,14 +470,7 @@ export function WorkspaceHeader({
               aria-label="ThinkEx"
             >
               <div className="relative h-6 w-6 flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
-                <Image
-                  src="/newlogothinkex.svg"
-                  alt="ThinkEx Logo"
-                  width={24}
-                  height={24}
-                  className="object-contain"
-                  priority
-                />
+                <ThinkExLogo size={24} priority />
               </div>
             </Link>
           )}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { ThinkExLogo } from "@/components/ui/thinkex-logo";
 
 
 export function Footer() {
@@ -35,13 +35,7 @@ export function Footer() {
           <div className="col-span-2 md:col-span-6 space-y-6">
             <Link href="#hero" className="flex items-center group w-fit">
               <div className="relative h-8 w-8 flex items-center justify-center transition-transform group-hover:scale-105">
-                <Image
-                  src="/newlogothinkex.svg"
-                  alt="ThinkEx Logo"
-                  width={32}
-                  height={32}
-                  className="object-contain"
-                />
+                <ThinkExLogo size={32} />
               </div>
             </Link>
 

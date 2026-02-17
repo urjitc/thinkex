@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { MoreVertical, LogOut, Layers, User, Mail, Play, Users, Globe, Plus, Upload, Tag } from "lucide-react";
@@ -45,6 +44,7 @@ import { useUIStore } from "@/lib/stores/ui-store";
 import type { WorkspaceWithState } from "@/lib/workspace-state/types";
 import { IconRenderer } from "@/hooks/use-icon-picker";
 import { cn } from "@/lib/utils";
+import { ThinkExLogo } from "@/components/ui/thinkex-logo";
 
 interface WorkspaceSidebarProps {
   showJsonView: boolean;
@@ -191,13 +191,7 @@ function WorkspaceSidebar({
               }}
             >
               <div className="relative h-6 w-6 flex items-center justify-center transition-transform group-hover/logo:scale-105">
-                <Image
-                  src="/newlogothinkex.svg"
-                  alt="ThinkEx Logo"
-                  width={24}
-                  height={24}
-                  className="object-contain"
-                />
+                <ThinkExLogo size={24} />
               </div>
               <h2 className="text-lg font-medium whitespace-nowrap -mb-0.5">ThinkEx</h2>
             </Link>
