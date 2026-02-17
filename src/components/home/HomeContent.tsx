@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { HomeAttachmentsProvider, useHomeAttachments } from "@/contexts/HomeAttachmentsContext";
 import { LinkInputDialog } from "./LinkInputDialog";
+import { HomeHeroDropzone } from "./HomeHeroDropzone";
 
 // Context for section visibility - allows child components to know when to focus
 const SectionVisibilityContext = createContext<{
@@ -307,108 +308,109 @@ export function HomeContent() {
       />
 
       {/* Scrollable Content */}
-      <div ref={scrollRef} className="relative h-full w-full overflow-y-auto">
-        {/* Floating Card Background with spotlight reveal effect */}
-        <div className="absolute inset-x-0 top-0 h-[185vh] z-0 select-none overflow-hidden">
-          <FloatingWorkspaceCards
-            bottomGradientHeight="40%"
-            includeExtraCards={true}
-          />
-        </div>
+      <HomeAttachmentsProvider>
+        <HomeHeroDropzone onFilesDropped={() => setShowPromptInput(true)}>
+          <div ref={scrollRef} className="relative h-full w-full overflow-y-auto">
+            {/* Floating Card Background with spotlight reveal effect */}
+            <div className="absolute inset-x-0 top-0 h-[185vh] z-0 select-none overflow-hidden">
+              <FloatingWorkspaceCards
+                bottomGradientHeight="40%"
+                includeExtraCards={true}
+              />
+            </div>
 
-        {/* Gradient fade from hero to workspaces section */}
-        <div
-          className="fixed bottom-0 left-0 right-0 h-[40vh] pointer-events-none z-[5]"
-          style={{
-            background: 'linear-gradient(to bottom, transparent 0%, hsl(var(--background)) 100%)',
-          }}
-        />
+            {/* Gradient fade from hero to workspaces section */}
+            <div
+              className="fixed bottom-0 left-0 right-0 h-[40vh] pointer-events-none z-[5]"
+              style={{
+                background: 'linear-gradient(to bottom, transparent 0%, hsl(var(--background)) 100%)',
+              }}
+            />
 
-        {/* Scroll hint arrow — appears when cursor enters bottom 20% */}
-        <div
-          className={cn(
-            "fixed bottom-8 left-1/2 -translate-x-1/2 z-[20] transition-all duration-300 ease-out",
-            showScrollHint && hasWorkspaces
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-2 pointer-events-none"
-          )}
-        >
-          <button
-            type="button"
-            onClick={scrollToWorkspaces}
-            className="flex items-center justify-center w-8 h-8 rounded-full text-background hover:text-background bg-foreground border border-border transition-colors duration-200 cursor-pointer"
-          >
-            <ChevronDown className="h-4 w-4" />
-          </button>
-        </div>
+            {/* Scroll hint arrow — appears when cursor enters bottom 20% */}
+            <div
+              className={cn(
+                "fixed bottom-8 left-1/2 -translate-x-1/2 z-[20] transition-all duration-300 ease-out",
+                showScrollHint && hasWorkspaces
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-2 pointer-events-none"
+              )}
+            >
+              <button
+                type="button"
+                onClick={scrollToWorkspaces}
+                className="flex items-center justify-center w-8 h-8 rounded-full text-background hover:text-background bg-foreground border border-border transition-colors duration-200 cursor-pointer"
+              >
+                <ChevronDown className="h-4 w-4" />
+              </button>
+            </div>
 
-        {/* Hero Section */}
-        <div
-          ref={heroRef}
-          className="relative z-10 h-[75vh] flex flex-col items-center justify-center text-center px-6"
-        >
+            {/* Hero Section */}
+            <div
+              ref={heroRef}
+              className="relative z-10 h-[75vh] flex flex-col items-center justify-center text-center px-6"
+            >
+              <div className="w-full max-w-[760px] relative">
+                {/* Hero Glow Effect */}
+                <HeroGlow />
 
-          <div className="w-full max-w-[760px] relative">
-            {/* Hero Glow Effect */}
-            <HeroGlow />
-
-            {/* Social proof */}
-            <div className="mb-12 flex flex-wrap items-center justify-center gap-3 text-xs sm:text-sm relative z-10">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/10 text-sidebar-foreground">
-                <div className="flex -space-x-2">
-                  {[
-                    "bg-gradient-to-br from-blue-400 to-blue-600",
-                    "bg-gradient-to-br from-emerald-400 to-emerald-600",
-                    "bg-gradient-to-br from-amber-400 to-amber-600",
-                    "bg-gradient-to-br from-rose-400 to-rose-600",
-                  ].map((gradient, i) => (
-                    <div
-                      key={gradient}
-                      className={`w-5 h-5 rounded-full ${gradient} flex items-center justify-center text-white text-[9px] font-medium shadow-sm`}
-                    >
-                      {["T", "J", "A", "M"][i]}
+                {/* Social proof */}
+                <div className="mb-12 flex flex-wrap items-center justify-center gap-3 text-xs sm:text-sm relative z-10">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/10 text-sidebar-foreground">
+                    <div className="flex -space-x-2">
+                      {[
+                        "bg-gradient-to-br from-blue-400 to-blue-600",
+                        "bg-gradient-to-br from-emerald-400 to-emerald-600",
+                        "bg-gradient-to-br from-amber-400 to-amber-600",
+                        "bg-gradient-to-br from-rose-400 to-rose-600",
+                      ].map((gradient, i) => (
+                        <div
+                          key={gradient}
+                          className={`w-5 h-5 rounded-full ${gradient} flex items-center justify-center text-white text-[9px] font-medium shadow-sm`}
+                        >
+                          {["T", "J", "A", "M"][i]}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                    <span className="text-xs sm:text-sm font-medium text-muted-foreground">100+ daily active users</span>
+                  </div>
                 </div>
-                <span className="text-xs sm:text-sm font-medium text-muted-foreground">100+ daily active users</span>
+
+                {/* Dynamic tagline with mask wipe animation */}
+                <div className="mb-10 relative z-10">
+                  <DynamicTagline />
+                </div>
+
+                <HeroAttachmentsSection
+                  fileInputRef={fileInputRef}
+                  showLinkDialog={showLinkDialog}
+                  setShowLinkDialog={setShowLinkDialog}
+                  handleCreateBlankWorkspace={handleCreateBlankWorkspace}
+                  createWorkspacePending={createWorkspace.isPending}
+                  onRecord={() => setShowRecordDialog(true)}
+                  heroVisible={heroVisible}
+                  showPromptInput={showPromptInput}
+                  onRequestShowPromptInput={() => setShowPromptInput(true)}
+                  pastedText={pastedText}
+                  onPastedText={setPastedText}
+                  onClearPastedText={() => setPastedText(null)}
+                />
               </div>
             </div>
 
-            {/* Dynamic tagline with mask wipe animation */}
-            <div className="mb-10 relative z-10">
-              <DynamicTagline />
-            </div>
-
-            <HomeAttachmentsProvider>
-              <HeroAttachmentsSection
-                fileInputRef={fileInputRef}
-                showLinkDialog={showLinkDialog}
-                setShowLinkDialog={setShowLinkDialog}
-                handleCreateBlankWorkspace={handleCreateBlankWorkspace}
-                createWorkspacePending={createWorkspace.isPending}
-                onRecord={() => setShowRecordDialog(true)}
-                heroVisible={heroVisible}
-                showPromptInput={showPromptInput}
-                onRequestShowPromptInput={() => setShowPromptInput(true)}
-                pastedText={pastedText}
-                onPastedText={setPastedText}
-                onClearPastedText={() => setPastedText(null)}
-              />
-            </HomeAttachmentsProvider>
-          </div>
-        </div>
-
-        {/* Workspaces Section - Allow scrolling within */}
-        <div ref={workspacesRef} className="relative z-10 px-6 pb-8 pt-8 min-h-screen bg-gradient-to-b from-transparent via-background to-background">
-          <div className="w-full max-w-6xl mx-auto h-full">
-            {/* Your Workspaces */}
-            <div className="bg-sidebar backdrop-blur-xl border border-border/50 rounded-2xl p-6 shadow-2xl">
-              <h2 className="text-lg font-normal text-muted-foreground mb-4">Recent workspaces</h2>
-              <WorkspaceGrid searchQuery={searchQuery} />
+            {/* Workspaces Section - Allow scrolling within */}
+            <div ref={workspacesRef} className="relative z-10 px-6 pb-8 pt-8 min-h-screen bg-gradient-to-b from-transparent via-background to-background">
+              <div className="w-full max-w-6xl mx-auto h-full">
+                {/* Your Workspaces */}
+                <div className="bg-sidebar backdrop-blur-xl border border-border/50 rounded-2xl p-6 shadow-2xl">
+                  <h2 className="text-lg font-normal text-muted-foreground mb-4">Recent workspaces</h2>
+                  <WorkspaceGrid searchQuery={searchQuery} />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </HomeHeroDropzone>
+      </HomeAttachmentsProvider>
     </>
   );
 }

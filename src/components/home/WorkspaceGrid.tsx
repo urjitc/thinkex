@@ -269,7 +269,8 @@ export function WorkspaceGrid({ searchQuery = "" }: WorkspaceGridProps) {
                   }, 100); // 100ms delay
 
                   if (!selectedIds.has(workspace.id)) {
-                    e.currentTarget.style.borderColor = 'white';
+                    // Dark brown – visible on light backgrounds
+                    e.currentTarget.style.borderColor = 'hsl(25 15% 25%)';
                   }
                 }}
                 onMouseLeave={(e) => {

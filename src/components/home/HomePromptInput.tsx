@@ -75,48 +75,6 @@ export function HomePromptInput({ shouldFocus, initialValue, onInitialValueAppli
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingKeyRef = useRef(0);
 
-  // const {
-  //   uploadFiles: uploadImages,
-  //   uploadedFiles: uploadedImages,
-  //   isUploading: isUploadingImages,
-  //   removeFile: removeImage,
-  //   clearFiles: clearImages,
-  // } = useImageUpload();
-
-  // // Setup file picker for images (button-click only, no drag)
-  // const { open: openImagePicker, getInputProps: getImageInputProps } = useDropzone({
-  //   accept: {
-  //     'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'],
-  //   },
-  //   multiple: true,
-  //   noClick: true,
-  //   noDrag: true,
-  //   onDrop: async (acceptedFiles) => {
-  //     if (acceptedFiles.length > 0) {
-  //       // Auto-populate input based on total uploads
-  //       const totalImages = uploadedImages.length + acceptedFiles.length;
-  //       const totalPdfs = uploadedFiles.length;
-  //       if (totalPdfs > 0) {
-  //         const parts = [];
-  //         parts.push(totalPdfs === 1 ? 'this pdf' : 'these pdfs');
-  //         parts.push(totalImages === 1 ? 'this image' : 'these images');
-  //         setValue(parts.join(' and '));
-  //       } else if (totalImages === 1) {
-  //         setValue("this image");
-  //       } else {
-  //         setValue("these images");
-  //       }
-
-  //       try {
-  //         await uploadImages(acceptedFiles);
-  //         toast.success(`Uploaded ${acceptedFiles.length} image${acceptedFiles.length > 1 ? 's' : ''}`);
-  //       } catch (error) {
-  //         toast.error("Failed to upload images");
-  //       }
-  //     }
-  //   },
-  // });
-
   // Shuffle options with random start for variety
   const shuffledOptions = useMemo(() => {
     const start = Math.floor(Math.random() * PLACEHOLDER_OPTIONS.length);
