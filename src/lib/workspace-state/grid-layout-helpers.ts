@@ -119,7 +119,8 @@ export function findNextAvailablePosition(
   newItemName: string = "",
   newItemSubtitle: string = "",
   customW?: number,
-  customH?: number
+  customH?: number,
+  breakpoint: 'lg' | 'xxs' = 'lg'
 ): { x: number; y: number; w: number; h: number } {
   const validType = (newItemType in DEFAULT_CARD_DIMENSIONS) ? newItemType : 'note';
   const dimensions = DEFAULT_CARD_DIMENSIONS[validType];
@@ -136,7 +137,7 @@ export function findNextAvailablePosition(
   const occupiedRects: { x: number; y: number; w: number; h: number }[] = [];
 
   existingItems.forEach((item) => {
-    const layout = getLayoutForBreakpoint(item, 'lg');
+    const layout = getLayoutForBreakpoint(item, breakpoint);
     const ix = layout?.x ?? 0;
     const iy = layout?.y ?? 0;
     const iw = layout?.w ?? DEFAULT_CARD_DIMENSIONS[item.type]?.w ?? 1;
@@ -176,14 +177,31 @@ export function findNextAvailablePosition(
   return { x: 0, y: maxY, w, h };
 }
 
+/** Default height for all items in xxs (single-column) mode */
+export const XXS_DEFAULT_HEIGHT = 12;
+
 /**
  * Generate missing layouts for items that don't have them.
  * Works with the 'lg' breakpoint by default.
+ * In xxs mode, new layouts use h=10 by default for consistent single-column stacking.
  */
 export function generateMissingLayouts(items: Item[], cols: number = DEFAULT_COLS, breakpoint: 'lg' | 'xxs' = 'lg'): Item[] {
   const result: Item[] = [];
 
-  items.forEach((item) => {
+  // For xxs, sort by lg position so stacking order matches 4-col visual order
+  const itemsToProcess =
+    breakpoint === 'xxs'
+      ? [...items].sort((a, b) => {
+          const aLg = getLayoutForBreakpoint(a, 'lg');
+          const bLg = getLayoutForBreakpoint(b, 'lg');
+          const aY = aLg?.y ?? 0;
+          const bY = bLg?.y ?? 0;
+          if (aY !== bY) return aY - bY;
+          return (aLg?.x ?? 0) - (bLg?.x ?? 0);
+        })
+      : items;
+
+  itemsToProcess.forEach((item) => {
     const existingLayout = getLayoutForBreakpoint(item, breakpoint);
 
     if (existingLayout) {
@@ -205,7 +223,19 @@ export function generateMissingLayouts(items: Item[], cols: number = DEFAULT_COL
         layout: newLayouts,
       });
     } else {
-      const position = findNextAvailablePosition(result, item.type, cols, item.name, item.subtitle);
+      const position =
+        breakpoint === 'xxs'
+          ? findNextAvailablePosition(
+              result,
+              item.type,
+              cols,
+              item.name,
+              item.subtitle,
+              1, // w=1 for single column
+              item.type === 'folder' || item.type === 'flashcard' || item.type === 'youtube' ? undefined : XXS_DEFAULT_HEIGHT,
+              'xxs'
+            )
+          : findNextAvailablePosition(result, item.type, cols, item.name, item.subtitle);
 
       // For items without layout, create new responsive structure
       const existingResponsive = isLegacyLayout(item.layout)

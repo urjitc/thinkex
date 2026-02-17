@@ -106,9 +106,10 @@ export function WorkspaceGrid({
   }, [allItems]);
 
   // Generate layouts for items that don't have them
-  // Note: We use 4 columns as the base for layout generation
+  // lg: 4 columns; xxs: 1 column with h=10 default for consistent single-column stacking
   const itemsWithLayout = useMemo(() => {
-    return generateMissingLayouts(items, 4);
+    const withLg = generateMissingLayouts(items, 4);
+    return generateMissingLayouts(withLg, 1, 'xxs');
   }, [items]);
 
   // Display all items (no longer hiding items when panels are open)
@@ -762,18 +763,11 @@ export function WorkspaceGrid({
   const cols = useMemo(() => ({ lg: 4, xxs: 1 }), []);
 
   // Create layouts object for ResponsiveGridLayout with both breakpoints
-  // Only provide xxs layout if at least one item has a saved xxs layout
-  // Otherwise, let the library auto-generate from lg
-  const hasAnyXxsLayout = useMemo(() =>
-    itemsWithLayout.some(item => {
-      if (!item.layout) return false;
-      // Check if it's responsive format with xxs key
-      return 'xxs' in item.layout && item.layout.xxs !== undefined;
-    }), [itemsWithLayout]);
-  const xxsLayout = useMemo(() => hasAnyXxsLayout ? itemsToLayout(itemsWithLayout, 'xxs') : [], [itemsWithLayout, hasAnyXxsLayout]);
+  // Always provide xxs layout (h=10 default) for consistent single-column stacking
+  const xxsLayout = useMemo(() => itemsToLayout(itemsWithLayout, 'xxs'), [itemsWithLayout]);
   const layouts = useMemo(() => ({
     lg: combinedLayout,
-    xxs: xxsLayout.length > 0 ? xxsLayout : undefined
+    xxs: xxsLayout
   }), [combinedLayout, xxsLayout]);
 
   // Handle breakpoint changes to track current breakpoint for saving layouts
