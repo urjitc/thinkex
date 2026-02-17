@@ -17,6 +17,7 @@ import { extractTextFromSelection } from "@/lib/utils/extract-blocknote-text";
 import { MathEditProvider } from "./MathEditDialog";
 import { useTheme } from "next-themes";
 import * as Tooltip from "@/components/ui/tooltip";
+import { Source, SourceIcon, SourceTitle } from "@/components/assistant-ui/sources";
 
 // Get the Block type from our custom schema
 type Block = (typeof schema)["Block"];
@@ -386,25 +387,35 @@ export default function BlockNoteEditor({ initialContent, onChange, readOnly, ca
             }
           />
         </BlockNoteView>
-        {/* Sources section - simple clickable links below editor content */}
+        {/* Sources section - matches streamdown/assistant-ui styling with favicon */}
         {sources && sources.length > 0 && (
           <div className="px-14 pb-6 pt-8 border-t border-border/40">
             <div className="text-xs font-semibold text-muted-foreground/70 mb-3 uppercase tracking-wider">
               Sources
             </div>
-            <div className="flex flex-col gap-1.5">
-              {sources.map((source, index) => (
-                <a
-                  key={index}
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-primary/80 hover:text-primary hover:underline flex items-start gap-2 group py-0.5"
-                >
-                  <span className="text-muted-foreground/50 group-hover:text-primary/60 transition-colors mt-0.5">•</span>
-                  <span className="flex-1 break-words">{source.title}</span>
-                </a>
-              ))}
+            <div className="flex flex-wrap gap-1.5">
+              {sources.map((source, index) => {
+                const domain = (() => {
+                  try {
+                    return new URL(source.url).hostname.replace(/^www\./, "");
+                  } catch {
+                    return source.url;
+                  }
+                })();
+                const displayTitle = source.title || domain;
+                return (
+                  <Source
+                    key={index}
+                    href={source.url}
+                    variant="outline"
+                    size="default"
+                    className="inline-flex"
+                  >
+                    <SourceIcon url={source.url} />
+                    <SourceTitle>{displayTitle}</SourceTitle>
+                  </Source>
+                );
+              })}
             </div>
           </div>
         )}
