@@ -243,16 +243,25 @@ function FolderCardComponent({
   const bodyBgColor = getCardColorCSS(folderColor, 0.25); // Body is more transparent
   const tabBgColor = getCardColorCSS(folderColor, 0.35); // Tab is slightly less transparent
   const borderColor = isSelected ? 'rgba(255, 255, 255, 0.8)' : getCardAccentColor(folderColor, 0.5);
-  const selectedBoxShadow = isSelected && resolvedTheme !== 'dark' ? '0 0 3px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.5)' : undefined;
+  // Selection ring on outer wrapper (like normal cards) – avoids overflow-hidden clipping
+  // Light mode: match resize-handle style with layered dark shadow for visibility
+  const selectedRingStyle = isSelected
+    ? {
+        boxShadow: resolvedTheme === 'dark'
+          ? '0 0 0 3px rgba(255, 255, 255, 0.8)'
+          : '0 0 0 3px rgba(255, 255, 255, 0.8), 0 0 2px rgba(0, 0, 0, 0.9), 0 0 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 0, 0, 0.4)',
+      }
+    : undefined;
 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            "group size-full",
+            "group size-full rounded-md transition-[box-shadow] duration-150",
             isDragHover && "border-4 border-blue-500 rounded-md scale-105 z-50"
           )}
+          style={selectedRingStyle}
           data-folder-id={item.id}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -268,12 +277,11 @@ function FolderCardComponent({
               style={{
                 backgroundColor: tabBgColor,
                 borderColor: borderColor,
-                borderTopWidth: isSelected ? '3px' : '1px',
-                borderLeftWidth: isSelected ? '3px' : '1px',
-                borderRightWidth: isSelected ? '3px' : '1px',
+                borderTopWidth: '1px',
+                borderLeftWidth: '1px',
+                borderRightWidth: '1px',
                 borderBottomWidth: 0,
-                transition: 'border-color 150ms ease-out, border-width 150ms ease-out',
-                boxShadow: selectedBoxShadow,
+                transition: 'border-color 150ms ease-out',
               }}
             />
 
@@ -283,9 +291,8 @@ function FolderCardComponent({
               style={{
                 backgroundColor: bodyBgColor,
                 borderColor: borderColor,
-                borderWidth: isSelected ? '3px' : '1px',
-                transition: 'border-color 150ms ease-out, border-width 150ms ease-out',
-                boxShadow: selectedBoxShadow,
+                borderWidth: '1px',
+                transition: 'border-color 150ms ease-out',
               }}
             />
 
