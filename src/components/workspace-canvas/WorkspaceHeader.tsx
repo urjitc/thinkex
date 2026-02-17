@@ -466,7 +466,7 @@ export function WorkspaceHeader({
           {isWorkspaceRoute && (
             <Link
               href="/home"
-              className="group flex items-center mr-2 shrink-0 rounded-md cursor-pointer"
+              className="group flex items-center mr-1 shrink-0 rounded-md cursor-pointer"
               aria-label="ThinkEx"
             >
               <div className="relative h-6 w-6 flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
