@@ -19,8 +19,9 @@ import { ThumbnailPluginPackage, ThumbnailsPane, ThumbImg } from '@embedpdf/plug
 import { AnnotationPluginPackage, AnnotationLayer, useAnnotationCapability, AnnotationSelectionMenuProps } from '@embedpdf/plugin-annotation/react';
 import { CapturePluginPackage, MarqueeCapture, useCapture } from '@embedpdf/plugin-capture/react';
 import { HistoryPluginPackage } from '@embedpdf/plugin-history/react';
+import { SearchPluginPackage, SearchLayer, useSearch, useSearchCapability } from '@embedpdf/plugin-search/react';
 
-import { Loader2, ChevronLeft, ChevronRight, Copy, Sparkles, Check, Trash2 } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Copy, Sparkles, Check, Trash2, Search, X as XIcon, ArrowUp, ArrowDown } from 'lucide-react';
 import { useUIStore } from "@/lib/stores/ui-store";
 import { toast } from "sonner";
 import { useMemo, ReactNode, useState, useEffect, useRef, useCallback } from 'react';
@@ -465,6 +466,154 @@ const ThumbnailSidebar = ({ documentId }: ThumbnailSidebarProps) => {
   );
 };
 
+// ─────────────────────────────────────────────────────────
+// PDF Search Bar (intercepts Cmd/Ctrl+F)
+// ─────────────────────────────────────────────────────────
+
+const PdfSearchBar = ({ documentId }: { documentId: string }) => {
+  const { state, provides } = useSearch(documentId);
+  const { provides: scroll } = useScroll(documentId);
+  const [isOpen, setIsOpen] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Intercept Cmd/Ctrl+F
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsOpen(true);
+        // Focus input after state update
+        setTimeout(() => inputRef.current?.focus(), 50);
+      }
+      if (e.key === 'Escape' && isOpen) {
+        e.preventDefault();
+        handleClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen]);
+
+  // Scroll to active result when it changes
+  useEffect(() => {
+    if (
+      state.activeResultIndex >= 0 &&
+      !state.loading &&
+      state.results.length > 0
+    ) {
+      const item = state.results[state.activeResultIndex];
+      if (!item) return;
+
+      const minCoordinates = item.rects.reduce(
+        (min, rect) => ({
+          x: Math.min(min.x, rect.origin.x),
+          y: Math.min(min.y, rect.origin.y),
+        }),
+        { x: Infinity, y: Infinity }
+      );
+
+      scroll?.scrollToPage({
+        pageNumber: item.pageIndex + 1,
+        pageCoordinates: minCoordinates,
+      });
+    }
+  }, [state.activeResultIndex, state.loading, state.results, scroll]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+    if (value === '') {
+      provides?.stopSearch();
+    } else {
+      provides?.searchAllPages(value);
+    }
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setInputValue('');
+    provides?.stopSearch();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        provides?.previousResult();
+      } else {
+        provides?.nextResult();
+      }
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      handleClose();
+    }
+  };
+
+  if (!isOpen || !provides) return null;
+
+  return (
+    <div className="absolute top-3 right-3 z-50 flex items-center gap-1.5 bg-black/80 backdrop-blur-md rounded-lg p-1.5 shadow-xl border border-white/15 text-white animate-in fade-in slide-in-from-top-2 duration-200">
+      <Search size={14} className="text-white/50 ml-1" />
+      <input
+        ref={inputRef}
+        type="text"
+        value={inputValue}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        placeholder="Find in PDF..."
+        className="bg-transparent text-sm text-white placeholder:text-white/40 outline-none w-48 px-1"
+        autoFocus
+      />
+
+      {/* Result count */}
+      {state.active && !state.loading && inputValue && (
+        <span className="text-[11px] text-white/50 tabular-nums whitespace-nowrap px-1">
+          {state.total > 0
+            ? `${state.activeResultIndex + 1} / ${state.total}`
+            : 'No results'}
+        </span>
+      )}
+
+      {state.loading && (
+        <Loader2 size={12} className="animate-spin text-white/50" />
+      )}
+
+      {/* Nav buttons */}
+      {state.total > 0 && (
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => provides.previousResult()}
+            className="p-1 rounded hover:bg-white/10 transition-colors"
+            title="Previous (Shift+Enter)"
+          >
+            <ArrowUp size={13} />
+          </button>
+          <button
+            onClick={() => provides.nextResult()}
+            className="p-1 rounded hover:bg-white/10 transition-colors"
+            title="Next (Enter)"
+          >
+            <ArrowDown size={13} />
+          </button>
+        </div>
+      )}
+
+      {/* Close */}
+      <button
+        onClick={handleClose}
+        className="p-1 rounded hover:bg-white/10 transition-colors ml-0.5"
+        title="Close (Esc)"
+      >
+        <XIcon size={13} />
+      </button>
+    </div>
+  );
+};
+
 const AppPdfViewer = ({ pdfSrc, showThumbnails = false, renderHeader, itemName, isMaximized, initialShowAnnotations = false }: Props) => {
   // Use the shared Pdfium engine from context
   const { engine, isLoading } = useEngineContext();
@@ -542,6 +691,7 @@ const AppPdfViewer = ({ pdfSrc, showThumbnails = false, renderHeader, itemName, 
       imageType: 'image/png',
       withAnnotations: true,
     }),
+    createPluginRegistration(SearchPluginPackage),
   ], [pdfSrc]);
 
   if (isLoading || !engine) {
@@ -619,6 +769,7 @@ const AppPdfViewer = ({ pdfSrc, showThumbnails = false, renderHeader, itemName, 
 
                         {/* Viewport */}
                         <div className="flex-1 overflow-hidden relative">
+                          <PdfSearchBar documentId={activeDocumentId} />
                           <CaptureOverlay documentId={activeDocumentId} />
                           <Viewport
                             documentId={activeDocumentId}
@@ -656,6 +807,13 @@ const AppPdfViewer = ({ pdfSrc, showThumbnails = false, renderHeader, itemName, 
                                         selectionMenu={(props) => (
                                           <TextSelectionMenu {...props} documentId={activeDocumentId} />
                                         )}
+                                      />
+                                      {/* Search highlight layer */}
+                                      <SearchLayer
+                                        documentId={activeDocumentId}
+                                        pageIndex={pageIndex}
+                                        highlightColor="rgba(255, 213, 0, 0.4)"
+                                        activeHighlightColor="rgba(255, 140, 0, 0.6)"
                                       />
                                       {/* Annotation Layer - Renders annotations and handles annotation interactions */}
                                       {/* Even if the toolbar is hidden, we might want to render annotations, just not edit them. 

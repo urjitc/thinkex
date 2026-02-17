@@ -20,7 +20,7 @@ function ActionCard({ icon, title, subtitle, onClick, isLoading, htmlFor }: Acti
 
     const content = (
         <>
-            <div className="text-foreground/70 flex-shrink-0">
+            <div className="text-foreground flex-shrink-0">
                 {icon}
             </div>
             <div className="flex flex-col items-start">
