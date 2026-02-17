@@ -206,7 +206,7 @@ export async function POST(req: Request) {
     const selectedCardsContext = getSelectedCardsContext(body);
 
     // Get model ID and ensure it has the correct prefix for Gateway
-    let modelId = body.modelId || "gemini-2.5-flash";
+    let modelId = body.modelId || "gemini-3-flash-preview";
 
     // Auto-prefix with google/ if it looks like a gemini model and lacks prefix
     // This allows existing client code to work without changes
@@ -278,13 +278,15 @@ export async function POST(req: Request) {
         // googleSearchRetrieval removed to force usage of explicit webSearch tool
       },
       thinkingConfig: {
-        includeThoughts: false,
+        includeThoughts: true,
       },
     };
 
-    // Explicitly disable thinking tokens for Gemini 2.5
-    if (modelId.includes("gemini-2.5")) {
-      googleConfig.thinkingConfig.thinkingBudget = 0;
+    // Gemini 3: set thinkingLevel per model (Gemini 2.5 uses default dynamic budget)
+    if (modelId.includes("gemini-3-flash")) {
+      googleConfig.thinkingConfig.thinkingLevel = "minimal";
+    } else if (modelId.includes("gemini-3-pro")) {
+      googleConfig.thinkingConfig.thinkingLevel = "low";
     }
 
     // Prepare provider options
