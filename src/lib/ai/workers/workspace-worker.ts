@@ -499,8 +499,12 @@ export async function workspaceWorker(
                         };
                     }
 
+                    const currentState = await loadWorkspaceState(params.workspaceId);
+                    const existingItem = currentState.items.find((i: any) => i.id === params.itemId);
+                    const itemName = (changes as Partial<Item>).name ?? existingItem?.name;
+
                     logger.time("📝 [UPDATE-NOTE] Event creation");
-                    const event = createEvent("ITEM_UPDATED", { id: params.itemId, changes, source: 'agent' }, userId);
+                    const event = createEvent("ITEM_UPDATED", { id: params.itemId, changes, source: 'agent', name: itemName }, userId);
                     logger.timeEnd("📝 [UPDATE-NOTE] Event creation");
 
                     logger.time("📝 [UPDATE-NOTE] Get workspace version");
@@ -613,7 +617,7 @@ export async function workspaceWorker(
                     changes.name = params.title;
                 }
 
-                const event = createEvent("ITEM_UPDATED", { id: params.itemId, changes, source: 'agent' }, userId);
+                const event = createEvent("ITEM_UPDATED", { id: params.itemId, changes, source: 'agent', name: (changes.name ?? existingItem.name) }, userId);
 
                 const currentVersionResult = await db.execute(sql`
           SELECT get_workspace_version(${params.workspaceId}::uuid) as version
@@ -707,7 +711,7 @@ export async function workspaceWorker(
                     changes.name = params.title;
                 }
 
-                const event = createEvent("ITEM_UPDATED", { id: params.itemId, changes, source: 'agent' }, userId);
+                const event = createEvent("ITEM_UPDATED", { id: params.itemId, changes, source: 'agent', name: (changes.name ?? existingItem.name) }, userId);
 
                 logger.debug("📝 [UPDATE-QUIZ-DB] Created event:", {
                     eventId: event.id,
@@ -805,7 +809,7 @@ export async function workspaceWorker(
                     changes.name = params.title;
                 }
 
-                const event = createEvent("ITEM_UPDATED", { id: params.itemId, changes, source: 'agent' }, userId);
+                const event = createEvent("ITEM_UPDATED", { id: params.itemId, changes, source: 'agent', name: (changes.name ?? existingItem.name) }, userId);
 
                 const currentVersionResult = await db.execute(sql`
           SELECT get_workspace_version(${params.workspaceId}::uuid) as version
@@ -853,7 +857,9 @@ export async function workspaceWorker(
                     throw new Error("Item ID required for delete");
                 }
 
-                const event = createEvent("ITEM_DELETED", { id: params.itemId }, userId);
+                const currentState = await loadWorkspaceState(params.workspaceId);
+                const existingItem = currentState.items.find((i: any) => i.id === params.itemId);
+                const event = createEvent("ITEM_DELETED", { id: params.itemId, name: existingItem?.name }, userId);
 
                 const currentVersionResult = await db.execute(sql`
           SELECT get_workspace_version(${params.workspaceId}::uuid) as version

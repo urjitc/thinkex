@@ -25,7 +25,7 @@ type WorkspaceEventBase =
   }
   | {
     type: 'ITEM_UPDATED';
-    payload: { id: string; changes: Partial<Item>; source?: 'user' | 'agent' };
+    payload: { id: string; changes: Partial<Item>; source?: 'user' | 'agent'; name?: string };
     timestamp: number;
     userId: string;
     userName?: string;
@@ -33,7 +33,7 @@ type WorkspaceEventBase =
   }
   | {
     type: 'ITEM_DELETED';
-    payload: { id: string };
+    payload: { id: string; name?: string };
     timestamp: number;
     userId: string;
     userName?: string;
@@ -97,7 +97,7 @@ type WorkspaceEventBase =
   }
   | {
     type: 'FOLDER_UPDATED';
-    payload: { id: string; changes: Partial<Folder> };
+    payload: { id: string; changes: Partial<Folder>; name?: string };
     timestamp: number;
     userId: string;
     userName?: string;
@@ -105,7 +105,7 @@ type WorkspaceEventBase =
   }
   | {
     type: 'FOLDER_DELETED';
-    payload: { id: string };
+    payload: { id: string; name?: string };
     timestamp: number;
     userId: string;
     userName?: string;
@@ -113,7 +113,7 @@ type WorkspaceEventBase =
   }
   | {
     type: 'ITEM_MOVED_TO_FOLDER';
-    payload: { itemId: string; folderId: string | null }; // null = remove from folder
+    payload: { itemId: string; folderId: string | null; itemName?: string }; // null = remove from folder
     timestamp: number;
     userId: string;
     userName?: string;
@@ -121,7 +121,7 @@ type WorkspaceEventBase =
   }
   | {
     type: 'ITEMS_MOVED_TO_FOLDER';
-    payload: { itemIds: string[]; folderId: string | null }; // Bulk operation
+    payload: { itemIds: string[]; folderId: string | null; itemNames?: string[] }; // Bulk operation
     timestamp: number;
     userId: string;
     userName?: string;

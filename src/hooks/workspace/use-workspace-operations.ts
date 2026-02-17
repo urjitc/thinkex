@@ -244,8 +244,10 @@ export function useWorkspaceOperations(
       const timeout = setTimeout(() => {
         const finalChanges = pendingItemChangesRef.current.get(id);
         if (finalChanges) {
+          const item = currentState.items.find(i => i.id === id);
+          const name = (finalChanges as Partial<Item>).name ?? item?.name;
           logger.debug("⏱️ [DEBOUNCE] updateItem firing after 500ms:", { id, changes: finalChanges, source });
-          const event = createEvent("ITEM_UPDATED", { id, changes: finalChanges, source }, userId, userName);
+          const event = createEvent("ITEM_UPDATED", { id, changes: finalChanges, source, name }, userId, userName);
           mutation.mutate(event);
           // Clean up
           pendingItemChangesRef.current.delete(id);
@@ -255,7 +257,7 @@ export function useWorkspaceOperations(
 
       updateItemDebounceRef.current.set(id, timeout);
     },
-    [mutation, userId, userName]
+    [mutation, userId, userName, currentState.items]
   );
 
   const deleteItem = useCallback(
@@ -287,8 +289,8 @@ export function useWorkspaceOperations(
         }
       }
 
-      // Delete the card (create event)
-      const event = createEvent("ITEM_DELETED", { id }, userId, userName);
+      // Delete the card (create event) - include name for version history display
+      const event = createEvent("ITEM_DELETED", { id, name: itemToDelete?.name }, userId, userName);
       logger.debug("🗑️ [DELETE-ITEM] Created event:", event);
       mutation.mutate(event);
     },
@@ -352,11 +354,12 @@ export function useWorkspaceOperations(
             dataKeys: Object.keys(newData)
           });
 
-          // Emit update event with new data
+          // Emit update event with new data - include name for version history display
           const event = createEvent("ITEM_UPDATED", {
             id: itemId,
             changes: { data: newData },
-            source
+            source,
+            name: latestItem.name
           }, userId, userName);
           mutation.mutate(event);
           // Clean up
@@ -613,20 +616,22 @@ export function useWorkspaceOperations(
 
   const moveItemToFolder = useCallback(
     (itemId: string, folderId: string | null) => {
+      const item = currentState.items.find(i => i.id === itemId);
       logger.debug("📁 [ITEM-MOVE] Moving item to folder:", { itemId, folderId });
-      const event = createEvent("ITEM_MOVED_TO_FOLDER", { itemId, folderId }, userId, userName);
+      const event = createEvent("ITEM_MOVED_TO_FOLDER", { itemId, folderId, itemName: item?.name }, userId, userName);
       mutation.mutate(event);
     },
-    [mutation, userId, userName]
+    [mutation, userId, userName, currentState.items]
   );
 
   const moveItemsToFolder = useCallback(
     (itemIds: string[], folderId: string | null) => {
+      const itemNames = itemIds.map(id => currentState.items.find(i => i.id === id)?.name);
       logger.debug("📁 [ITEMS-MOVE] Moving items to folder:", { itemIds, folderId });
-      const event = createEvent("ITEMS_MOVED_TO_FOLDER", { itemIds, folderId }, userId, userName);
+      const event = createEvent("ITEMS_MOVED_TO_FOLDER", { itemIds, folderId, itemNames }, userId, userName);
       mutation.mutate(event);
     },
-    [mutation, userId, userName]
+    [mutation, userId, userName, currentState.items]
   );
 
   // Flush pending debounced changes for an item (called when modal closes)
@@ -642,8 +647,10 @@ export function useWorkspaceOperations(
 
         const pendingChanges = pendingItemChangesRef.current.get(itemId);
         if (pendingChanges) {
+          const item = currentState.items.find(i => i.id === itemId);
+          const name = (pendingChanges as Partial<Item>).name ?? item?.name;
           logger.debug("💾 [FLUSH] Sending pending updateItem changes:", { itemId, changes: pendingChanges });
-          const event = createEvent("ITEM_UPDATED", { id: itemId, changes: pendingChanges }, userId, userName);
+          const event = createEvent("ITEM_UPDATED", { id: itemId, changes: pendingChanges, name }, userId, userName);
           mutation.mutate(event);
           pendingItemChangesRef.current.delete(itemId);
         }
@@ -664,7 +671,8 @@ export function useWorkspaceOperations(
             const newData = pendingUpdater(latestItem.data);
             const event = createEvent("ITEM_UPDATED", {
               id: itemId,
-              changes: { data: newData }
+              changes: { data: newData },
+              name: latestItem.name
             }, userId, userName);
             mutation.mutate(event);
             pendingItemDataUpdatersRef.current.delete(itemId);

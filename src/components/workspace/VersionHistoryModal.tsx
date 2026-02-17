@@ -72,14 +72,14 @@ function getEventDescription(event: WorkspaceEvent, items?: any[]): string {
     case 'ITEM_CREATED':
       return `Created ${event.payload.item.type}: "${event.payload.item.name}"`;
     case 'ITEM_UPDATED': {
-      // Try to find the item title from the current items
-      const item = items?.find(item => item.id === event.payload.id);
-      const itemTitle = item?.name || `item ${event.payload.id}`;
+      // Prefer name stored in event payload, then lookup from items
+      const itemTitle = event.payload.name ?? items?.find(item => item.id === event.payload.id)?.name ?? `item ${event.payload.id}`;
       return `Updated "${itemTitle}"`;
     }
     case 'ITEM_DELETED': {
-      // For deleted items, we can't look up the current title, so use ID
-      return `Deleted item ${event.payload.id}`;
+      // Prefer name stored in event payload (included when event was created)
+      const itemTitle = event.payload.name ?? `item ${event.payload.id}`;
+      return `Deleted "${itemTitle}"`;
     }
     case 'GLOBAL_TITLE_SET':
       return `Set title to "${event.payload.title}"`;
@@ -135,18 +135,25 @@ function getEventDescription(event: WorkspaceEvent, items?: any[]): string {
       const name = event.payload.folder?.name;
       return name ? `Created folder "${name}"` : 'Created folder';
     }
-    case 'FOLDER_UPDATED':
-      return 'Updated folder';
-    case 'FOLDER_DELETED':
-      return 'Deleted folder';
+    case 'FOLDER_UPDATED': {
+      const name = event.payload.name ?? items?.find(item => item.id === event.payload.id)?.name;
+      return name ? `Updated folder "${name}"` : 'Updated folder';
+    }
+    case 'FOLDER_DELETED': {
+      const name = event.payload.name ?? items?.find(item => item.id === event.payload.id)?.name;
+      return name ? `Deleted folder "${name}"` : 'Deleted folder';
+    }
     case 'ITEM_MOVED_TO_FOLDER': {
       const n = event.payload.folderId ? 'moved into folder' : 'removed from folder';
-      return `Item ${n}`;
+      const name = event.payload.itemName ?? items?.find(item => item.id === event.payload.itemId)?.name;
+      return name ? `"${name}" ${n}` : `Item ${n}`;
     }
     case 'ITEMS_MOVED_TO_FOLDER': {
       const count = event.payload.itemIds?.length ?? 0;
       const n = event.payload.folderId ? 'moved into folder' : 'removed from folder';
       if (count === 0) return `No items ${n}`;
+      const names = event.payload.itemNames?.filter(Boolean);
+      if (count === 1 && names?.[0]) return `"${names[0]}" ${n}`;
       if (count === 1) return `Item ${n}`;
       return `${count} items ${n}`;
     }
