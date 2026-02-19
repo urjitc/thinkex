@@ -27,6 +27,7 @@ import { Loader2, ChevronLeft, ChevronRight, Copy, Sparkles, Check, Trash2, Sear
 import { useUIStore } from "@/lib/stores/ui-store";
 import { toast } from "sonner";
 import { useMemo, ReactNode, useState, useEffect, useRef, useCallback } from 'react';
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { AnnotationToolbar } from './AnnotationToolbar';
 import { PdfPasswordPrompt } from './PdfPasswordPrompt';
 
@@ -255,7 +256,6 @@ const AnnotationSelectionMenu = ({
 
 // ... (TextSelectionMenu and PageControls remain unchanged)
 const TextSelectionMenu = ({
-  rect,
   menuWrapperProps,
   placement,
   documentId
@@ -309,32 +309,37 @@ const TextSelectionMenu = ({
     }
   }, [selectionCapability, documentId, addReplySelection]);
 
-  // Position logic (fallback if placement util is quirky, but using standard pattern)
-  const top = placement.suggestTop ? -36 : rect.size.height + 6;
-
   return (
-    <div {...menuWrapperProps}>
-      <div
-        style={{ position: 'absolute', top, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'auto', cursor: 'default' }}
-        className="flex items-center gap-0.5 bg-black/80 backdrop-blur-md rounded-full p-0.5 shadow-lg border border-white/10 text-white z-50 scale-90 origin-bottom"
+    <Popover open>
+      <PopoverAnchor asChild>
+        <span {...menuWrapperProps} />
+      </PopoverAnchor>
+      <PopoverContent
+        side={placement.suggestTop ? "top" : "bottom"}
+        sideOffset={8}
+        align="center"
+        className="w-auto p-0.5 rounded-full border shadow-lg bg-popover text-popover-foreground"
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full hover:bg-white/10 transition-colors text-[10px] font-medium"
-        >
-          {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
-          {copied ? 'Copied' : 'Copy'}
-        </button>
-        <div className="w-px h-2.5 bg-white/20" />
-        <button
-          onClick={handleAskAI}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full hover:bg-white/10 transition-colors text-[10px] font-medium text-blue-400 hover:text-blue-300"
-        >
-          <Sparkles size={12} />
-          Ask AI
-        </button>
-      </div>
-    </div>
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full hover:bg-muted transition-colors text-xs font-medium"
+          >
+            {copied ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+          <div className="w-px h-2.5 bg-border" />
+          <button
+            onClick={handleAskAI}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full hover:bg-muted transition-colors text-xs font-medium text-blue-400 hover:text-blue-300"
+          >
+            <Sparkles size={12} />
+            Ask AI
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
