@@ -54,18 +54,9 @@ export function WorkspaceCanvasDropzone({ children }: WorkspaceCanvasDropzonePro
         return;
       }
 
-      const MAX_FILES = 5;
       const MAX_FILE_SIZE_MB = 50;
       const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-
-      // Check file count limit
-      if (acceptedFiles.length > MAX_FILES) {
-        toast.error(`You can only upload up to ${MAX_FILES} files at once. You dropped ${acceptedFiles.length} files.`, {
-          style: { color: '#fff' },
-          duration: 5000,
-        });
-        return;
-      }
+      const MAX_COMBINED_BYTES = 100 * 1024 * 1024; // 100MB total
 
       // Prevent multiple simultaneous drop events
       if (isProcessingRef.current) {
@@ -105,6 +96,18 @@ export function WorkspaceCanvasDropzone({ children }: WorkspaceCanvasDropzonePro
       }
 
       if (validFiles.length === 0) {
+        return;
+      }
+
+      // Check combined size limit (100MB total)
+      const totalSize = validFiles.reduce((sum, f) => sum + f.size, 0);
+      if (totalSize > MAX_COMBINED_BYTES) {
+        const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+        toast.error(`Total file size (${totalSizeMB}MB) exceeds the 100MB combined limit`, {
+          style: { color: '#fff' },
+          duration: 5000,
+        });
+        validFiles.forEach(f => processingFilesRef.current.delete(getFileKey(f)));
         return;
       }
 
