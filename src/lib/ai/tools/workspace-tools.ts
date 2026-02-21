@@ -3,7 +3,6 @@ import { z } from "zod";
 import { logger } from "@/lib/utils/logger";
 import { workspaceWorker } from "@/lib/ai/workers";
 import { loadWorkspaceState } from "@/lib/workspace/state-loader";
-import { formatSelectedCardsContext } from "@/lib/utils/format-workspace-context";
 import type { Item } from "@/lib/workspace-state/types";
 import { loadStateForTool, fuzzyMatchItem, getAvailableItemsList } from "./tool-utils";
 
@@ -308,9 +307,6 @@ export function createSelectCardsTool(ctx: WorkspaceToolContext) {
                     }
                 }
 
-                // Format the selected cards context
-                const context = formatSelectedCardsContext(selectedItems, state.items);
-
                 const addedCount = selectedItems.length;
                 const notFoundCount = cardTitles.length - addedCount;
 
@@ -318,13 +314,12 @@ export function createSelectCardsTool(ctx: WorkspaceToolContext) {
                 if (notFoundCount > 0) {
                     message += ` (${notFoundCount} not found)`;
                 }
-                message += `: ${selectedItems.map(item => item.name).join(", ")}`;
+                message += `: ${selectedItems.map(item => item.name).join(", ")}. Use grepWorkspace or readWorkspace to fetch content when needed.`;
 
                 return {
                     success: true,
                     message,
                     addedCount,
-                    context, // Return formatted context so AI has immediate access
                     cardTitles: cardTitles,
                 };
             } catch (error: any) {
@@ -332,7 +327,6 @@ export function createSelectCardsTool(ctx: WorkspaceToolContext) {
                 return {
                     success: false,
                     message: `Failed to load workspace state: ${error?.message || String(error)}`,
-                    context: "",
                 };
             }
         },
