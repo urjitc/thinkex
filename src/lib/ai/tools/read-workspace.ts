@@ -10,10 +10,14 @@ import { logger } from "@/lib/utils/logger";
 import { isValidThreadIdForDb } from "@/lib/utils/thread-id";
 import type { WorkspaceToolContext } from "./workspace-tools";
 
+const DEFAULT_LIMIT = 500;
+const MAX_LIMIT = 2000;
+const MAX_LINE_LENGTH = 2000;
+
 export function createReadWorkspaceTool(ctx: WorkspaceToolContext) {
     return tool({
         description:
-            "Read the full content of a workspace item (note, flashcard deck, PDF summary, quiz) by path or name. REQUIRED before targeted updateNote edits — the edit tool will error otherwise. Use path when items share the same name. When editing notes, use exact text from the Content section only (not the <card> wrapper).",
+            "Read content of a workspace item (note, flashcard deck, PDF summary, quiz) by path or name. Usage: By default returns up to 500 lines from the start. The lineStart parameter is the 1-indexed line number to start from — call again with a larger lineStart to read later sections. Use searchWorkspace to find specific content in large items. Contents are returned with each line prefixed by its line number as <line>: <content>. Any line longer than 2000 characters is truncated. Avoid tiny repeated slices (e.g. 30-line chunks); read a larger window. REQUIRED before targeted updateNote edits — the tool will error otherwise.",
         inputSchema: zodSchema(
             z.object({
                 path: z
@@ -28,9 +32,22 @@ export function createReadWorkspaceTool(ctx: WorkspaceToolContext) {
                     .describe(
                         "Name for fuzzy match — use when path unknown; if multiple items share the name, use path instead"
                     ),
+                lineStart: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .optional()
+                    .describe("1-based line number to start from (default 1). Use with limit for pagination."),
+                limit: z
+                    .number()
+                    .int()
+                    .min(1)
+                    .max(MAX_LIMIT)
+                    .optional()
+                    .describe(`Max lines to return (default ${DEFAULT_LIMIT}, max ${MAX_LIMIT}). Use with lineStart for pagination.`),
             })
         ),
-        execute: async ({ path, itemName }) => {
+        execute: async ({ path, itemName, lineStart = 1, limit = DEFAULT_LIMIT }) => {
             if (!path?.trim() && !itemName?.trim()) {
                 return {
                     success: false,
@@ -84,7 +101,25 @@ export function createReadWorkspaceTool(ctx: WorkspaceToolContext) {
                 };
             }
 
-            const content = formatItemContent(item);
+            const fullContent = formatItemContent(item);
+            const allLines = fullContent.split(/\r?\n/);
+            const totalLines = allLines.length;
+            const startIdx = Math.max(0, lineStart - 1);
+            const cappedLimit = Math.min(limit, MAX_LIMIT);
+            const slice = allLines.slice(startIdx, startIdx + cappedLimit);
+            const content = slice
+                .map((line, i) => {
+                    const lineNum = startIdx + 1 + i;
+                    const truncated =
+                        line.length > MAX_LINE_LENGTH
+                            ? line.substring(0, MAX_LINE_LENGTH) + "..."
+                            : line;
+                    return `${lineNum}: ${truncated}`;
+                })
+                .join("\n");
+            const lineEnd = startIdx + slice.length;
+            const hasMore = lineEnd < totalLines;
+
             const vpath = getVirtualPath(item, items);
 
             // Record read for read-before-write enforcement (targeted edits)
@@ -117,6 +152,11 @@ export function createReadWorkspaceTool(ctx: WorkspaceToolContext) {
                 type: item.type,
                 path: vpath,
                 content,
+                totalLines,
+                lineStart: startIdx + 1,
+                lineEnd,
+                hasMore,
+                ...(hasMore && { nextLineStart: lineEnd + 1 }),
             };
         },
     });

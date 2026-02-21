@@ -17,7 +17,6 @@ import {
 import { createFlashcardsTool, createUpdateFlashcardsTool } from "./flashcard-tools";
 import { createQuizTool, createUpdateQuizTool } from "./quiz-tools";
 import { createDeepResearchTool } from "./deep-research";
-import { createUpdatePdfContentTool } from "./pdf-tools";
 import { createSearchYoutubeTool, createAddYoutubeVideoTool } from "./youtube-tools";
 import { createSearchImagesTool, createAddImageTool } from "./image-tools";
 import { createWebSearchTool } from "./web-search";
@@ -70,9 +69,6 @@ export function createChatTools(config: ChatToolsConfig): Record<string, any> {
 
         deleteItem: createDeleteItemTool(ctx),
         selectCards: createSelectCardsTool(ctx),
-
-        // PDF content caching
-        updatePdfContent: createUpdatePdfContentTool(ctx),
 
         // Flashcards
         createFlashcards: createFlashcardsTool(ctx),

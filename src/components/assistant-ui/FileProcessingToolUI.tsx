@@ -221,6 +221,7 @@ function getFileType(url: string): { type: 'video' | 'pdf' | 'image' | 'document
 export const FileProcessingToolUI = makeAssistantToolUI<{
     urls?: string[];
     fileNames?: string[];
+    pdfImageRefs?: Array<{ pdfName: string; imageId: string }>;
     instruction?: string;
     forceReprocess?: boolean;
 }, string>({
@@ -243,17 +244,21 @@ export const FileProcessingToolUI = makeAssistantToolUI<{
 
         // Parse args
         let urls: string[] = [];
+        let pdfImageRefs: Array<{ pdfName: string; imageId: string }> = [];
         let instruction: string | undefined;
 
         // Use the actual tool parameters
         if (args?.urls && Array.isArray(args.urls)) {
             urls = args.urls;
         }
+        if (args?.pdfImageRefs && Array.isArray(args.pdfImageRefs)) {
+            pdfImageRefs = args.pdfImageRefs;
+        }
         if (args?.instruction) {
             instruction = args.instruction;
         }
 
-        const fileCount = urls.length;
+        const fileCount = urls.length + (args?.fileNames?.length ?? 0) + pdfImageRefs.length;
 
         // Debug parsed data
         if (typeof window !== 'undefined') {
@@ -302,7 +307,7 @@ export const FileProcessingToolUI = makeAssistantToolUI<{
                                                 const fileInfo = getFileType(url);
                                                 const filename = url.split('/').pop() || url;
                                                 return (
-                                                    <div key={index} className="flex items-center gap-2">
+                                                    <div key={`url-${index}`} className="flex items-center gap-2">
                                                         {fileInfo.icon}
                                                         <a
                                                             href={url}
@@ -318,6 +323,26 @@ export const FileProcessingToolUI = makeAssistantToolUI<{
                                                     </div>
                                                 );
                                             })}
+                                            {(args?.fileNames ?? []).map((name, index) => (
+                                                <div key={`name-${index}`} className="flex items-center gap-2">
+                                                    <FileIcon className="h-3 w-3" />
+                                                    <span className="text-xs break-all">{name}</span>
+                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
+                                                        workspace
+                                                    </Badge>
+                                                </div>
+                                            ))}
+                                            {pdfImageRefs.map((ref, index) => (
+                                                <div key={`pdfimg-${index}`} className="flex items-center gap-2">
+                                                    <ImageIcon className="h-3 w-3" />
+                                                    <span className="text-xs break-all">
+                                                        {ref.imageId} <span className="text-muted-foreground">from {ref.pdfName}</span>
+                                                    </span>
+                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
+                                                        PDF image
+                                                    </Badge>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 )}

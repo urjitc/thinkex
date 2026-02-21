@@ -461,38 +461,49 @@ export function WorkspaceSection({
       return;
     }
 
-    // Upload all PDFs first
-    const uploadPromises = unprotectedFiles.map(async (file) => {
-      const { url: fileUrl, filename } = await uploadFileDirect(file);
+    const ocrToastId = toast.loading(
+      `Uploading and extracting text from ${unprotectedFiles.length} PDF${unprotectedFiles.length > 1 ? 's' : ''}...`,
+      { style: { color: '#fff' } }
+    );
 
-      return {
-        fileUrl,
-        filename: filename || file.name,
-        fileSize: file.size,
-        name: file.name.replace(/\.pdf$/i, ''),
-      };
-    });
-
-    const uploadResults = await Promise.all(uploadPromises);
-
-    // Filter out any null results (files that couldn't be processed)
-    const validResults = uploadResults.filter((result): result is NonNullable<typeof result> => result !== null);
-
-    if (validResults.length > 0) {
-      // Collect all PDF card data and create in a single batch event
-      const pdfCardDefinitions = validResults.map((result) => {
+    const uploadAndOcrPromises = unprotectedFiles.map(async (file) => {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/pdf/upload-and-ocr', {
+          method: 'POST',
+          body: formData,
+        });
+        const json = await res.json();
+        if (!res.ok || json.error) {
+          throw new Error(json.error || 'Upload and OCR failed');
+        }
         const pdfData: Partial<PdfData> = {
-          fileUrl: result.fileUrl,
-          filename: result.filename,
-          fileSize: result.fileSize,
+          fileUrl: json.fileUrl,
+          filename: json.filename,
+          fileSize: json.fileSize,
+          textContent: json.textContent,
+          ocrPages: json.ocrPages,
+          ocrStatus: json.ocrStatus ?? (json.ocrPages?.length ? 'complete' : 'failed'),
+          ...(json.ocrError && { ocrError: json.ocrError }),
         };
-
         return {
           type: 'pdf' as const,
-          name: result.name,
+          name: file.name.replace(/\.pdf$/i, ''),
           initialData: pdfData,
         };
-      });
+      } catch (err) {
+        toast.error(`Failed to process ${file.name}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        return null;
+      }
+    });
+
+    const pdfCardDefinitions = (await Promise.all(uploadAndOcrPromises))
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+
+    toast.dismiss(ocrToastId);
+
+    if (pdfCardDefinitions.length > 0) {
 
       // Create all PDF cards atomically in a single event
       const createdIds = operations.createItems(pdfCardDefinitions);

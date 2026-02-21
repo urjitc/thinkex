@@ -38,6 +38,9 @@ export function extractSearchableText(item: Item, items: Item[]): string {
         }
         case "pdf": {
             const data = item.data as PdfData;
+            if (data.ocrPages?.length) {
+                return data.ocrPages.map((p) => p.markdown).filter(Boolean).join("\n\n");
+            }
             return data.textContent ?? "";
         }
         case "quiz": {

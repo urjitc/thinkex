@@ -202,6 +202,8 @@ export async function workspaceWorker(
             fileSize?: number;
         };
         pdfTextContent?: string; // For caching extracted PDF text content
+        pdfOcrPages?: PdfData["ocrPages"]; // Full OCR page data from Azure Document AI
+        pdfOcrStatus?: "complete" | "failed"; // OCR run status
         flashcardData?: {
             cards?: { front: string; back: string }[]; // For creating flashcards
             cardsToAdd?: { front: string; back: string }[]; // For updating flashcards (appending)
@@ -879,8 +881,8 @@ export async function workspaceWorker(
                 if (!params.itemId) {
                     throw new Error("Item ID required for PDF content update");
                 }
-                if (!params.pdfTextContent) {
-                    throw new Error("Text content required for PDF content update");
+                if (!params.pdfTextContent && !params.pdfOcrPages?.length) {
+                    throw new Error("Text content or OCR pages required for PDF content update");
                 }
 
                 const currentState = await loadWorkspaceState(params.workspaceId);
@@ -893,9 +895,16 @@ export async function workspaceWorker(
                 }
 
                 const existingData = existingItem.data as PdfData;
+                const textContent =
+                    params.pdfTextContent ??
+                    (params.pdfOcrPages?.length
+                        ? params.pdfOcrPages.map((p) => p.markdown ?? "").filter(Boolean).join("\n\n")
+                        : undefined);
                 const updatedData: PdfData = {
                     ...existingData,
-                    textContent: params.pdfTextContent,
+                    ...(textContent != null && { textContent }),
+                    ...(params.pdfOcrPages != null && { ocrPages: params.pdfOcrPages }),
+                    ...(params.pdfOcrStatus != null && { ocrStatus: params.pdfOcrStatus }),
                 };
 
                 const changes: Partial<Item> = { data: updatedData };

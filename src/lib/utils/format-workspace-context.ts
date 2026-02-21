@@ -15,7 +15,10 @@ function formatItemMetadata(item: Item, items: Item[]): string {
         case "pdf": {
             const d = item.data as PdfData;
             if (d?.filename) parts.push(`filename=${d.filename}`);
-            if (d?.textContent) parts.push("hasContent=true");
+            // OCR indicator: complete only when we have ocrPages (actual OCR ran)
+            if (d?.ocrStatus === "failed") parts.push("ocr=failed");
+            else if (d?.ocrPages?.length) parts.push("ocr=complete");
+            else parts.push("ocr=none");
             break;
         }
         case "flashcard": {
@@ -57,7 +60,7 @@ Workspace is empty. Reference items by name when created.
     );
 
     return `<virtual-workspace>
-Paths and metadata. Reference items by path or name. Use processFiles or selected cards for content.
+Paths and metadata. Use readWorkspace for items with ocr=complete; use processFiles for PDFs with ocr=none.
 
 ${entries.join("\n")}
 </virtual-workspace>`;
@@ -109,7 +112,9 @@ Use webSearch when: temporal cues ("today", "latest", "current"), real-time data
 Use internal knowledge for: creative writing, coding, general concepts, summarizing provided content.
 If uncertain about accuracy, prefer to search.
 
-PDF ATTACHMENTS: When the user uploads a PDF as a file attachment and there's a matching PDF item in the workspace, call updatePdfContent with a comprehensive summary of the PDF's content to cache it. This avoids reprocessing the file later.
+PDF CONTENT: For PDFs with ocr=complete (in virtual-workspace metadata), use readWorkspace to get the content — it is already extracted. Use processFiles only for PDFs with ocr=none (not yet extracted) or ocr=failed.
+
+PDF IMAGES: When readWorkspace shows image placeholders like ![img-0.jpeg](img-0.jpeg), use processFiles with pdfImageRefs: [{ pdfName: "<PDF item name>", imageId: "img-0.jpeg" }] to analyze the image.
 
 YOUTUBE: If user says "add a video" without a topic, infer from workspace context. Don't ask - just search.
 
@@ -140,6 +145,8 @@ Use inline brackets only — no separate block. Format: [citation:REF] where REF
 - Web URL: [citation:https://example.com/article] — for web sources
 - Workspace note: [citation:Note Title] — use exact note title from workspace
 - Workspace + quote: [citation:Note Title | exact excerpt] — pipe with spaces before quote; only when you have the exact text
+
+Do NOT use page numbers (e.g. p. 3, page 5) in citations. Use the actual quoted text instead.
 
 Examples:
 - [citation:https://en.wikipedia.org/wiki/Supply_chain]
@@ -528,7 +535,7 @@ function formatSelectedCardFull(item: Item, index: number): string {
  * Format full content of a single item. Used by read tool and formatSelectedCardFull.
  */
 export function formatItemContent(item: Item): string {
-    const lines = [`<card type="${item.type}" name="${item.name}">`];
+    const lines: string[] = [];
 
     switch (item.type) {
         case "note":
@@ -556,7 +563,6 @@ export function formatItemContent(item: Item): string {
             break;
     }
 
-    lines.push(`</card>`);
     return lines.join("\n");
 }
 
@@ -585,9 +591,56 @@ function formatNoteDetailsFull(data: NoteData): string[] {
 }
 
 /**
+ * Formats OCR pages as markdown matching readWorkspace output.
+ * Exported for processFiles to return OCR content in the same format.
+ */
+export function formatOcrPagesAsMarkdown(ocrPages: PdfData["ocrPages"]): string {
+    if (!ocrPages?.length) return "";
+    const lines: string[] = [`OCR Pages (${ocrPages.length}):`];
+    for (const page of ocrPages) {
+        const pageNum = page.index + 1;
+        lines.push(`--- Page ${pageNum} ---`);
+        if (page.header) lines.push(`Header: ${page.header}`);
+        const rawMd = page.markdown ?? "";
+        const md = replaceOcrPlaceholders(
+            rawMd,
+            page.tables as Array<{ id?: string; content?: string }> | undefined
+        );
+        for (const line of md.split(/\r?\n/)) lines.push(line);
+        if (page.footer) lines.push(`Footer: ${page.footer}`);
+        lines.push("");
+    }
+    return lines.join("\n").trimEnd();
+}
+
+/** Replaces table placeholders [id](id) with actual table content. Images stay as placeholders; use processFiles with pdfImageRefs to fetch. */
+function replaceOcrPlaceholders(
+    markdown: string,
+    tables?: Array<{ id?: string; content?: string }>
+): string {
+    let out = markdown;
+    for (const tbl of tables ?? []) {
+        const id = tbl.id;
+        const content = tbl.content;
+        if (!id || !content) continue;
+        out = out.replace(
+            new RegExp(`\\[${escapeRegex(id)}\\]\\(${escapeRegex(id)}\\)`, "g"),
+            `\n\n[Table ${id}]\n${content}\n\n`
+        );
+    }
+    return out;
+}
+
+function escapeRegex(s: string): string {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
  * Formats PDF details with FULL content
- * If cached textContent is available, include it so the agent can reason about the PDF
+ * If cached textContent/ocrPages are available, include them so the agent can reason about the PDF
  * without needing to call processFiles.
+ * OCR pages output markdown as proper lines (one line per line) instead of JSON blobs.
+ * Image and table placeholders are mapped to actual content when available.
  */
 function formatPdfDetailsFull(data: PdfData): string[] {
     const lines: string[] = [];
@@ -600,12 +653,23 @@ function formatPdfDetailsFull(data: PdfData): string[] {
         lines.push(`   - URL: ${data.fileUrl}`);
     }
 
-    if (data.fileSize) {
-        const sizeMB = (data.fileSize / (1024 * 1024)).toFixed(2);
-        lines.push(`   - Size: ${sizeMB} MB`);
-    }
-
-    if (data.textContent) {
+    if (data.ocrPages?.length) {
+        lines.push(`   - OCR Pages (${data.ocrPages.length}):`);
+        for (const page of data.ocrPages) {
+            const pageNum = page.index + 1;
+            lines.push(`     --- Page ${pageNum} ---`);
+            if (page.header) lines.push(`     Header: ${page.header}`);
+            const rawMd = page.markdown ?? "";
+            const md = replaceOcrPlaceholders(
+                rawMd,
+                page.tables as Array<{ id?: string; content?: string }> | undefined
+            );
+            for (const line of md.split(/\r?\n/)) {
+                lines.push(`     ${line}`);
+            }
+            if (page.footer) lines.push(`     Footer: ${page.footer}`);
+        }
+    } else if (data.textContent) {
         lines.push(`   - Extracted Content:\n${data.textContent}`);
     } else {
         lines.push(`   - (Content not yet extracted — use processFiles or upload the PDF to extract)`);

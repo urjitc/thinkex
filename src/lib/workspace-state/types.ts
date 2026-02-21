@@ -31,6 +31,17 @@ export interface PdfData {
   filename: string; // original filename
   fileSize?: number; // optional file size in bytes
   textContent?: string; // cached extracted text content (avoids reprocessing)
+  ocrStatus?: "complete" | "failed";
+  ocrError?: string;
+  ocrPages?: Array<{
+    index: number;
+    markdown: string;
+    images?: unknown[];
+    footer?: string | null;
+    header?: string | null;
+    hyperlinks?: unknown[];
+    tables?: unknown[];
+  }>;
 }
 
 export interface FlashcardItem {

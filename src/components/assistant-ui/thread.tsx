@@ -75,7 +75,6 @@ import { URLContextToolUI } from "@/components/assistant-ui/URLContextToolUI";
 // import { DeepResearchToolUI } from "@/components/assistant-ui/DeepResearchToolUI";
 import { UpdateNoteToolUI } from "@/components/assistant-ui/UpdateNoteToolUI";
 import { WebSearchToolUI } from "@/components/assistant-ui/WebSearchToolUI";
-import { UpdatePdfContentToolUI } from "@/components/assistant-ui/UpdatePdfContentToolUI";
 import { SearchWorkspaceToolUI } from "@/components/assistant-ui/SearchWorkspaceToolUI";
 import { ReadWorkspaceToolUI } from "@/components/assistant-ui/ReadWorkspaceToolUI";
 
@@ -199,7 +198,6 @@ export const Thread: FC<ThreadProps> = ({ items = [] }) => {
         <URLContextToolUI />
         {/* <DeepResearchToolUI /> */}
         <WebSearchToolUI />
-        <UpdatePdfContentToolUI />
         <SearchWorkspaceToolUI />
         <ReadWorkspaceToolUI />
         <ThreadPrimitive.Root

@@ -142,71 +142,115 @@ export function WorkspaceCanvasDropzone({ children }: WorkspaceCanvasDropzonePro
       );
 
       try {
-        // Upload all files in parallel, keeping the original File reference
-        const uploadPromises = filteredFiles.map(async (file) => {
-          try {
-            const { url, filename } = await uploadFileToStorage(file);
-            return {
-              fileUrl: url,
-              filename: file.name,
-              fileSize: file.size,
-              name: file.name.replace(/\.pdf$/i, ''), // Remove .pdf extension for card name
-              originalFile: file,
-            };
-          } catch (error) {
-            console.error("Failed to upload file:", error);
-            // Remove from processing set on error so it can be retried
-            const fileKey = getFileKey(file);
-            processingFilesRef.current.delete(fileKey);
-            return null;
-          }
-        });
+        // Separate PDFs from other files — PDFs use upload-and-ocr (single request)
+        const pdfFiles = filteredFiles.filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+        const nonPdfFiles = filteredFiles.filter((f) => f.type !== 'application/pdf' && !f.name.toLowerCase().endsWith('.pdf'));
 
-        const uploadResults = await Promise.all(uploadPromises);
+        // PDFs: upload + OCR in one request per file
+        const pdfResults: Array<{
+          fileUrl: string;
+          filename: string;
+          fileSize: number;
+          name: string;
+          pdfData: Partial<PdfData>;
+        }> = [];
+        if (pdfFiles.length > 0) {
+          const pdfToastId = toast.loading(
+            `Uploading and extracting text from ${pdfFiles.length} PDF${pdfFiles.length > 1 ? 's' : ''}...`,
+            { style: { color: '#fff' } }
+          );
 
-        // Filter out any null results (files that couldn't be processed)
-        const validResults = uploadResults.filter((result): result is NonNullable<typeof result> => result !== null);
-
-        // Dismiss loading toast
-        toast.dismiss(loadingToastId);
-
-        if (validResults.length > 0) {
-          // Separate files by type using the original file reference (avoids index misalignment)
-          const pdfResults: typeof validResults = [];
-          const imageResults: typeof validResults = [];
-          const audioResults: typeof validResults = [];
-
-          validResults.forEach((result) => {
-            const fileType = result.originalFile.type;
-            if (fileType === 'application/pdf') {
-              pdfResults.push(result);
-            } else if (fileType.startsWith('audio/')) {
-              audioResults.push(result);
-            } else {
-              imageResults.push(result);
+          const pdfPromises = pdfFiles.map(async (file) => {
+            try {
+              const formData = new FormData();
+              formData.append('file', file);
+              const res = await fetch('/api/pdf/upload-and-ocr', {
+                method: 'POST',
+                body: formData,
+              });
+              const json = await res.json();
+              if (!res.ok || json.error) {
+                throw new Error(json.error || 'Upload and OCR failed');
+              }
+              return {
+                fileUrl: json.fileUrl,
+                filename: json.filename,
+                fileSize: json.fileSize,
+                name: file.name.replace(/\.pdf$/i, ''),
+                pdfData: {
+                  fileUrl: json.fileUrl,
+                  filename: json.filename,
+                  fileSize: json.fileSize,
+                  textContent: json.textContent,
+                  ocrPages: json.ocrPages,
+                  ocrStatus: json.ocrStatus ?? (json.ocrPages?.length ? 'complete' : 'failed'),
+                  ...(json.ocrError && { ocrError: json.ocrError }),
+                } as Partial<PdfData>,
+              };
+            } catch (err) {
+              const fileKey = getFileKey(file);
+              processingFilesRef.current.delete(fileKey);
+              console.error('PDF upload-and-OCR failed:', err);
+              return null;
             }
           });
 
-          // Create PDF cards
-          if (pdfResults.length > 0) {
-            const pdfCardDefinitions = pdfResults.map((result) => {
-              const pdfData: Partial<PdfData> = {
-                fileUrl: result.fileUrl,
-                filename: result.filename,
-                fileSize: result.fileSize,
-              };
+          const results = await Promise.all(pdfPromises);
+          pdfResults.push(...results.filter((r): r is NonNullable<typeof r> => r !== null));
+          toast.dismiss(pdfToastId);
+        }
 
+        // Non-PDFs: upload only
+        const nonPdfResults: Array<{
+          fileUrl: string;
+          filename: string;
+          fileSize: number;
+          name: string;
+          originalFile: File;
+        }> = [];
+        if (nonPdfFiles.length > 0) {
+          const uploadPromises = nonPdfFiles.map(async (file) => {
+            try {
+              const { url, filename } = await uploadFileToStorage(file);
               return {
-                type: 'pdf' as const,
-                name: result.name,
-                initialData: pdfData,
+                fileUrl: url,
+                filename: file.name,
+                fileSize: file.size,
+                name: file.name.replace(/\.pdf$/i, ''),
+                originalFile: file,
               };
-            });
+            } catch (error) {
+              console.error('Failed to upload file:', error);
+              const fileKey = getFileKey(file);
+              processingFilesRef.current.delete(fileKey);
+              return null;
+            }
+          });
+          const results = await Promise.all(uploadPromises);
+          nonPdfResults.push(...results.filter((r): r is NonNullable<typeof r> => r !== null));
+        }
 
+        const validResults = [...pdfResults, ...nonPdfResults];
+        if (validResults.length > 0) {
+          const imageResults: typeof nonPdfResults = [];
+          const audioResults: typeof nonPdfResults = [];
+          nonPdfResults.forEach((r) => {
+            if (r.originalFile.type.startsWith('audio/')) audioResults.push(r);
+            else imageResults.push(r);
+          });
+
+          // Create PDF cards (OCR data already included)
+          if (pdfResults.length > 0) {
+            const pdfCardDefinitions = pdfResults.map((r) => ({
+              type: 'pdf' as const,
+              name: r.name,
+              initialData: r.pdfData,
+            }));
             const pdfCreatedIds = operations.createItems(pdfCardDefinitions);
-            // Use shared hook to handle navigation/selection for PDFs
             handleCreatedItems(pdfCreatedIds);
           }
+
+          toast.dismiss(loadingToastId);
 
           // Create image cards with aspect ratio detection
           if (imageResults.length > 0) {
