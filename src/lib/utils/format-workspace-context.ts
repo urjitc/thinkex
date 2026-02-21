@@ -125,9 +125,14 @@ Rules:
 - Include article dates in responses when available
 
 NOTE EDITING (updateNote, Cline convention):
+- You MUST use readWorkspace at least once before a targeted edit. The tool will error if you edit without reading.
 - Full rewrite: oldString="", newString=entire note content.
-- Targeted edit: readWorkspace first, then oldString=exact text to find, newString=replacement. Include enough context in oldString to make it unique.
-- oldString must match exactly including whitespace, or use enough surrounding lines for uniqueness.
+- Targeted edit: readWorkspace first, then oldString=exact text to find (from the Content section only), newString=replacement. Extract oldString from the note body — never include the <card> wrapper or "   - Content:" prefix.
+- When editing from readWorkspace output, preserve exact indentation and whitespace. Match the text as it appears in the Content section.
+- The edit will FAIL if oldString is not found with "Could not find oldString in the file. It must match exactly, including whitespace, indentation, and line endings."
+- The edit will FAIL if oldString matches multiple times with "Found multiple matches for oldString. Provide more surrounding context to make the match unique." Use more surrounding lines in oldString or use replaceAll to change every instance.
+- Use replaceAll for replacing/renaming across the entire note (e.g., rename a term).
+- Only use emojis if the user explicitly requests them. Avoid adding emojis unless asked.
 
 INLINE CITATIONS (optional):
 Put the citation data block at the very BEGINNING of your response (sources only, no quotes). Each inline citation may optionally include a quote; omit the quote if you do not have the exact text from the source.

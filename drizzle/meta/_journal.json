@@ -22,6 +22,13 @@
       "when": 1771631691687,
       "tag": "0002_deep_shadowcat",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1771686859689,
+      "tag": "0003_elite_harrier",
+      "breakpoints": true
     }
   ]
 }

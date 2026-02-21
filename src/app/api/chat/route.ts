@@ -190,6 +190,8 @@ export async function POST(req: Request) {
     const system = body.system || "";
     workspaceId = extractWorkspaceId(body);
     activeFolderId = body.activeFolderId;
+    // AssistantChatTransport passes thread remoteId as body.id (see assistant-ui react-ai-sdk)
+    const threadId = body.id ?? body.threadId ?? null;
 
     // Convert messages
     let convertedMessages;
@@ -261,6 +263,7 @@ export async function POST(req: Request) {
       workspaceId,
       userId,
       activeFolderId,
+      threadId,
       clientTools: body.tools,
       enableDeepResearch: false,
     });

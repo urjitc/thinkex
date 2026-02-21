@@ -5,11 +5,14 @@ import { workspaceWorker } from "@/lib/ai/workers";
 import { loadWorkspaceState } from "@/lib/workspace/state-loader";
 import type { Item } from "@/lib/workspace-state/types";
 import { loadStateForTool, fuzzyMatchItem, getAvailableItemsList } from "./tool-utils";
+import { assertWorkspaceItemRead } from "@/lib/db/workspace-item-reads";
+import { isValidThreadIdForDb } from "@/lib/utils/thread-id";
 
 export interface WorkspaceToolContext {
     workspaceId: string | null;
     userId: string | null;
     activeFolderId?: string;
+    threadId?: string | null;
 }
 
 /**
@@ -73,7 +76,7 @@ export function createNoteTool(ctx: WorkspaceToolContext) {
 export function createUpdateNoteTool(ctx: WorkspaceToolContext) {
     return tool({
         description:
-            "Update a note. Full rewrite: oldString='', newString=entire note content. Targeted edit: oldString=exact text to find (from readWorkspace), newString=replacement. Include enough context in oldString to make it unique.",
+            "Update a note. You MUST use readWorkspace at least once before targeted edits — the tool will error otherwise. Full rewrite: oldString='', newString=entire note. Targeted edit: readWorkspace first, then oldString=exact text from the Content section (never include <card> wrapper), newString=replacement. Preserve exact whitespace/indentation. Fails if oldString not found or matches multiple times — include more context or use replaceAll.",
         inputSchema: zodSchema(
             z
                 .object({
@@ -81,12 +84,12 @@ export function createUpdateNoteTool(ctx: WorkspaceToolContext) {
                     oldString: z
                         .string()
                         .describe(
-                            "Text to find. Use empty string '' for full rewrite; otherwise exact text from readWorkspace for targeted edit."
+                            "Text to find. Use '' for full rewrite. For targeted edit: exact text from readWorkspace Content section — match exactly including whitespace. Include enough context to make it unique, or use replaceAll to change every instance."
                         ),
                     newString: z
                         .string()
                         .describe("Replacement text (entire note if oldString is empty)"),
-                    replaceAll: z.boolean().optional().default(false),
+                    replaceAll: z.boolean().optional().default(false).describe("Replace every occurrence of oldString; use for renaming or changing repeated text."),
                     title: z.string().optional().describe("New title for the note. If not provided, the existing title will be preserved."),
                     sources: z
                         .array(
@@ -168,6 +171,24 @@ export function createUpdateNoteTool(ctx: WorkspaceToolContext) {
                     matchedName: matchedNote.name,
                     matchedId: matchedNote.id,
                 });
+
+                // Read-before-write: for targeted edits, assert item was read
+                // Skip assert when threadId is a placeholder (e.g. DEFAULT_THREAD_ID before thread exists)
+                const isTargetedEdit = oldString.trim().length > 0;
+                if (isTargetedEdit && isValidThreadIdForDb(ctx.threadId)) {
+                    const currentLastModified = matchedNote.lastModified ?? 0;
+                    const assert = await assertWorkspaceItemRead(
+                        ctx.threadId,
+                        matchedNote.id,
+                        currentLastModified
+                    );
+                    if (!assert.ok) {
+                        return {
+                            success: false,
+                            message: assert.message,
+                        };
+                    }
+                }
 
                 const workerResult = await workspaceWorker("update", {
                     workspaceId: ctx.workspaceId,

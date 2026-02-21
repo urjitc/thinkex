@@ -29,6 +29,7 @@ export interface ChatToolsConfig {
     workspaceId: string | null;
     userId: string | null;
     activeFolderId?: string;
+    threadId?: string | null;
     clientTools?: Record<string, any>;
     enableDeepResearch?: boolean;
 }
@@ -41,6 +42,7 @@ export function createChatTools(config: ChatToolsConfig): Record<string, any> {
         workspaceId: config.workspaceId,
         userId: config.userId,
         activeFolderId: config.activeFolderId,
+        threadId: config.threadId ?? null,
     };
 
     // Safeguard frontendTools
